@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CashPro Movimientos</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#20df60",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#112116",
+                        "soft-black": "#1F2937",
+                        "subtle-gray": "#9CA3AF",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "3xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar hiding for horizontal scroll */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-soft-black dark:text-white font-display antialiased">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-hidden max-w-md mx-auto bg-white dark:bg-background-dark shadow-2xl">
+<!-- Header Section -->
+<header class="sticky top-0 z-20 bg-white/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
+<!-- Top Bar with Title & Back -->
+<div class="flex items-center justify-between px-4 pt-12 pb-4"> <!-- Increased pt for status bar simulation -->
+<button class="flex items-center justify-center p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+<span class="material-symbols-outlined text-soft-black dark:text-white">arrow_back</span>
+</button>
+<h1 class="text-lg font-bold text-soft-black dark:text-white">Movimientos</h1>
+<button class="flex items-center justify-center p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-primary">
+<span class="material-symbols-outlined">add_circle</span>
+</button>
+</div>
+<!-- Search Bar -->
+<div class="px-4 pb-4">
+<div class="group flex w-full items-center rounded-2xl bg-gray-100 dark:bg-gray-800 px-3 py-2.5 transition-all focus-within:ring-2 focus-within:ring-primary/20">
+<span class="material-symbols-outlined text-gray-400 dark:text-gray-500 mr-2">search</span>
+<input class="h-full w-full bg-transparent text-sm font-medium text-soft-black dark:text-white placeholder-gray-400 focus:outline-none" placeholder="Buscar movimientos" type="text"/>
+</div>
+</div>
+<!-- Filter Chips -->
+<div class="flex gap-2 overflow-x-auto px-4 pb-4 no-scrollbar">
+<button class="shrink-0 rounded-full bg-primary text-white px-5 py-1.5 text-sm font-semibold shadow-sm transition-transform active:scale-95">
+                    Mes
+                </button>
+<button class="shrink-0 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-5 py-1.5 text-sm font-medium transition-colors hover:bg-gray-200 dark:hover:bg-gray-700">
+                    Hoy
+                </button>
+<button class="shrink-0 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-5 py-1.5 text-sm font-medium transition-colors hover:bg-gray-200 dark:hover:bg-gray-700">
+                    Semana
+                </button>
+<button class="shrink-0 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-5 py-1.5 text-sm font-medium transition-colors hover:bg-gray-200 dark:hover:bg-gray-700">
+                    Año
+                </button>
+<button class="shrink-0 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-5 py-1.5 text-sm font-medium transition-colors hover:bg-gray-200 dark:hover:bg-gray-700">
+                    Personalizado
+                </button>
+</div>
+</header>
+<!-- Main Content List -->
+<main class="flex-1 overflow-y-auto pb-24">
+<!-- Date Header: Today -->
+<div class="sticky top-0 z-10 bg-white/90 dark:bg-background-dark/90 px-4 py-3 backdrop-blur-sm">
+<h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Hoy</h3>
+</div>
+<!-- Transaction Item: Supermercado -->
+<div class="group flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
+<span class="material-symbols-outlined">shopping_bag</span>
+</div>
+<div class="flex flex-col">
+<p class="text-base font-semibold text-soft-black dark:text-white line-clamp-1">Supermercado</p>
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400">14:30 PM • Comestibles</p>
+</div>
+</div>
+<p class="text-base font-bold text-soft-black dark:text-white">-$45.00</p>
+</div>
+<div class="ml-[72px] h-px bg-gray-100 dark:bg-gray-800"></div>
+<!-- Transaction Item: Income -->
+<div class="group flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/20 text-primary dark:bg-primary/10">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+</div>
+<div class="flex flex-col">
+<p class="text-base font-semibold text-soft-black dark:text-white line-clamp-1">Transferencia recibida</p>
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400">10:15 AM • Nómina</p>
+</div>
+</div>
+<p class="text-base font-bold text-primary">+$1,250.00</p>
+</div>
+<div class="ml-[72px] h-px bg-gray-100 dark:bg-gray-800"></div>
+<!-- Transaction Item: Coffee -->
+<div class="group flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+<span class="material-symbols-outlined">coffee</span>
+</div>
+<div class="flex flex-col">
+<p class="text-base font-semibold text-soft-black dark:text-white line-clamp-1">Starbucks</p>
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400">08:45 AM • Desayuno</p>
+</div>
+</div>
+<p class="text-base font-bold text-soft-black dark:text-white">-$8.50</p>
+</div>
+<!-- Date Header: Yesterday -->
+<div class="sticky top-0 z-10 mt-2 bg-white/90 dark:bg-background-dark/90 px-4 py-3 backdrop-blur-sm">
+<h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Ayer</h3>
+</div>
+<!-- Transaction Item: Gas -->
+<div class="group flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+<span class="material-symbols-outlined">local_gas_station</span>
+</div>
+<div class="flex flex-col">
+<p class="text-base font-semibold text-soft-black dark:text-white line-clamp-1">Gasolinera Shell</p>
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400">18:20 PM • Transporte</p>
+</div>
+</div>
+<p class="text-base font-bold text-soft-black dark:text-white">-$30.00</p>
+</div>
+<div class="ml-[72px] h-px bg-gray-100 dark:bg-gray-800"></div>
+<!-- Transaction Item: Subscription -->
+<div class="group flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+<span class="material-symbols-outlined">movie</span>
+</div>
+<div class="flex flex-col">
+<p class="text-base font-semibold text-soft-black dark:text-white line-clamp-1">Netflix</p>
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400">09:00 AM • Suscripción</p>
+</div>
+</div>
+<p class="text-base font-bold text-soft-black dark:text-white">-$15.99</p>
+</div>
+<div class="ml-[72px] h-px bg-gray-100 dark:bg-gray-800"></div>
+<!-- Transaction Item: Freelance Income -->
+<div class="group flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/20 text-primary dark:bg-primary/10">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<div class="flex flex-col">
+<p class="text-base font-semibold text-soft-black dark:text-white line-clamp-1">Pago Proyecto Web</p>
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400">09:00 AM • Freelance</p>
+</div>
+</div>
+<p class="text-base font-bold text-primary">+$550.00</p>
+</div>
+<!-- Date Header: 24 Oct -->
+<div class="sticky top-0 z-10 mt-2 bg-white/90 dark:bg-background-dark/90 px-4 py-3 backdrop-blur-sm">
+<h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">24 Octubre</h3>
+</div>
+<!-- Transaction Item: Gym -->
+<div class="group flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+<span class="material-symbols-outlined">fitness_center</span>
+</div>
+<div class="flex flex-col">
+<p class="text-base font-semibold text-soft-black dark:text-white line-clamp-1">Gimnasio Planet</p>
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400">19:30 PM • Salud</p>
+</div>
+</div>
+<p class="text-base font-bold text-soft-black dark:text-white">-$29.99</p>
+</div>
+<div class="ml-[72px] h-px bg-gray-100 dark:bg-gray-800"></div>
+<!-- Transaction Item: Pharmacy -->
+<div class="group flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400">
+<span class="material-symbols-outlined">medication</span>
+</div>
+<div class="flex flex-col">
+<p class="text-base font-semibold text-soft-black dark:text-white line-clamp-1">Farmacia Central</p>
+<p class="text-xs font-medium text-gray-500 dark:text-gray-400">14:15 PM • Salud</p>
+</div>
+</div>
+<p class="text-base font-bold text-soft-black dark:text-white">-$12.45</p>
+</div>
+<div class="h-8"></div> <!-- Spacer -->
+</main>
+<!-- Bottom Navigation -->
+<nav class="absolute bottom-0 z-30 w-full border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-background-dark pb-6 pt-2">
+<div class="flex justify-around items-end">
+<a class="flex flex-1 flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-primary transition-colors">home</span>
+<span class="text-[10px] font-medium text-gray-400 dark:text-gray-500 group-hover:text-primary transition-colors">Inicio</span>
+</a>
+<a class="flex flex-1 flex-col items-center gap-1 group" href="#">
+<div class="relative">
+<span class="material-symbols-outlined text-primary fill-current">format_list_bulleted</span>
+<span class="absolute -top-1 -right-1 flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+</div>
+<span class="text-[10px] font-medium text-primary">Movimientos</span>
+</a>
+<a class="flex flex-1 flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-primary transition-colors">pie_chart</span>
+<span class="text-[10px] font-medium text-gray-400 dark:text-gray-500 group-hover:text-primary transition-colors">Presupuesto</span>
+</a>
+<a class="flex flex-1 flex-col items-center gap-1 group" href="#">
+<span class="material-symbols-outlined text-gray-400 dark:text-gray-500 group-hover:text-primary transition-colors">person</span>
+<span class="text-[10px] font-medium text-gray-400 dark:text-gray-500 group-hover:text-primary transition-colors">Perfil</span>
+</a>
+</div>
+</nav>
+<!-- Optional Floating Action Button for "Add" - Positioned above navbar -->
+<div class="absolute bottom-[88px] right-4 z-40">
+<button class="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition-transform active:scale-95 hover:shadow-xl hover:shadow-primary/40">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+</div>
+</div>
+</body></html>

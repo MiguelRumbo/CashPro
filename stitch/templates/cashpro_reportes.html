@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CashPro Reportes</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#20df60",
+                        "primary-dark": "#1ab84e", // darker shade for text/contrast
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#112116",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a2c22",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "3xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar hiding */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Simple CSS Pie Chart Logic */
+        .pie-chart {
+            background: conic-gradient(
+                #20df60 0% 45%, 
+                #86efac 45% 70%, 
+                #bbf7d0 70% 85%, 
+                #e2e8f0 85% 100%
+            );
+            border-radius: 50%;
+        }
+        
+        /* Dark mode pie chart adjustment */
+        .dark .pie-chart {
+            background: conic-gradient(
+                #20df60 0% 45%, 
+                #166534 45% 70%, 
+                #14532d 70% 85%, 
+                #3f3f46 85% 100%
+            );
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased text-slate-800 dark:text-slate-100 selection:bg-primary selection:text-white">
+<div class="relative flex h-full min-h-screen w-full flex-col mx-auto max-w-md bg-background-light dark:bg-background-dark shadow-xl overflow-hidden">
+<!-- Header Section -->
+<header class="sticky top-0 z-10 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-sm px-5 pt-12 pb-2">
+<div class="flex items-center justify-between mb-4">
+<button class="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-surface-dark transition-colors text-slate-900 dark:text-white">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div class="flex-1 text-center">
+<h1 class="text-lg font-bold tracking-tight">Reportes</h1>
+</div>
+<button class="p-2 -mr-2 rounded-full hover:bg-slate-100 dark:hover:bg-surface-dark transition-colors text-slate-900 dark:text-white">
+<span class="material-symbols-outlined">more_horiz</span>
+</button>
+</div>
+<!-- Date Filter Pills -->
+<div class="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
+<button class="flex-none px-5 py-2 rounded-full bg-slate-900 dark:bg-white text-white dark:text-background-dark text-sm font-semibold shadow-md transition-transform active:scale-95">
+                    Este mes
+                </button>
+<button class="flex-none px-5 py-2 rounded-full bg-white dark:bg-surface-dark border border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium shadow-sm transition-transform active:scale-95">
+                    Mes pasado
+                </button>
+<button class="flex-none px-5 py-2 rounded-full bg-white dark:bg-surface-dark border border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium shadow-sm transition-transform active:scale-95">
+                    3 meses
+                </button>
+<button class="flex-none w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-surface-dark border border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 shadow-sm transition-transform active:scale-95">
+<span class="material-symbols-outlined text-[20px]">calendar_month</span>
+</button>
+</div>
+</header>
+<!-- Main Scrollable Content -->
+<main class="flex-1 overflow-y-auto px-5 pb-24 space-y-6">
+<!-- Summary Cards -->
+<div class="grid grid-cols-2 gap-4 mt-2">
+<div class="bg-surface-light dark:bg-surface-dark p-5 rounded-3xl shadow-sm border border-white/50 dark:border-slate-700">
+<div class="flex items-start justify-between mb-3">
+<div class="p-2 bg-rose-100 dark:bg-rose-900/30 rounded-xl text-rose-600 dark:text-rose-400">
+<span class="material-symbols-outlined">trending_down</span>
+</div>
+<span class="text-xs font-medium text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded-full">-12%</span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Gasto Total</p>
+<p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">$1,240<span class="text-lg text-slate-400">.50</span></p>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark p-5 rounded-3xl shadow-sm border border-white/50 dark:border-slate-700">
+<div class="flex items-start justify-between mb-3">
+<div class="p-2 bg-primary/20 dark:bg-primary/10 rounded-xl text-primary-dark dark:text-primary">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+</div>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Presupuesto</p>
+<p class="text-2xl font-bold text-slate-900 dark:text-white mt-1">$1,500<span class="text-lg text-slate-400">.00</span></p>
+</div>
+</div>
+<!-- Donut Chart Section -->
+<div class="bg-surface-light dark:bg-surface-dark p-6 rounded-3xl shadow-sm border border-white/50 dark:border-slate-700">
+<div class="flex items-center justify-between mb-6">
+<h2 class="text-lg font-bold text-slate-900 dark:text-white">Gastos por Categoría</h2>
+<button class="text-primary-dark dark:text-primary hover:bg-primary/10 p-1 rounded-lg transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<div class="flex flex-col sm:flex-row items-center gap-8">
+<!-- CSS Donut Chart -->
+<div class="relative w-40 h-40 flex-shrink-0">
+<div class="pie-chart w-full h-full rounded-full transform -rotate-90"></div>
+<!-- Inner Circle for Donut Effect -->
+<div class="absolute inset-0 m-auto w-24 h-24 bg-surface-light dark:bg-surface-dark rounded-full flex items-center justify-center flex-col shadow-inner">
+<span class="text-xs text-slate-400 font-medium">Top</span>
+<span class="text-lg font-bold text-slate-800 dark:text-white">45%</span>
+</div>
+</div>
+<!-- Legend -->
+<div class="flex-1 w-full space-y-3">
+<div class="flex items-center justify-between w-full">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-primary shadow-sm shadow-primary/50"></span>
+<span class="text-sm font-medium text-slate-600 dark:text-slate-300">Hogar</span>
+</div>
+<span class="text-sm font-bold text-slate-900 dark:text-white">$558.00</span>
+</div>
+<div class="flex items-center justify-between w-full">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-green-300 dark:bg-green-700"></span>
+<span class="text-sm font-medium text-slate-600 dark:text-slate-300">Comida</span>
+</div>
+<span class="text-sm font-bold text-slate-900 dark:text-white">$310.12</span>
+</div>
+<div class="flex items-center justify-between w-full">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-green-200 dark:bg-green-800"></span>
+<span class="text-sm font-medium text-slate-600 dark:text-slate-300">Transporte</span>
+</div>
+<span class="text-sm font-bold text-slate-900 dark:text-white">$186.00</span>
+</div>
+<div class="flex items-center justify-between w-full">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-slate-200 dark:bg-slate-600"></span>
+<span class="text-sm font-medium text-slate-600 dark:text-slate-300">Otros</span>
+</div>
+<span class="text-sm font-bold text-slate-900 dark:text-white">$186.38</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bar Chart Section -->
+<div class="bg-surface-light dark:bg-surface-dark p-6 rounded-3xl shadow-sm border border-white/50 dark:border-slate-700">
+<div class="flex items-center justify-between mb-6">
+<h2 class="text-lg font-bold text-slate-900 dark:text-white">Tendencia Mensual</h2>
+</div>
+<!-- Bar Chart Bars -->
+<div class="flex items-end justify-between h-40 gap-2">
+<!-- Bar 1 -->
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="relative w-full bg-slate-100 dark:bg-slate-800 rounded-t-lg h-full overflow-hidden">
+<div class="absolute bottom-0 left-0 right-0 bg-primary/40 group-hover:bg-primary transition-all duration-300 rounded-t-lg" style="height: 40%;"></div>
+</div>
+<span class="text-xs text-slate-400 group-hover:text-primary transition-colors">Lun</span>
+</div>
+<!-- Bar 2 -->
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="relative w-full bg-slate-100 dark:bg-slate-800 rounded-t-lg h-full overflow-hidden">
+<div class="absolute bottom-0 left-0 right-0 bg-primary/60 group-hover:bg-primary transition-all duration-300 rounded-t-lg" style="height: 65%;"></div>
+</div>
+<span class="text-xs text-slate-400 group-hover:text-primary transition-colors">Mar</span>
+</div>
+<!-- Bar 3 (Active/Highlight) -->
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="relative w-full bg-slate-100 dark:bg-slate-800 rounded-t-lg h-full overflow-hidden shadow-[0_0_15px_-3px_rgba(32,223,96,0.3)]">
+<div class="absolute bottom-0 left-0 right-0 bg-primary rounded-t-lg" style="height: 85%;"></div>
+</div>
+<span class="text-xs font-bold text-primary-dark dark:text-primary">Mié</span>
+</div>
+<!-- Bar 4 -->
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="relative w-full bg-slate-100 dark:bg-slate-800 rounded-t-lg h-full overflow-hidden">
+<div class="absolute bottom-0 left-0 right-0 bg-primary/30 group-hover:bg-primary transition-all duration-300 rounded-t-lg" style="height: 30%;"></div>
+</div>
+<span class="text-xs text-slate-400 group-hover:text-primary transition-colors">Jue</span>
+</div>
+<!-- Bar 5 -->
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="relative w-full bg-slate-100 dark:bg-slate-800 rounded-t-lg h-full overflow-hidden">
+<div class="absolute bottom-0 left-0 right-0 bg-primary/50 group-hover:bg-primary transition-all duration-300 rounded-t-lg" style="height: 55%;"></div>
+</div>
+<span class="text-xs text-slate-400 group-hover:text-primary transition-colors">Vie</span>
+</div>
+<!-- Bar 6 -->
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="relative w-full bg-slate-100 dark:bg-slate-800 rounded-t-lg h-full overflow-hidden">
+<div class="absolute bottom-0 left-0 right-0 bg-slate-300 dark:bg-slate-600 group-hover:bg-slate-400 transition-all duration-300 rounded-t-lg" style="height: 20%;"></div>
+</div>
+<span class="text-xs text-slate-400 group-hover:text-slate-500 transition-colors">Sáb</span>
+</div>
+<!-- Bar 7 -->
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="relative w-full bg-slate-100 dark:bg-slate-800 rounded-t-lg h-full overflow-hidden">
+<div class="absolute bottom-0 left-0 right-0 bg-slate-300 dark:bg-slate-600 group-hover:bg-slate-400 transition-all duration-300 rounded-t-lg" style="height: 25%;"></div>
+</div>
+<span class="text-xs text-slate-400 group-hover:text-slate-500 transition-colors">Dom</span>
+</div>
+</div>
+</div>
+<!-- Insight Box -->
+<div class="bg-gradient-to-br from-primary/10 to-transparent p-6 rounded-3xl border border-primary/20">
+<div class="flex items-start gap-4">
+<div class="p-3 bg-primary/20 text-primary-dark dark:text-primary rounded-2xl shrink-0">
+<span class="material-symbols-outlined">lightbulb</span>
+</div>
+<div>
+<h3 class="text-base font-bold text-slate-900 dark:text-white mb-1">Salud Financiera: Excelente</h3>
+<p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                            Has gastado un <span class="font-bold text-primary-dark dark:text-primary">12% menos</span> en comida comparado con el mes anterior. ¡Sigue así para alcanzar tu meta de ahorro!
+                        </p>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="absolute bottom-0 w-full bg-surface-light/90 dark:bg-background-dark/90 border-t border-slate-100 dark:border-slate-800 backdrop-blur-md pb-6 pt-3 px-6">
+<div class="flex justify-between items-center">
+<a class="flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-primary transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">home</span>
+<span class="text-[10px] font-medium">Inicio</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-primary transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">receipt_long</span>
+<span class="text-[10px] font-medium">Movimientos</span>
+</a>
+<!-- Active Item -->
+<a class="flex flex-col items-center justify-center gap-1 text-primary-dark dark:text-primary group" href="#">
+<div class="relative">
+<span class="material-symbols-outlined fill-current" style="font-variation-settings: 'FILL' 1;">bar_chart</span>
+<span class="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+</div>
+<span class="text-[10px] font-bold">Reportes</span>
+</a>
+<a class="flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-primary transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">person</span>
+<span class="text-[10px] font-medium">Perfil</span>
+</a>
+</div>
+</nav>
+</div>
+</body></html>

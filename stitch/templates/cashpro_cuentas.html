@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CashPro Cuentas</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#20df60",
+                        "primary-dark": "#16a34a",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#112116",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1c2e24",
+                        "text-main": "#111713",
+                        "text-sub": "#64876f",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "sans": ["Inter", "sans-serif"],
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px" },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+                        'card': '0 0 0 1px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.04)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        /* Smooth scrolling */
+        html { scroll-behavior: smooth; }
+        /* Hide scrollbar for clean look */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-text-main font-display antialiased selection:bg-primary selection:text-white">
+<div class="relative flex h-full min-h-screen w-full flex-col overflow-hidden mx-auto max-w-md bg-background-light shadow-2xl">
+<!-- Header -->
+<header class="sticky top-0 z-30 flex items-center justify-between px-6 pt-12 pb-4 bg-background-light/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
+<div>
+<h1 class="text-2xl font-bold tracking-tight text-text-main dark:text-white">Mis Cuentas</h1>
+<p class="text-xs font-medium text-text-sub mt-0.5">Gestión financiera</p>
+</div>
+<button class="flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-surface-dark shadow-soft text-text-main hover:bg-gray-50 transition-colors">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto no-scrollbar pb-24 px-4 pt-2">
+<!-- Total Balance Card -->
+<div class="mt-4 mb-6 relative overflow-hidden rounded-2xl bg-text-main text-white p-6 shadow-xl shadow-primary/20">
+<div class="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-primary/20 rounded-full blur-2xl"></div>
+<div class="absolute bottom-0 left-0 -mb-4 -ml-4 w-24 h-24 bg-primary/30 rounded-full blur-xl"></div>
+<div class="relative z-10 flex flex-col items-center text-center">
+<p class="text-sm font-medium text-gray-300 mb-1">Balance Total</p>
+<h2 class="text-4xl font-bold tracking-tight mb-2">$14,250.00</h2>
+<div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 text-xs font-medium text-primary backdrop-blur-sm">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+<span>+2.5% este mes</span>
+</div>
+</div>
+</div>
+<!-- Action Bar -->
+<div class="flex items-center justify-between mb-4 px-1">
+<h3 class="text-lg font-bold text-text-main dark:text-white">Cuentas Activas</h3>
+<button class="text-sm font-semibold text-primary hover:text-primary-dark transition-colors">Ver todo</button>
+</div>
+<!-- Account List -->
+<div class="flex flex-col gap-4">
+<!-- Card: Efectivo -->
+<div class="group relative flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-surface-dark shadow-card hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-primary/10">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400">
+<span class="material-symbols-outlined text-[24px]">payments</span>
+</div>
+<div class="flex flex-1 flex-col">
+<p class="text-base font-bold text-text-main dark:text-white leading-tight">Efectivo</p>
+<p class="text-xs text-text-sub font-medium">Billetera personal</p>
+</div>
+<div class="flex flex-col items-end">
+<p class="text-base font-bold text-text-main dark:text-white">$250.00</p>
+<span class="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded text-right mt-1">DISPONIBLE</span>
+</div>
+</div>
+<!-- Card: Débito BBVA -->
+<div class="group relative flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-surface-dark shadow-card hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-primary/10">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400">
+<span class="material-symbols-outlined text-[24px]">account_balance</span>
+</div>
+<div class="flex flex-1 flex-col">
+<p class="text-base font-bold text-text-main dark:text-white leading-tight">Débito BBVA</p>
+<p class="text-xs text-text-sub font-medium">•••• 4582</p>
+</div>
+<div class="flex flex-col items-end">
+<p class="text-base font-bold text-text-main dark:text-white">$3,500.00</p>
+<p class="text-xs text-text-sub">Actualizado hoy</p>
+</div>
+</div>
+<!-- Card: Crédito Visa -->
+<div class="group relative flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-surface-dark shadow-card hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-primary/10">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400">
+<span class="material-symbols-outlined text-[24px]">credit_card</span>
+</div>
+<div class="flex flex-1 flex-col">
+<p class="text-base font-bold text-text-main dark:text-white leading-tight">Crédito Visa</p>
+<p class="text-xs text-text-sub font-medium">•••• 9921</p>
+</div>
+<div class="flex flex-col items-end">
+<p class="text-base font-bold text-red-500 dark:text-red-400">-$450.00</p>
+<p class="text-xs text-red-500/70 font-medium">Pago pendiente</p>
+</div>
+</div>
+<!-- Card: Savings (Inactive style example) -->
+<div class="group relative flex items-center gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-dashed border-gray-200 dark:border-gray-700 hover:bg-white transition-all cursor-pointer opacity-80 hover:opacity-100">
+<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400">
+<span class="material-symbols-outlined text-[24px]">savings</span>
+</div>
+<div class="flex flex-1 flex-col">
+<p class="text-base font-bold text-text-main dark:text-white leading-tight">Ahorros Meta</p>
+<p class="text-xs text-text-sub font-medium">Objetivo: Auto nuevo</p>
+</div>
+<div class="flex flex-col items-end">
+<p class="text-base font-bold text-text-main dark:text-white">$10,950.00</p>
+<div class="w-16 h-1 bg-gray-200 rounded-full mt-2 overflow-hidden">
+<div class="h-full bg-orange-400 w-3/4"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Add Account Button (Floating within flow) -->
+<button class="mt-8 group flex w-full items-center justify-center gap-3 rounded-xl bg-primary px-6 py-4 text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary-dark hover:shadow-primary/50 active:scale-95">
+<span class="material-symbols-outlined font-bold">add_circle</span>
+<span class="text-base font-bold">Agregar nueva cuenta</span>
+</button>
+<p class="mt-6 text-center text-xs text-text-sub px-8">
+                Puedes vincular tus cuentas bancarias de forma segura o agregar registros manuales.
+            </p>
+</main>
+<!-- Bottom Navigation Bar -->
+<div class="fixed bottom-0 left-0 right-0 z-50 flex justify-center w-full max-w-md mx-auto">
+<nav class="w-full border-t border-gray-100 bg-white/90 px-4 pb-6 pt-2 backdrop-blur-lg dark:border-gray-800 dark:bg-surface-dark/90">
+<div class="flex justify-around items-end">
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-text-sub hover:text-primary transition-colors group" href="#">
+<div class="flex h-8 items-center justify-center transition-transform group-hover:-translate-y-1">
+<span class="material-symbols-outlined text-[24px] group-hover:fill-1">home</span>
+</div>
+<p class="text-[10px] font-medium leading-none">Inicio</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-primary" href="#">
+<div class="flex h-8 items-center justify-center relative">
+<span class="absolute -top-1 -right-1 flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+<span class="material-symbols-outlined text-[24px] fill-1">account_balance_wallet</span>
+</div>
+<p class="text-[10px] font-bold leading-none">Cuentas</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-text-sub hover:text-primary transition-colors group" href="#">
+<div class="flex h-8 items-center justify-center transition-transform group-hover:-translate-y-1">
+<span class="material-symbols-outlined text-[24px] group-hover:fill-1">bar_chart</span>
+</div>
+<p class="text-[10px] font-medium leading-none">Estadísticas</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-text-sub hover:text-primary transition-colors group" href="#">
+<div class="flex h-8 items-center justify-center transition-transform group-hover:-translate-y-1">
+<span class="material-symbols-outlined text-[24px] group-hover:fill-1">settings</span>
+</div>
+<p class="text-[10px] font-medium leading-none">Ajustes</p>
+</a>
+</div>
+</nav>
+</div>
+</div>
+</body></html>

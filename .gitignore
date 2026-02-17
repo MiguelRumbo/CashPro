@@ -1,0 +1,21 @@
+# node / pnpm
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+
+# expo / react native
+apps/mobile/.expo/
+apps/mobile/dist/
+apps/mobile/web-build/
+apps/mobile/.env*
+apps/mobile/npm-debug.log*
+apps/mobile/yarn-error.log*
+
+# api
+apps/api/*.db
+apps/api/*.db-journal
+apps/api/.env*
+
+# general
+.DS_Store
+Thumbs.db

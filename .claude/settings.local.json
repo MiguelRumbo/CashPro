@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(del \"c:\\\\Users\\\\MiguelAngelRumbo\\\\Videos\\\\cash_pro\\\\apps\\\\mobile\\\\app\\\\\\(tabs\\)\\\\profile.tsx\")",
+      "Bash(ls:*)",
+      "Bash(powershell -Command:*)"
+    ]
+  }
+}

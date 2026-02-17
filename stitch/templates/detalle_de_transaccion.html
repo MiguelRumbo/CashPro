@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Detalle de Transacción - CashPro</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#20df60",
+                        "primary-dark": "#1ab84e", 
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#112116",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-gray-100 antialiased h-screen overflow-hidden flex flex-col">
+<!-- Header -->
+<header class="flex-none px-4 pt-12 pb-4 bg-white dark:bg-[#112116] border-b border-gray-100 dark:border-gray-800 flex items-center justify-between z-10 sticky top-0">
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors text-gray-800 dark:text-gray-200">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h1 class="text-lg font-bold tracking-tight text-center flex-1 pr-10">Detalle de Transacción</h1>
+</header>
+<!-- Scrollable Content -->
+<main class="flex-1 overflow-y-auto w-full max-w-md mx-auto no-scrollbar pb-32">
+<!-- Hero Section -->
+<div class="flex flex-col items-center justify-center pt-10 pb-8 px-6">
+<div class="relative mb-6">
+<!-- Icon container with Primary Color glow/bg -->
+<div class="flex items-center justify-center w-20 h-20 rounded-3xl bg-primary/20 text-primary dark:text-primary shadow-lg shadow-primary/10">
+<span class="material-symbols-outlined text-[40px]">shopping_cart</span>
+</div>
+</div>
+<h2 class="text-4xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">-$450.00</h2>
+<p class="text-gray-500 dark:text-gray-400 font-medium text-lg">Supermercado</p>
+</div>
+<!-- Details Card -->
+<div class="px-4 w-full">
+<div class="bg-white dark:bg-white/5 rounded-2xl p-2 shadow-sm border border-gray-100 dark:border-white/5 divide-y divide-gray-100 dark:divide-white/10">
+<!-- Row: Date -->
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400">
+<span class="material-symbols-outlined text-sm">calendar_today</span>
+</div>
+<span class="text-gray-500 dark:text-gray-400 text-sm font-medium">Fecha</span>
+</div>
+<span class="text-gray-900 dark:text-gray-100 font-semibold text-sm">24 Oct, 2023</span>
+</div>
+<!-- Row: Time -->
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400">
+<span class="material-symbols-outlined text-sm">schedule</span>
+</div>
+<span class="text-gray-500 dark:text-gray-400 text-sm font-medium">Hora</span>
+</div>
+<span class="text-gray-900 dark:text-gray-100 font-semibold text-sm">14:30 PM</span>
+</div>
+<!-- Row: Account -->
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400">
+<span class="material-symbols-outlined text-sm">credit_card</span>
+</div>
+<span class="text-gray-500 dark:text-gray-400 text-sm font-medium">Cuenta</span>
+</div>
+<div class="flex items-center gap-2">
+<!-- Small icon for the bank if needed, simplified here -->
+<div class="w-2 h-2 rounded-full bg-blue-600"></div>
+<span class="text-gray-900 dark:text-gray-100 font-semibold text-sm">BBVA Débito</span>
+</div>
+</div>
+<!-- Row: Location (Map Preview) -->
+<div class="flex flex-col p-4 gap-3">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400">
+<span class="material-symbols-outlined text-sm">location_on</span>
+</div>
+<span class="text-gray-500 dark:text-gray-400 text-sm font-medium">Ubicación</span>
+</div>
+<div class="mt-1 w-full h-32 rounded-xl overflow-hidden relative">
+<div class="absolute inset-0 bg-cover bg-center opacity-80" data-alt="Map location preview of Mexico City" data-location="Mexico City" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDMLg9J-4DD6XtG55wn0wlQQVNwaE9xn82eJDDJEdt6-vuDlIKKASP5Y49qgTIwNa66Z2nCYeTkfX-_HUvPhS98xpM11hGM_878rCMLjCdOLtI0ykEMexg6rMGDWjhqr6XOGTCP3G-a-NQ6FKBApRk2pmjWQrStY43QALTRRtPKT10gcf4ZZDy_xT8T7uGWFUsj0v7Puh4iEWQ9cwlSRZ4Hem3eP7VVg-frpziB5u_RNagJnlMFidkQZeRwmv-SnPzfguBbLAnxkUmK');"></div>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-red-500 text-3xl drop-shadow-md">location_on</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Notes Section -->
+<div class="mt-6">
+<h3 class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Nota</h3>
+<div class="bg-white dark:bg-white/5 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-white/5">
+<p class="text-gray-700 dark:text-gray-300 text-base leading-relaxed">
+                        Compra semanal + artículos de limpieza.
+                    </p>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Actions -->
+<footer class="flex-none bg-white dark:bg-[#112116] border-t border-gray-100 dark:border-gray-800 px-6 py-6 pb-10 w-full z-20">
+<div class="max-w-md mx-auto flex flex-col gap-3">
+<button class="w-full bg-primary hover:bg-primary-dark text-white dark:text-black font-semibold h-12 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+                Editar
+            </button>
+<button class="w-full bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-500 dark:text-red-400 font-semibold h-12 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+                Eliminar
+            </button>
+</div>
+</footer>
+</body></html>
