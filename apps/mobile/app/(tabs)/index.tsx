@@ -3,6 +3,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { formatCurrency } from '@/utils/format';
 
 export default function DashboardScreen() {
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
@@ -46,7 +47,7 @@ export default function DashboardScreen() {
                 Balance Total
               </ThemedText>
               <ThemedText style={[styles.balanceAmount, { color: textMain }]}>
-                $2,150.00
+                {formatCurrency(2150.00)}
               </ThemedText>
               <View style={[styles.badge, { backgroundColor: 'rgba(32, 223, 96, 0.1)' }]}>
                 <IconSymbol size={14} name="arrow.up.right" color={primary} />
@@ -69,7 +70,7 @@ export default function DashboardScreen() {
                   Ingresos
                 </ThemedText>
                 <ThemedText style={[styles.smallCardAmount, { color: textMain }]}>
-                  +$3,400
+                  +{formatCurrency(3400)}
                 </ThemedText>
               </View>
             </View>
@@ -84,7 +85,7 @@ export default function DashboardScreen() {
                   Gastos
                 </ThemedText>
                 <ThemedText style={[styles.smallCardAmount, { color: textMain }]}>
-                  -$1,250
+                  -{formatCurrency(1250)}
                 </ThemedText>
               </View>
             </View>
@@ -120,7 +121,7 @@ export default function DashboardScreen() {
               <View style={styles.accountCardFooter}>
                 <ThemedText style={styles.accountNameLight}>BBVA Débito</ThemedText>
                 <ThemedText style={styles.accountNumber}>**** 4821</ThemedText>
-                <ThemedText style={styles.accountBalance}>$1,850.00</ThemedText>
+                <ThemedText style={styles.accountBalance}>{formatCurrency(1850.00)}</ThemedText>
               </View>
             </View>
 
@@ -137,7 +138,7 @@ export default function DashboardScreen() {
                   Cartera
                 </ThemedText>
                 <ThemedText style={[styles.accountBalanceDark, { color: textMain }]}>
-                  $300.00
+                  {formatCurrency(300.00)}
                 </ThemedText>
               </View>
             </View>
@@ -180,7 +181,7 @@ export default function DashboardScreen() {
                   </View>
                 </View>
                 <ThemedText style={[styles.categoryAmount, { color: textMain }]}>
-                  $450.00
+                  {formatCurrency(450.00)}
                 </ThemedText>
               </View>
               <View style={[styles.progressBar, { backgroundColor: useThemeColor({ light: '#f3f4f6', dark: '#1f2937' }, 'surface') }]}>
@@ -205,7 +206,7 @@ export default function DashboardScreen() {
                   </View>
                 </View>
                 <ThemedText style={[styles.categoryAmount, { color: textMain }]}>
-                  $150.00
+                  {formatCurrency(150.00)}
                 </ThemedText>
               </View>
               <View style={[styles.progressBar, { backgroundColor: useThemeColor({ light: '#f3f4f6', dark: '#1f2937' }, 'surface') }]}>
@@ -230,7 +231,7 @@ export default function DashboardScreen() {
                   </View>
                 </View>
                 <ThemedText style={[styles.categoryAmount, { color: textMain }]}>
-                  $85.00
+                  {formatCurrency(85.00)}
                 </ThemedText>
               </View>
               <View style={[styles.progressBar, { backgroundColor: useThemeColor({ light: '#f3f4f6', dark: '#1f2937' }, 'surface') }]}>

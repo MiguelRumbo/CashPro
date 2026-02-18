@@ -1,16 +1,122 @@
-import { ScrollView, View, StyleSheet, TouchableOpacity } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { ScrollView, View, StyleSheet, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { API_CONFIG } from '@/config/api';
+import { formatCurrency } from '@/utils/format';
+
+interface Account {
+  id: number;
+  name: string;
+  type: 'cash' | 'bank' | 'debit' | 'credit';
+  balance: number;
+  currency: string;
+  card_last_four?: string;
+  bank_name?: string;
+  credit_limit?: number;
+  current_balance?: number;
+  cut_off_day?: number;
+  payment_due_day?: number;
+}
 
 export default function AccountsScreen() {
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [totalBalance, setTotalBalance] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1c2e24' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
   const borderColor = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'border');
   const textSub = '#64876f';
   const primary = '#20df60';
+
+  const fetchAccounts = async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/accounts`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setAccounts(result.data);
+      }
+    } catch (error) {
+      console.error('Error al cargar cuentas:', error);
+      Alert.alert('Error', 'No se pudieron cargar las cuentas. Verifica que el servidor esté corriendo.');
+    }
+  };
+
+  const fetchTotalBalance = async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/accounts/stats/total-balance`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setTotalBalance(result.data.total_balance);
+      }
+    } catch (error) {
+      console.error('Error al cargar balance:', error);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchAccounts(), fetchTotalBalance()]);
+    setRefreshing(false);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchAccounts();
+      fetchTotalBalance();
+    }, [])
+  );
+
+  const getAccountIcon = (type: string) => {
+    switch (type) {
+      case 'cash': return { name: 'banknote', color: '#16a34a', bg: '#f0fdf4' };
+      case 'bank': return { name: 'building.columns.fill', color: '#2563eb', bg: '#eff6ff' };
+      case 'debit': return { name: 'creditcard', color: '#7c3aed', bg: '#faf5ff' };
+      case 'credit': return { name: 'creditcard.fill', color: '#dc2626', bg: '#fef2f2' };
+      default: return { name: 'banknote', color: '#64748b', bg: '#f1f5f9' };
+    }
+  };
+
+  const formatCurrencyLocal = (amount: number) => {
+    return formatCurrency(amount);
+  };
+
+  const handleDeleteAccount = (id: number, name: string) => {
+    Alert.alert(
+      'Eliminar Cuenta',
+      `¿Estás seguro de eliminar "${name}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await fetch(`${API_CONFIG.BASE_URL}/accounts/${id}`, {
+                method: 'DELETE',
+              });
+              const result = await response.json();
+              
+              if (result.success) {
+                fetchAccounts();
+                fetchTotalBalance();
+              } else {
+                Alert.alert('Error', result.error);
+              }
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo eliminar la cuenta');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
@@ -30,6 +136,9 @@ export default function AccountsScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />
+        }
       >
         {/* Total Balance Card */}
         <View style={styles.balanceCard}>
@@ -38,10 +147,10 @@ export default function AccountsScreen() {
           <View style={styles.balanceGlowBottomLeft} />
           <View style={styles.balanceContent}>
             <ThemedText style={styles.balanceLabel}>Balance Total</ThemedText>
-            <ThemedText style={styles.balanceAmount}>$14,250.00</ThemedText>
+            <ThemedText style={styles.balanceAmount}>{formatCurrencyLocal(totalBalance)}</ThemedText>
             <View style={styles.balanceBadge}>
               <IconSymbol size={14} name="arrow.up.right" color={primary} />
-              <ThemedText style={styles.balanceBadgeText}>+2.5% este mes</ThemedText>
+              <ThemedText style={styles.balanceBadgeText}>{accounts.length} cuenta{accounts.length !== 1 ? 's' : ''}</ThemedText>
             </View>
           </View>
         </View>
@@ -56,73 +165,68 @@ export default function AccountsScreen() {
 
         {/* Account List */}
         <View style={styles.accountList}>
-          {/* Efectivo */}
-          <TouchableOpacity style={[styles.accountItem, { backgroundColor: surfaceColor }]}>
-            <View style={[styles.accountIcon, { backgroundColor: '#f0fdf4' }]}>
-              <IconSymbol size={24} name="banknote" color="#16a34a" />
+          {accounts.length === 0 ? (
+            <View style={styles.emptyState}>
+              <IconSymbol size={48} name="tray" color={textSub} />
+              <ThemedText style={[styles.emptyText, { color: textSub }]}>
+                No tienes cuentas registradas
+              </ThemedText>
+              <ThemedText style={[styles.emptySubtext, { color: textSub }]}>
+                Agrega tu primera cuenta para comenzar
+              </ThemedText>
             </View>
-            <View style={styles.accountInfo}>
-              <ThemedText style={[styles.accountName, { color: textMain }]}>Efectivo</ThemedText>
-              <ThemedText style={[styles.accountDetail, { color: textSub }]}>Billetera personal</ThemedText>
-            </View>
-            <View style={styles.accountRight}>
-              <ThemedText style={[styles.accountAmount, { color: textMain }]}>$250.00</ThemedText>
-              <View style={styles.statusBadge}>
-                <ThemedText style={styles.statusBadgeText}>DISPONIBLE</ThemedText>
-              </View>
-            </View>
-          </TouchableOpacity>
-
-          {/* Débito BBVA */}
-          <TouchableOpacity style={[styles.accountItem, { backgroundColor: surfaceColor }]}>
-            <View style={[styles.accountIcon, { backgroundColor: '#eff6ff' }]}>
-              <IconSymbol size={24} name="building.columns.fill" color="#2563eb" />
-            </View>
-            <View style={styles.accountInfo}>
-              <ThemedText style={[styles.accountName, { color: textMain }]}>Débito BBVA</ThemedText>
-              <ThemedText style={[styles.accountDetail, { color: textSub }]}>•••• 4582</ThemedText>
-            </View>
-            <View style={styles.accountRight}>
-              <ThemedText style={[styles.accountAmount, { color: textMain }]}>$3,500.00</ThemedText>
-              <ThemedText style={[styles.accountSubDetail, { color: textSub }]}>Actualizado hoy</ThemedText>
-            </View>
-          </TouchableOpacity>
-
-          {/* Crédito Visa */}
-          <TouchableOpacity style={[styles.accountItem, { backgroundColor: surfaceColor }]}>
-            <View style={[styles.accountIcon, { backgroundColor: '#faf5ff' }]}>
-              <IconSymbol size={24} name="creditcard" color="#9333ea" />
-            </View>
-            <View style={styles.accountInfo}>
-              <ThemedText style={[styles.accountName, { color: textMain }]}>Crédito Visa</ThemedText>
-              <ThemedText style={[styles.accountDetail, { color: textSub }]}>•••• 9921</ThemedText>
-            </View>
-            <View style={styles.accountRight}>
-              <ThemedText style={[styles.accountAmountNegative]}>-$450.00</ThemedText>
-              <ThemedText style={styles.accountWarning}>Pago pendiente</ThemedText>
-            </View>
-          </TouchableOpacity>
-
-          {/* Ahorros Meta */}
-          <TouchableOpacity style={[styles.accountItemDashed, { borderColor: useThemeColor({ light: '#e5e7eb', dark: '#374151' }, 'border') }]}>
-            <View style={[styles.accountIcon, { backgroundColor: '#fff7ed' }]}>
-              <IconSymbol size={24} name="dollarsign.circle.fill" color="#ea580c" />
-            </View>
-            <View style={styles.accountInfo}>
-              <ThemedText style={[styles.accountName, { color: textMain }]}>Ahorros Meta</ThemedText>
-              <ThemedText style={[styles.accountDetail, { color: textSub }]}>Objetivo: Auto nuevo</ThemedText>
-            </View>
-            <View style={styles.accountRight}>
-              <ThemedText style={[styles.accountAmount, { color: textMain }]}>$10,950.00</ThemedText>
-              <View style={styles.progressBarSmall}>
-                <View style={styles.progressFillSmall} />
-              </View>
-            </View>
-          </TouchableOpacity>
+          ) : (
+            accounts.map((account) => {
+              const iconData = getAccountIcon(account.type);
+              const isCredit = account.type === 'credit';
+              const displayBalance = isCredit ? account.current_balance || 0 : account.balance;
+              
+              return (
+                <TouchableOpacity
+                  key={account.id}
+                  style={[styles.accountItem, { backgroundColor: surfaceColor }]}
+                  onPress={() => router.push(`/account-detail?id=${account.id}`)}
+                  onLongPress={() => handleDeleteAccount(account.id, account.name)}
+                >
+                  <View style={[styles.accountIcon, { backgroundColor: iconData.bg }]}>
+                    <IconSymbol size={24} name={iconData.name as any} color={iconData.color} />
+                  </View>
+                  <View style={styles.accountInfo}>
+                    <ThemedText style={[styles.accountName, { color: textMain }]}>
+                      {account.name}
+                    </ThemedText>
+                    <ThemedText style={[styles.accountDetail, { color: textSub }]}>
+                      {account.card_last_four 
+                        ? `•••• ${account.card_last_four}`
+                        : account.bank_name || 'Efectivo'}
+                    </ThemedText>
+                  </View>
+                  <View style={styles.accountRight}>
+                    <ThemedText 
+                      style={[
+                        isCredit ? styles.accountAmountNegative : styles.accountAmount,
+                        { color: isCredit ? '#ef4444' : textMain }
+                      ]}
+                    >
+                      {isCredit ? '-' : ''}{formatCurrencyLocal(displayBalance)}
+                    </ThemedText>
+                    {isCredit && account.credit_limit && (
+                      <ThemedText style={[styles.accountSubDetail, { color: textSub }]}>
+                        Límite: {formatCurrencyLocal(account.credit_limit)}
+                      </ThemedText>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
 
         {/* Add Account Button */}
-        <TouchableOpacity style={styles.addButton}>
+        <TouchableOpacity 
+          style={styles.addButton}
+          onPress={() => router.push('/add-account')}
+        >
           <IconSymbol size={24} name="plus.circle.fill" color="white" />
           <ThemedText style={styles.addButtonText}>Agregar nueva cuenta</ThemedText>
         </TouchableOpacity>
@@ -387,5 +491,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     paddingHorizontal: 32,
+  },
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    gap: 12,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    textAlign: 'center',
   },
 });
