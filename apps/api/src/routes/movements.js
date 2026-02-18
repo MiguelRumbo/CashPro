@@ -6,7 +6,18 @@ const { db } = require('../database/db-json');
 router.get('/', (req, res) => {
   try {
     const movements = db.prepare('SELECT * FROM movements ORDER BY date DESC, created_at DESC').all();
-    res.json({ success: true, data: movements });
+    
+    // Enriquecer movimientos con información de la cuenta
+    const enrichedMovements = movements.map(movement => {
+      const account = db.prepare('SELECT id, name, type FROM accounts WHERE id = ?').get(movement.account_id);
+      return {
+        ...movement,
+        account_name: account?.name,
+        account_type: account?.type,
+      };
+    });
+    
+    res.json({ success: true, data: enrichedMovements });
   } catch (error) {
     console.error('Error al obtener movimientos:', error);
     res.status(500).json({ success: false, error: error.message });
@@ -108,14 +119,37 @@ router.post('/', (req, res) => {
       account_id, to_account_id, date || new Date().toISOString(), notes
     );
 
-    // Actualizar balance de la cuenta
+    // Actualizar balance de la cuenta según el tipo de cuenta
     if (type === 'expense') {
-      db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(amount, account_id);
+      if (account.type === 'credit') {
+        // Para cuentas de crédito, incrementar current_balance (deuda)
+        db.prepare('UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?').run(amount, account_id);
+      } else {
+        // Para otras cuentas, decrementar balance
+        db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(amount, account_id);
+      }
     } else if (type === 'income') {
-      db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(amount, account_id);
+      if (account.type === 'credit') {
+        // Para cuentas de crédito, decrementar current_balance (pago de deuda)
+        db.prepare('UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?').run(amount, account_id);
+      } else {
+        // Para otras cuentas, incrementar balance
+        db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(amount, account_id);
+      }
     } else if (type === 'transfer') {
-      db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(amount, account_id);
-      db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(amount, to_account_id);
+      // Transferencias: restar de origen, sumar a destino
+      if (account.type === 'credit') {
+        db.prepare('UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?').run(amount, account_id);
+      } else {
+        db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(amount, account_id);
+      }
+      
+      const toAccount = db.prepare('SELECT * FROM accounts WHERE id = ?').get(to_account_id);
+      if (toAccount.type === 'credit') {
+        db.prepare('UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?').run(amount, to_account_id);
+      } else {
+        db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(amount, to_account_id);
+      }
     }
 
     const newMovement = db.prepare('SELECT * FROM movements WHERE id = ?').get(result.lastInsertRowid);
@@ -143,13 +177,34 @@ router.put('/:id', (req, res) => {
     }
 
     // Revertir el movimiento anterior
+    const oldAccount = db.prepare('SELECT * FROM accounts WHERE id = ?').get(existingMovement.account_id);
+    
     if (existingMovement.type === 'expense') {
-      db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
+      if (oldAccount && oldAccount.type === 'credit') {
+        db.prepare('UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
+      } else {
+        db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
+      }
     } else if (existingMovement.type === 'income') {
-      db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
+      if (oldAccount && oldAccount.type === 'credit') {
+        db.prepare('UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
+      } else {
+        db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
+      }
     } else if (existingMovement.type === 'transfer') {
-      db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
-      db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(existingMovement.amount, existingMovement.to_account_id);
+      const oldToAccount = db.prepare('SELECT * FROM accounts WHERE id = ?').get(existingMovement.to_account_id);
+      
+      if (oldAccount && oldAccount.type === 'credit') {
+        db.prepare('UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
+      } else {
+        db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
+      }
+      
+      if (oldToAccount && oldToAccount.type === 'credit') {
+        db.prepare('UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?').run(existingMovement.amount, existingMovement.to_account_id);
+      } else {
+        db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(existingMovement.amount, existingMovement.to_account_id);
+      }
     }
 
     const allowedFields = [
@@ -180,13 +235,34 @@ router.put('/:id', (req, res) => {
     const updatedMovement = db.prepare('SELECT * FROM movements WHERE id = ?').get(id);
 
     // Aplicar el nuevo movimiento
+    const newAccount = db.prepare('SELECT * FROM accounts WHERE id = ?').get(updatedMovement.account_id);
+    
     if (updatedMovement.type === 'expense') {
-      db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(updatedMovement.amount, updatedMovement.account_id);
+      if (newAccount && newAccount.type === 'credit') {
+        db.prepare('UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?').run(updatedMovement.amount, updatedMovement.account_id);
+      } else {
+        db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(updatedMovement.amount, updatedMovement.account_id);
+      }
     } else if (updatedMovement.type === 'income') {
-      db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(updatedMovement.amount, updatedMovement.account_id);
+      if (newAccount && newAccount.type === 'credit') {
+        db.prepare('UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?').run(updatedMovement.amount, updatedMovement.account_id);
+      } else {
+        db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(updatedMovement.amount, updatedMovement.account_id);
+      }
     } else if (updatedMovement.type === 'transfer') {
-      db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(updatedMovement.amount, updatedMovement.account_id);
-      db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(updatedMovement.amount, updatedMovement.to_account_id);
+      const newToAccount = db.prepare('SELECT * FROM accounts WHERE id = ?').get(updatedMovement.to_account_id);
+      
+      if (newAccount && newAccount.type === 'credit') {
+        db.prepare('UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?').run(updatedMovement.amount, updatedMovement.account_id);
+      } else {
+        db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(updatedMovement.amount, updatedMovement.account_id);
+      }
+      
+      if (newToAccount && newToAccount.type === 'credit') {
+        db.prepare('UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?').run(updatedMovement.amount, updatedMovement.to_account_id);
+      } else {
+        db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(updatedMovement.amount, updatedMovement.to_account_id);
+      }
     }
 
     res.json({ 
@@ -211,13 +287,34 @@ router.delete('/:id', (req, res) => {
     }
 
     // Revertir el movimiento
+    const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(existingMovement.account_id);
+    
     if (existingMovement.type === 'expense') {
-      db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
+      if (account && account.type === 'credit') {
+        db.prepare('UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
+      } else {
+        db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
+      }
     } else if (existingMovement.type === 'income') {
-      db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
+      if (account && account.type === 'credit') {
+        db.prepare('UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
+      } else {
+        db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
+      }
     } else if (existingMovement.type === 'transfer') {
-      db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
-      db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(existingMovement.amount, existingMovement.to_account_id);
+      const toAccount = db.prepare('SELECT * FROM accounts WHERE id = ?').get(existingMovement.to_account_id);
+      
+      if (account && account.type === 'credit') {
+        db.prepare('UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
+      } else {
+        db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?').run(existingMovement.amount, existingMovement.account_id);
+      }
+      
+      if (toAccount && toAccount.type === 'credit') {
+        db.prepare('UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?').run(existingMovement.amount, existingMovement.to_account_id);
+      } else {
+        db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?').run(existingMovement.amount, existingMovement.to_account_id);
+      }
     }
 
     db.prepare('DELETE FROM movements WHERE id = ?').run(id);

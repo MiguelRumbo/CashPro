@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ScrollView, View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { ScrollView, View, StyleSheet, TouchableOpacity, Alert, Switch } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -24,6 +24,7 @@ interface Account {
   current_balance?: number;
   cut_off_day?: number;
   payment_due_day?: number;
+  include_in_balance?: number;
   created_at: string;
   updated_at: string;
 }
@@ -34,6 +35,7 @@ export default function AccountDetailScreen() {
   
   const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
+  const [includeInBalance, setIncludeInBalance] = useState(true);
 
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1c2e24' }, 'surface');
@@ -53,6 +55,7 @@ export default function AccountDetailScreen() {
       
       if (result.success) {
         setAccount(result.data);
+        setIncludeInBalance(result.data.include_in_balance === 1 || result.data.include_in_balance === undefined);
       } else {
         Alert.alert('Error', 'No se pudo cargar la cuenta');
         router.back();
@@ -88,6 +91,34 @@ export default function AccountDetailScreen() {
 
   const handleEdit = () => {
     router.push(`/accounts/edit-account?id=${accountId}`);
+  };
+
+  const handleToggleIncludeInBalance = async (value: boolean) => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/accounts/${accountId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ include_in_balance: value ? 1 : 0 }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setIncludeInBalance(value);
+        setAccount(result.data);
+        Alert.alert(
+          'Actualizado',
+          value 
+            ? 'Esta cuenta ahora se incluye en el balance general' 
+            : 'Esta cuenta ya no se incluye en el balance general'
+        );
+      } else {
+        Alert.alert('Error', result.error);
+      }
+    } catch (error) {
+      console.error('Error al actualizar cuenta:', error);
+      Alert.alert('Error', 'No se pudo actualizar la configuración');
+    }
   };
 
   const handleDelete = () => {
@@ -250,45 +281,69 @@ export default function AccountDetailScreen() {
 
         {/* Información de Crédito */}
         {isCredit && (
-          <View style={[styles.section, { backgroundColor: surfaceColor }]}>
-            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-              Información de Crédito
-            </ThemedText>
-
-            <View style={styles.infoRow}>
-              <ThemedText style={[styles.infoLabel, { color: textSub }]}>Límite de Crédito</ThemedText>
-              <ThemedText style={[styles.infoValue, { color: textMain }]}>
-                {formatCurrency(account.credit_limit || 0)}
+          <>
+            <View style={[styles.section, { backgroundColor: surfaceColor }]}>
+              <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
+                Información de Crédito
               </ThemedText>
+
+              <View style={styles.infoRow}>
+                <ThemedText style={[styles.infoLabel, { color: textSub }]}>Límite de Crédito</ThemedText>
+                <ThemedText style={[styles.infoValue, { color: textMain }]}>
+                  {formatCurrency(account.credit_limit || 0)}
+                </ThemedText>
+              </View>
+
+              <View style={[styles.divider, { backgroundColor: borderColor }]} />
+
+              <View style={styles.infoRow}>
+                <ThemedText style={[styles.infoLabel, { color: textSub }]}>Crédito Disponible</ThemedText>
+                <ThemedText style={[styles.infoValue, { color: primary }]}>
+                  {formatCurrency((account.credit_limit || 0) - (account.current_balance || 0))}
+                </ThemedText>
+              </View>
+
+              <View style={[styles.divider, { backgroundColor: borderColor }]} />
+
+              <View style={styles.infoRow}>
+                <ThemedText style={[styles.infoLabel, { color: textSub }]}>Día de Corte</ThemedText>
+                <ThemedText style={[styles.infoValue, { color: textMain }]}>
+                  {account.cut_off_day}
+                </ThemedText>
+              </View>
+
+              <View style={[styles.divider, { backgroundColor: borderColor }]} />
+
+              <View style={styles.infoRow}>
+                <ThemedText style={[styles.infoLabel, { color: textSub }]}>Día de Pago</ThemedText>
+                <ThemedText style={[styles.infoValue, { color: textMain }]}>
+                  {account.payment_due_day}
+                </ThemedText>
+              </View>
             </View>
 
-            <View style={[styles.divider, { backgroundColor: borderColor }]} />
-
-            <View style={styles.infoRow}>
-              <ThemedText style={[styles.infoLabel, { color: textSub }]}>Crédito Disponible</ThemedText>
-              <ThemedText style={[styles.infoValue, { color: primary }]}>
-                {formatCurrency((account.credit_limit || 0) - (account.current_balance || 0))}
-              </ThemedText>
+            {/* Toggle para incluir en balance */}
+            <View style={[styles.section, { backgroundColor: surfaceColor }]}>
+              <View style={styles.toggleRow}>
+                <View style={styles.toggleInfo}>
+                  <ThemedText style={[styles.toggleTitle, { color: textMain }]}>
+                    Incluir en Balance General
+                  </ThemedText>
+                  <ThemedText style={[styles.toggleDescription, { color: textSub }]}>
+                    {includeInBalance 
+                      ? 'La deuda de esta tarjeta se resta del balance total' 
+                      : 'La deuda de esta tarjeta no afecta el balance total'}
+                  </ThemedText>
+                </View>
+                <Switch
+                  value={includeInBalance}
+                  onValueChange={handleToggleIncludeInBalance}
+                  trackColor={{ false: '#d1d5db', true: primary }}
+                  thumbColor="#ffffff"
+                />
+              </View>
             </View>
-
-            <View style={[styles.divider, { backgroundColor: borderColor }]} />
-
-            <View style={styles.infoRow}>
-              <ThemedText style={[styles.infoLabel, { color: textSub }]}>Día de Corte</ThemedText>
-              <ThemedText style={[styles.infoValue, { color: textMain }]}>
-                {account.cut_off_day}
-              </ThemedText>
-            </View>
-
-            <View style={[styles.divider, { backgroundColor: borderColor }]} />
-
-            <View style={styles.infoRow}>
-              <ThemedText style={[styles.infoLabel, { color: textSub }]}>Día de Pago</ThemedText>
-              <ThemedText style={[styles.infoValue, { color: textMain }]}>
-                {account.payment_due_day}
-              </ThemedText>
-            </View>
-          </View>
+          </>
         )}
 
         {/* Botón Eliminar */}
@@ -389,6 +444,24 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  toggleInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  toggleTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  toggleDescription: {
+    fontSize: 13,
+    lineHeight: 18,
   },
   deleteButton: {
     flexDirection: 'row',

@@ -49,7 +49,8 @@ router.post('/', (req, res) => {
       current_balance = 0,
       cut_off_day,
       payment_due_day,
-      is_primary = 0
+      is_primary = 0,
+      include_in_balance
     } = req.body;
 
     // Validaciones básicas
@@ -67,28 +68,34 @@ router.post('/', (req, res) => {
       });
     }
 
-    // Ocultar número de tarjeta excepto últimos 4 dígitos
+    // Extraer solo los últimos 4 dígitos si se proporciona número de tarjeta
     let card_last_four = null;
     if (card_number && card_number.length >= 4) {
-      card_last_four = card_number.slice(-4);
+      const cleanNumber = card_number.replace(/\s/g, '');
+      card_last_four = cleanNumber.slice(-4);
     }
+
+    // Por defecto, cuentas de crédito no se incluyen en balance general
+    const shouldIncludeInBalance = include_in_balance !== undefined 
+      ? include_in_balance 
+      : (type === 'credit' ? 0 : 1);
 
     const stmt = db.prepare(`
       INSERT INTO accounts (
         name, type, balance, currency, icon, color,
-        clabe, bank_name, card_number, card_last_four,
+        clabe, bank_name, card_last_four,
         generates_interest, interest_rate,
         credit_limit, current_balance, cut_off_day, payment_due_day,
-        is_primary
+        is_primary, include_in_balance
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
       name, type, balance || 0, currency, icon, color,
-      clabe, bank_name, card_number, card_last_four,
+      clabe, bank_name, card_last_four,
       generates_interest, interest_rate,
       credit_limit, current_balance, cut_off_day, payment_due_day,
-      is_primary
+      is_primary, shouldIncludeInBalance
     );
 
     const newAccount = db.prepare('SELECT * FROM accounts WHERE id = ?').get(result.lastInsertRowid);
@@ -122,7 +129,7 @@ router.put('/:id', (req, res) => {
       'clabe', 'bank_name', 'card_number', 'card_last_four',
       'generates_interest', 'interest_rate',
       'credit_limit', 'current_balance', 'cut_off_day', 'payment_due_day',
-      'is_primary'
+      'is_primary', 'include_in_balance'
     ];
 
     const updateFields = [];

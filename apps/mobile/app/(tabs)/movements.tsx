@@ -1,5 +1,5 @@
 import { ScrollView, View, StyleSheet, TouchableOpacity, TextInput, RefreshControl, Alert } from 'react-native';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -18,6 +18,8 @@ type Transaction = {
   category_name?: string;
   category_icon?: string;
   category_color?: string;
+  account_name?: string;
+  account_type?: string;
   date: string;
   notes?: string;
 };
@@ -30,7 +32,9 @@ type Section = {
 export default function MovementsScreen() {
   const [activeFilter, setActiveFilter] = useState('Mes');
   const [movements, setMovements] = useState<Transaction[]>([]);
+  const [filteredMovements, setFilteredMovements] = useState<Transaction[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
   const backgroundColor = useThemeColor({ light: '#ffffff', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#112116' }, 'surface');
@@ -46,6 +50,10 @@ export default function MovementsScreen() {
     }, [])
   );
 
+  useEffect(() => {
+    applyFilters();
+  }, [movements, activeFilter, searchQuery]);
+
   const fetchMovements = async () => {
     try {
       const response = await fetch(`${API_CONFIG.BASE_URL}/movements`);
@@ -60,6 +68,65 @@ export default function MovementsScreen() {
     }
   };
 
+  const applyFilters = () => {
+    let filtered = [...movements];
+
+    // Filtrar por búsqueda
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(m => 
+        m.title.toLowerCase().includes(query) ||
+        (m.category_name && m.category_name.toLowerCase().includes(query)) ||
+        (m.notes && m.notes.toLowerCase().includes(query))
+      );
+    }
+
+    // Filtrar por fecha
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    switch (activeFilter) {
+      case 'Hoy':
+        filtered = filtered.filter(m => {
+          const movementDate = new Date(m.date);
+          const movementDay = new Date(movementDate.getFullYear(), movementDate.getMonth(), movementDate.getDate());
+          return movementDay.getTime() === today.getTime();
+        });
+        break;
+      
+      case 'Semana':
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        filtered = filtered.filter(m => {
+          const movementDate = new Date(m.date);
+          return movementDate >= weekAgo && movementDate <= now;
+        });
+        break;
+      
+      case 'Mes':
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        filtered = filtered.filter(m => {
+          const movementDate = new Date(m.date);
+          return movementDate >= monthStart && movementDate <= now;
+        });
+        break;
+      
+      case 'Año':
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        filtered = filtered.filter(m => {
+          const movementDate = new Date(m.date);
+          return movementDate >= yearStart && movementDate <= now;
+        });
+        break;
+      
+      case 'Personalizado':
+        // Por ahora mostrar todos, después se puede agregar un date picker
+        break;
+    }
+
+    setFilteredMovements(filtered);
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchMovements();
@@ -72,7 +139,7 @@ export default function MovementsScreen() {
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    movements.forEach((movement) => {
+    filteredMovements.forEach((movement) => {
       const movementDate = new Date(movement.date);
       let dateKey: string;
 
@@ -124,13 +191,9 @@ export default function MovementsScreen() {
       <View style={[styles.header, { backgroundColor, borderBottomColor: borderColor }]}>
         {/* Top Bar */}
         <View style={styles.topBar}>
-          <TouchableOpacity style={styles.headerButton}>
-            <IconSymbol size={24} name="arrow.backward" color={textMain} />
-          </TouchableOpacity>
+          <View style={styles.headerButton} />
           <ThemedText style={[styles.headerTitle, { color: textMain }]}>Movimientos</ThemedText>
-          <TouchableOpacity style={styles.headerButton}>
-            <IconSymbol size={24} name="plus.circle.fill" color={primary} />
-          </TouchableOpacity>
+          <View style={styles.headerButton} />
         </View>
 
         {/* Search Bar */}
@@ -140,7 +203,14 @@ export default function MovementsScreen() {
             style={[styles.searchInput, { color: textMain }]}
             placeholder="Buscar movimientos"
             placeholderTextColor={textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <IconSymbol size={18} name="xmark.circle.fill" color={textMuted} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Filter Chips */}
@@ -209,6 +279,7 @@ export default function MovementsScreen() {
                 const iconData = getMovementIcon(item);
                 const isIncome = item.type === 'income';
                 const isTransfer = item.type === 'transfer';
+                const isCreditCard = item.account_type === 'credit';
                 
                 return (
                   <View key={item.id}>
@@ -218,11 +289,19 @@ export default function MovementsScreen() {
                           <IconSymbol size={24} name={iconData.name as any} color={iconData.color} />
                         </View>
                         <View style={styles.transactionInfo}>
-                          <ThemedText style={[styles.transactionName, { color: textMain }]} numberOfLines={1}>
-                            {item.title}
-                          </ThemedText>
+                          <View style={styles.transactionTitleRow}>
+                            <ThemedText style={[styles.transactionName, { color: textMain }]} numberOfLines={1}>
+                              {item.title}
+                            </ThemedText>
+                            {isCreditCard && (
+                              <View style={styles.creditBadge}>
+                                <IconSymbol size={12} name="creditcard.fill" color="#dc2626" />
+                              </View>
+                            )}
+                          </View>
                           <ThemedText style={[styles.transactionMeta, { color: textMuted }]}>
                             {formatTime(item.date)} • {item.category_name || (isTransfer ? 'Transferencia' : 'Sin categoría')}
+                            {item.account_name && ` • ${item.account_name}`}
                           </ThemedText>
                         </View>
                       </View>
@@ -366,9 +445,23 @@ const styles = StyleSheet.create({
   transactionInfo: {
     flex: 1,
   },
+  transactionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   transactionName: {
     fontSize: 16,
     fontWeight: '600',
+    flex: 1,
+  },
+  creditBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#fee2e2',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   transactionMeta: {
     fontSize: 12,

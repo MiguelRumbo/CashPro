@@ -1,4 +1,4 @@
-import { ScrollView, View, StyleSheet, TouchableOpacity, Image, RefreshControl, Alert } from 'react-native';
+import { ScrollView, View, StyleSheet, TouchableOpacity, Image, RefreshControl } from 'react-native';
 import { useState, useCallback } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
@@ -31,6 +31,7 @@ export default function DashboardScreen() {
   const [totalBalance, setTotalBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
+  const [expenseChange, setExpenseChange] = useState(0);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,12 +54,52 @@ export default function DashboardScreen() {
         setTotalBalance(balanceResult.data.total_balance);
       }
 
-      // Obtener estadísticas de movimientos
-      const statsResponse = await fetch(`${API_CONFIG.BASE_URL}/movements/stats/summary`);
-      const statsResult = await statsResponse.json();
-      if (statsResult.success) {
-        setTotalIncome(statsResult.data.total_income);
-        setTotalExpense(statsResult.data.total_expense);
+      // Obtener movimientos
+      const movementsResponse = await fetch(`${API_CONFIG.BASE_URL}/movements`);
+      const movementsResult = await movementsResponse.json();
+      
+      if (movementsResult.success) {
+        const allMovements = movementsResult.data;
+        
+        // Filtrar movimientos del mes actual
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const currentMonthMovements = allMovements.filter((m: any) => {
+          const movementDate = new Date(m.date);
+          return movementDate >= monthStart && movementDate <= now;
+        });
+        
+        // Calcular estadísticas solo del mes actual
+        const expenses = currentMonthMovements.filter((m: any) => m.type === 'expense');
+        const incomes = currentMonthMovements.filter((m: any) => m.type === 'income');
+        
+        const totalExpense = expenses.reduce((sum: number, m: any) => sum + m.amount, 0);
+        const totalIncome = incomes.reduce((sum: number, m: any) => sum + m.amount, 0);
+        
+        setTotalIncome(totalIncome);
+        setTotalExpense(totalExpense);
+        
+        // Calcular cambio porcentual comparando con mes anterior
+        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        const lastMonthMovements = allMovements.filter((m: any) => {
+          const movementDate = new Date(m.date);
+          return movementDate >= lastMonthStart && movementDate <= lastMonthEnd;
+        });
+        
+        const lastMonthExpenses = lastMonthMovements.filter((m: any) => m.type === 'expense');
+        const lastMonthTotal = lastMonthExpenses.reduce((sum: number, m: any) => sum + m.amount, 0);
+        
+        let change = 0;
+        if (lastMonthTotal > 0) {
+          change = ((totalExpense - lastMonthTotal) / lastMonthTotal) * 100;
+        } else if (totalExpense > 0) {
+          change = 100;
+        }
+        setExpenseChange(change);
+        
+        // Calcular categorías solo del mes actual
+        calculateCategoryStats(expenses);
       }
 
       // Obtener cuentas
@@ -66,13 +107,6 @@ export default function DashboardScreen() {
       const accountsResult = await accountsResponse.json();
       if (accountsResult.success) {
         setAccounts(accountsResult.data.slice(0, 3)); // Solo las primeras 3
-      }
-
-      // Obtener movimientos para calcular categorías
-      const movementsResponse = await fetch(`${API_CONFIG.BASE_URL}/movements`);
-      const movementsResult = await movementsResponse.json();
-      if (movementsResult.success) {
-        calculateCategoryStats(movementsResult.data);
       }
     } catch (error) {
       console.error('Error al cargar datos:', error);
@@ -129,8 +163,7 @@ export default function DashboardScreen() {
     }
   };
 
-  const netChange = totalIncome - totalExpense;
-  const changePercentage = totalBalance > 0 ? ((netChange / totalBalance) * 100).toFixed(1) : '0.0';
+  const changePercentage = expenseChange.toFixed(1);
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
@@ -171,10 +204,10 @@ export default function DashboardScreen() {
               <ThemedText style={[styles.balanceAmount, { color: textMain }]}>
                 {formatCurrency(totalBalance)}
               </ThemedText>
-              <View style={[styles.badge, { backgroundColor: netChange >= 0 ? 'rgba(32, 223, 96, 0.1)' : 'rgba(239, 68, 68, 0.1)' }]}>
-                <IconSymbol size={14} name={netChange >= 0 ? "arrow.up.right" : "arrow.down.right"} color={netChange >= 0 ? primary : '#ef4444'} />
-                <ThemedText style={[styles.badgeText, { color: netChange >= 0 ? primary : '#ef4444' }]}>
-                  {netChange >= 0 ? '+' : ''}{changePercentage}% este mes
+              <View style={[styles.badge, { backgroundColor: expenseChange <= 0 ? 'rgba(32, 223, 96, 0.1)' : 'rgba(239, 68, 68, 0.1)' }]}>
+                <IconSymbol size={14} name={expenseChange <= 0 ? "arrow.down.right" : "arrow.up.right"} color={expenseChange <= 0 ? primary : '#ef4444'} />
+                <ThemedText style={[styles.badgeText, { color: expenseChange <= 0 ? primary : '#ef4444' }]}>
+                  {expenseChange > 0 ? '+' : ''}{changePercentage}% este mes
                 </ThemedText>
               </View>
             </View>

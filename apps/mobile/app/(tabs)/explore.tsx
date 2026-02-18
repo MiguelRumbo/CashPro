@@ -149,17 +149,40 @@ export default function ReportesScreen() {
       if (movementsResult.success) {
         const movements = movementsResult.data;
         
-        // Calcular total de gastos
-        const expenses = movements.filter((m: any) => m.type === 'expense');
-        const total = expenses.reduce((sum: number, m: any) => sum + m.amount, 0);
+        // Filtrar movimientos del mes actual
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const currentMonthMovements = movements.filter((m: any) => {
+          const movementDate = new Date(m.date);
+          return movementDate >= monthStart && movementDate <= now;
+        });
+        
+        // Calcular total de gastos del mes actual
+        const currentExpenses = currentMonthMovements.filter((m: any) => m.type === 'expense');
+        const total = currentExpenses.reduce((sum: number, m: any) => sum + m.amount, 0);
         setTotalExpense(total);
         
-        // Calcular cambio porcentual (mock por ahora)
-        const change = total > 0 ? -12 : 0;
+        // Calcular cambio porcentual comparando con mes anterior
+        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        const lastMonthMovements = movements.filter((m: any) => {
+          const movementDate = new Date(m.date);
+          return movementDate >= lastMonthStart && movementDate <= lastMonthEnd;
+        });
+        
+        const lastMonthExpenses = lastMonthMovements.filter((m: any) => m.type === 'expense');
+        const lastMonthTotal = lastMonthExpenses.reduce((sum: number, m: any) => sum + m.amount, 0);
+        
+        let change = 0;
+        if (lastMonthTotal > 0) {
+          change = ((total - lastMonthTotal) / lastMonthTotal) * 100;
+        } else if (total > 0) {
+          change = 100;
+        }
         setExpenseChange(change);
         
-        // Calcular estadísticas por categoría
-        calculateCategoryStats(expenses);
+        // Calcular estadísticas por categoría del mes actual
+        calculateCategoryStats(currentExpenses);
         
         // Calcular tendencia mensual
         calculateMonthlyTrend(movements);
@@ -270,12 +293,10 @@ export default function ReportesScreen() {
       {/* Header */}
       <View style={[styles.header, { backgroundColor }]}>
         <View style={styles.headerTop}>
-          <TouchableOpacity style={styles.headerButton}>
-            <IconSymbol size={24} name="arrow.backward" color={textMain} />
-          </TouchableOpacity>
+          <View style={styles.headerButton} />
           <ThemedText style={[styles.headerTitle, { color: textMain }]}>Reportes</ThemedText>
-          <TouchableOpacity style={styles.headerButton}>
-            <IconSymbol size={24} name="ellipsis" color={textMain} />
+          <TouchableOpacity style={styles.headerButton} onPress={() => router.push('/budgets')}>
+            <IconSymbol size={24} name="chart.pie.fill" color={textMain} />
           </TouchableOpacity>
         </View>
 

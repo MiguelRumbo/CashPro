@@ -301,13 +301,13 @@ export default function AddAccountScreen() {
             </View>
 
             <View style={styles.section}>
-              <ThemedText style={[styles.label, { color: textMain }]}>Nombre de la Tarjeta</ThemedText>
+              <ThemedText style={[styles.label, { color: textMain }]}>Banco</ThemedText>
               <TextInput
                 style={[styles.input, { backgroundColor: surfaceColor, color: textMain, borderColor }]}
-                placeholder="Ej: BBVA Débito"
+                placeholder="Ej: BBVA, Santander"
                 placeholderTextColor={textSub}
-                value={name}
-                onChangeText={setName}
+                value={bankName}
+                onChangeText={setBankName}
               />
             </View>
 

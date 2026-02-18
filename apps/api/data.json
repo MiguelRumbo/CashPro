@@ -49,7 +49,8 @@
       "payment_due_day": 22,
       "is_primary": 0,
       "created_at": "2026-02-18T21:13:31.223Z",
-      "updated_at": "2026-02-18T21:13:31.223Z"
+      "updated_at": "2026-02-18T22:31:08.287Z",
+      "include_in_balance": 1
     }
   ],
   "nextAccountId": 4,

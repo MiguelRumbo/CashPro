@@ -1,9 +1,8 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-// Obtener la IP local para desarrollo
-// IMPORTANTE: Cambia esta IP por la de tu computadora
-// Para obtenerla: Windows (ipconfig), Mac/Linux (ifconfig)
-const LOCAL_IP = '192.168.1.6'; // ⚠️ Tu IP local actual
+// Obtener la IP desde variables de entorno o usar valor por defecto
+const LOCAL_IP = Constants.expoConfig?.extra?.apiHost || '192.168.1.6';
 
 // Configuración de la API
 export const API_CONFIG = {

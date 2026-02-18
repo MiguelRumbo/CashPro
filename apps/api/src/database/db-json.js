@@ -97,10 +97,17 @@ const db = {
             let total_credit_debt = 0;
             
             data.accounts.forEach(account => {
+              // Solo incluir cuentas que tengan include_in_balance = 1 (o undefined para retrocompatibilidad)
+              const shouldInclude = account.include_in_balance === undefined || account.include_in_balance === 1;
+              
               if (account.type !== 'credit') {
-                total_balance += account.balance || 0;
+                if (shouldInclude) {
+                  total_balance += account.balance || 0;
+                }
               } else {
-                total_credit_debt += account.current_balance || 0;
+                if (shouldInclude) {
+                  total_credit_debt += account.current_balance || 0;
+                }
               }
             });
             
@@ -214,10 +221,10 @@ const db = {
           // Crear nueva cuenta
           const [
             name, type, balance, currency, icon, color,
-            clabe, bank_name, card_number, card_last_four,
+            clabe, bank_name, card_last_four,
             generates_interest, interest_rate,
             credit_limit, current_balance, cut_off_day, payment_due_day,
-            is_primary
+            is_primary, include_in_balance
           ] = params;
           
           const newAccount = {
@@ -230,7 +237,6 @@ const db = {
             color,
             clabe,
             bank_name,
-            card_number,
             card_last_four,
             generates_interest: generates_interest || 0,
             interest_rate: interest_rate || 0,
@@ -239,6 +245,7 @@ const db = {
             cut_off_day,
             payment_due_day,
             is_primary: is_primary || 0,
+            include_in_balance: include_in_balance !== undefined ? include_in_balance : (type === 'credit' ? 0 : 1),
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           };

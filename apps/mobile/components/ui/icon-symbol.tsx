@@ -24,14 +24,21 @@ const MAPPING = {
   'arrow.up': 'arrow-upward',
   'arrow.down': 'arrow-downward',
   'arrow.up.right': 'trending-up',
+  'arrow.left.arrow.right': 'swap-horiz',
   // Actions
   'plus': 'add',
   'minus': 'remove',
   'ellipsis': 'more-horiz',
+  'xmark': 'close',
+  'trash': 'delete-outline',
+  'trash.fill': 'delete',
   // Categories
   'fork.knife': 'restaurant',
   'car.fill': 'directions-car',
   'bag.fill': 'shopping-bag',
+  'briefcase.fill': 'work',
+  'gift.fill': 'card-giftcard',
+  'sparkles': 'auto-awesome',
   // Finance
   'building.columns.fill': 'account-balance',
   'banknote': 'payments',
@@ -47,6 +54,11 @@ const MAPPING = {
   'film': 'movie',
   'dumbbell': 'fitness-center',
   'cross.case.fill': 'local-pharmacy',
+  'tray': 'inbox',
+  'doc.text.fill': 'description',
+  'note.text': 'note',
+  'clock': 'schedule',
+  'exclamationmark.triangle.fill': 'warning',
   // Ajustes
   'gearshape.fill': 'settings',
   'pencil': 'edit',
