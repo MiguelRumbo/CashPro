@@ -5,6 +5,7 @@ const { initDatabase } = require('./database/db-json');
 const accountsRouter = require('./routes/accounts');
 const movementsRouter = require('./routes/movements');
 const budgetsRouter = require('./routes/budgets');
+const profileRouter = require('./routes/profile');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -28,6 +29,7 @@ app.get('/', (req, res) => {
 app.use('/api/accounts', accountsRouter);
 app.use('/api/movements', movementsRouter);
 app.use('/api/budgets', budgetsRouter);
+app.use('/api/profile', profileRouter);
 
 // Endpoint para resetear todos los datos
 app.post('/api/reset', (req, res) => {
@@ -46,6 +48,15 @@ app.post('/api/reset', (req, res) => {
       nextCategoryId: 1,
       budgets: [],
       nextBudgetId: 1,
+      user_profile: [{
+        id: 1,
+        name: 'Usuario',
+        email: '',
+        currency: 'MXN',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }],
+      nextProfileId: 2,
     };
     
     // Escribir datos limpios

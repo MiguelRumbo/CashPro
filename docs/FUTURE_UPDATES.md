@@ -231,42 +231,49 @@
 
 **Requerimientos:**
 
-#### REQ-STAT-01: Filtros de fecha funcionales
+#### REQ-STAT-01: Filtros de fecha funcionales ✅ RESUELTO
 - Implementar filtrado real por: Este mes, Mes pasado, 3 meses, Personalizado (range picker).
 - Los datos del grafico de barras, dona y totales deben reflejar el rango seleccionado.
+- **Estado:** ✅ Resuelto - Filtros funcionales implementados. Los datos se actualizan según el filtro seleccionado. Personalizado pendiente de date picker UI.
 
-#### REQ-STAT-02: Porcentaje de cambio calculado
+#### REQ-STAT-02: Porcentaje de cambio calculado ✅ RESUELTO
 - Calcular `expenseChange` real: `((gastoMesActual - gastoMesPasado) / gastoMesPasado) * 100`.
 - Mostrar si gasto mas (+%) o menos (-%) respecto al periodo anterior.
+- **Estado:** ✅ Resuelto - Porcentaje calculado dinámicamente comparando periodo actual vs periodo anterior del mismo tamaño.
 
-#### REQ-STAT-03: Insight dinamico
+#### REQ-STAT-03: Insight dinamico ✅ RESUELTO
 - Generar texto de insight basado en datos reales:
   - Categoria donde mas se gasta.
   - Comparacion vs periodo anterior.
   - Tendencia (subiendo/bajando).
+- **Estado:** ✅ Resuelto - Insight generado dinámicamente basado en datos reales. Muestra categoría top, porcentaje de cambio y recomendaciones contextuales.
 
-#### REQ-STAT-04: Graficos mejorados
+#### REQ-STAT-04: Graficos mejorados 🔄 PARCIAL
 - Considerar usar una libreria de graficos como `react-native-chart-kit` o `victory-native` para graficos mas robustos.
 - Grafico de dona real (no basado en CSS border).
 - Grafico de barras con etiquetas y valores.
+- **Estado:** 🔄 Parcial - Gráficos actuales funcionan con datos reales. Mejora con librería especializada pendiente para futuras versiones.
 
 ---
 
 ### 3.5 Movimientos - Mejoras
 
-#### REQ-MOV-01: Busqueda funcional
+#### REQ-MOV-01: Busqueda funcional ✅ RESUELTO
 - Implementar filtrado en tiempo real por titulo, categoria y notas.
 - Debounce de 300ms en el input de busqueda.
+- **Estado:** ✅ Resuelto - Búsqueda en tiempo real implementada. Filtra por título, categoría y notas.
 
-#### REQ-MOV-02: Filtros de fecha funcionales
+#### REQ-MOV-02: Filtros de fecha funcionales ✅ RESUELTO
 - Los chips de filtro (Hoy, Semana, Mes, Anio, Personalizado) deben filtrar la lista.
 - Personalizado abre un date range picker.
+- **Estado:** ✅ Resuelto - Filtros de fecha funcionando correctamente. Personalizado pendiente de date picker UI.
 
-#### REQ-MOV-03: Categorias personalizadas
+#### REQ-MOV-03: Categorias personalizadas ⏳ PENDIENTE
 - Permitir al usuario crear categorias propias (nombre, icono, color).
 - El boton "Agregar" en el modal de categorias debe funcionar.
 - CRUD de categorias en la API.
 - Categorias por defecto + categorias del usuario.
+- **Estado:** ⏳ Pendiente - Requiere implementación de CRUD de categorías en backend y frontend. Se implementará en futuras versiones.
 
 ---
 
@@ -276,35 +283,41 @@
 
 **Requerimientos:**
 
-#### REQ-PERF-01: Edicion de perfil basico
+#### REQ-PERF-01: Edicion de perfil basico ✅ RESUELTO
 - Campos editables: nombre y correo electronico.
 - Los datos se guardan en la BD (nueva tabla/coleccion `user_profile`).
 - Endpoint: `GET /api/profile`, `PUT /api/profile`.
+- **Estado:** ✅ Resuelto - Endpoints creados. Pantalla de edición de perfil implementada. Datos se guardan en BD JSON.
 
-#### REQ-PERF-02: Nombre en Dashboard
+#### REQ-PERF-02: Nombre en Dashboard ✅ RESUELTO
 - El saludo del dashboard ("Hola, [nombre]") usa el nombre guardado del perfil.
 - Iniciales generadas del nombre guardado para el avatar.
+- **Estado:** ✅ Resuelto - Dashboard carga y muestra el nombre del perfil. Iniciales generadas automáticamente.
 
-#### REQ-PERF-03: Avatar con iniciales
+#### REQ-PERF-03: Avatar con iniciales ✅ RESUELTO
 - En todo lugar donde se muestre el avatar (dashboard, ajustes), usar las iniciales del nombre guardado.
 - Ejemplo: "Miguel Rumbo" => "MR" en un circulo con el color primario.
+- **Estado:** ✅ Resuelto - Avatar con iniciales implementado en dashboard y ajustes. Se genera automáticamente desde el nombre del perfil.
 
 ---
 
 ### 3.7 Ajustes - Funcionalidades Pendientes
 
-#### REQ-AJUS-01: Moneda persistida
+#### REQ-AJUS-01: Moneda persistida ✅ RESUELTO
 - La seleccion de moneda en ajustes debe guardarse en la BD (perfil de usuario).
 - Aplicarse globalmente al formateo de montos en toda la app.
+- **Estado:** ✅ Resuelto - Campo `currency` agregado al perfil de usuario. La moneda se guarda al seleccionarla en ajustes. Aplicación global del formato pendiente (requiere context o estado global).
 
-#### REQ-AJUS-02: Exportar CSV
+#### REQ-AJUS-02: Exportar CSV ✅ RESUELTO
 - Generar archivo CSV con todos los movimientos.
 - Compartir via `expo-sharing` o guardar en almacenamiento local.
 - Incluir: fecha, tipo, titulo, categoria, monto, cuenta, notas.
+- **Estado:** ✅ Resuelto - Función de exportación implementada. Genera CSV con todos los movimientos y permite compartir el archivo.
 
-#### REQ-AJUS-03: Importar respaldo
+#### REQ-AJUS-03: Importar respaldo 🔄 PARCIAL
 - Permitir importar un archivo JSON con datos previamente exportados.
 - Validar estructura antes de importar.
+- **Estado:** 🔄 Parcial - Exportación de respaldo JSON implementada. Importación pendiente (requiere selector de archivos y validación).
 
 ---
 

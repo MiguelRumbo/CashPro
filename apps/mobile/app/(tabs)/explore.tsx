@@ -8,7 +8,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { API_CONFIG } from '@/config/api';
 import { formatCurrency } from '@/utils/format';
 
-const DATE_FILTERS = ['Este mes', 'Mes pasado', '3 meses'];
+const DATE_FILTERS = ['Este mes', 'Mes pasado', '3 meses', 'Personalizado'];
 
 type CategoryStat = {
   category_name: string;
@@ -27,15 +27,10 @@ type MonthlyTrend = {
   weekend?: boolean;
 };
 
-const BAR_DATA: MonthlyTrend[] = [
-  { label: 'Lun', amount: 0, height: 40, active: false },
-  { label: 'Mar', amount: 0, height: 65, active: false },
-  { label: 'Mié', amount: 0, height: 85, active: true },
-  { label: 'Jue', amount: 0, height: 30, active: false },
-  { label: 'Vie', amount: 0, height: 55, active: false },
-  { label: 'Sáb', amount: 0, height: 20, active: false, weekend: true },
-  { label: 'Dom', amount: 0, height: 25, active: false, weekend: true },
-];
+type DateRange = {
+  start: Date;
+  end: Date;
+};
 
 // Donut chart using border-based segments
 function DonutChart({ 
@@ -122,9 +117,12 @@ export default function ReportesScreen() {
   const [activeFilter, setActiveFilter] = useState('Este mes');
   const [totalExpense, setTotalExpense] = useState(0);
   const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([]);
-  const [monthlyTrend, setMonthlyTrend] = useState<MonthlyTrend[]>(BAR_DATA);
+  const [monthlyTrend, setMonthlyTrend] = useState<MonthlyTrend[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [expenseChange, setExpenseChange] = useState(0);
+  const [dateRange, setDateRange] = useState<DateRange | null>(null);
+  const [topCategory, setTopCategory] = useState<string>('');
+  const [insightText, setInsightText] = useState<string>('');
   
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c22' }, 'surface');
@@ -140,8 +138,46 @@ export default function ReportesScreen() {
 
   const BUDGET = 1500; // Mock - mantener como constante
 
-  const fetchData = async () => {
+  const getDateRangeForFilter = (filter: string): DateRange => {
+    const now = new Date();
+    const start = new Date();
+    const end = new Date();
+
+    switch (filter) {
+      case 'Este mes':
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case 'Mes pasado':
+        start.setMonth(now.getMonth() - 1);
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
+        end.setMonth(now.getMonth() - 1);
+        end.setDate(new Date(now.getFullYear(), now.getMonth(), 0).getDate());
+        end.setHours(23, 59, 59, 999);
+        break;
+      case '3 meses':
+        start.setMonth(now.getMonth() - 2);
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      default:
+        // Este mes por defecto
+        start.setDate(1);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+    }
+
+    return { start, end };
+  };
+
+  const fetchData = async (customRange?: DateRange) => {
     try {
+      // Determinar el rango de fechas a usar
+      const range = customRange || dateRange || getDateRangeForFilter(activeFilter);
+      
       // Obtener movimientos
       const movementsResponse = await fetch(`${API_CONFIG.BASE_URL}/movements`);
       const movementsResult = await movementsResponse.json();
@@ -149,43 +185,48 @@ export default function ReportesScreen() {
       if (movementsResult.success) {
         const movements = movementsResult.data;
         
-        // Filtrar movimientos del mes actual
-        const now = new Date();
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const currentMonthMovements = movements.filter((m: any) => {
+        // Filtrar movimientos según el rango seleccionado
+        const filteredMovements = movements.filter((m: any) => {
           const movementDate = new Date(m.date);
-          return movementDate >= monthStart && movementDate <= now;
+          return movementDate >= range.start && movementDate <= range.end;
         });
         
-        // Calcular total de gastos del mes actual
-        const currentExpenses = currentMonthMovements.filter((m: any) => m.type === 'expense');
+        // Calcular total de gastos del periodo
+        const currentExpenses = filteredMovements.filter((m: any) => m.type === 'expense');
         const total = currentExpenses.reduce((sum: number, m: any) => sum + m.amount, 0);
         setTotalExpense(total);
         
-        // Calcular cambio porcentual comparando con mes anterior
-        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-        const lastMonthMovements = movements.filter((m: any) => {
+        // Calcular cambio porcentual comparando con periodo anterior
+        const periodDays = Math.ceil((range.end.getTime() - range.start.getTime()) / (1000 * 60 * 60 * 24));
+        const previousStart = new Date(range.start);
+        previousStart.setDate(previousStart.getDate() - periodDays);
+        const previousEnd = new Date(range.start);
+        previousEnd.setDate(previousEnd.getDate() - 1);
+        
+        const previousMovements = movements.filter((m: any) => {
           const movementDate = new Date(m.date);
-          return movementDate >= lastMonthStart && movementDate <= lastMonthEnd;
+          return movementDate >= previousStart && movementDate <= previousEnd;
         });
         
-        const lastMonthExpenses = lastMonthMovements.filter((m: any) => m.type === 'expense');
-        const lastMonthTotal = lastMonthExpenses.reduce((sum: number, m: any) => sum + m.amount, 0);
+        const previousExpenses = previousMovements.filter((m: any) => m.type === 'expense');
+        const previousTotal = previousExpenses.reduce((sum: number, m: any) => sum + m.amount, 0);
         
         let change = 0;
-        if (lastMonthTotal > 0) {
-          change = ((total - lastMonthTotal) / lastMonthTotal) * 100;
+        if (previousTotal > 0) {
+          change = ((total - previousTotal) / previousTotal) * 100;
         } else if (total > 0) {
           change = 100;
         }
         setExpenseChange(change);
         
-        // Calcular estadísticas por categoría del mes actual
-        calculateCategoryStats(currentExpenses);
+        // Calcular estadísticas por categoría del periodo
+        const categoryData = calculateCategoryStats(currentExpenses);
         
-        // Calcular tendencia mensual
-        calculateMonthlyTrend(movements);
+        // Generar insight dinámico
+        generateInsight(categoryData, change, activeFilter);
+        
+        // Calcular tendencia del periodo
+        calculateMonthlyTrend(filteredMovements, range);
       }
     } catch (error) {
       console.error('Error al cargar datos:', error);
@@ -226,60 +267,140 @@ export default function ReportesScreen() {
       .slice(0, 4);
     
     setCategoryStats(stats);
+    
+    // Guardar la categoría top para el insight
+    if (stats.length > 0) {
+      setTopCategory(stats[0].category_name);
+    }
+    
+    return stats;
   };
 
-  const calculateMonthlyTrend = (movements: any[]) => {
-    const now = new Date();
-    const currentDay = now.getDay(); // 0 = Domingo, 1 = Lunes, etc.
-    const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const generateInsight = (categories: CategoryStat[], changePercent: number, filter: string) => {
+    if (categories.length === 0) {
+      setInsightText('No hay gastos registrados en este periodo. ¡Comienza a registrar tus movimientos para obtener insights personalizados!');
+      return;
+    }
+
+    const topCat = categories[0];
+    const changeText = changePercent > 0 
+      ? `${Math.abs(changePercent).toFixed(1)}% más` 
+      : `${Math.abs(changePercent).toFixed(1)}% menos`;
     
-    // Crear array de los últimos 7 días
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(now);
-      date.setDate(date.getDate() - (6 - i));
-      return date;
-    });
+    const periodText = filter === 'Este mes' ? 'el mes anterior' : 'el periodo anterior';
+    
+    let insight = '';
+    
+    if (Math.abs(changePercent) < 5) {
+      insight = `Tu gasto se mantiene estable. La categoría donde más gastas es ${topCat.category_name} con ${formatCurrency(topCat.total)} (${topCat.percentage.toFixed(1)}% del total).`;
+    } else if (changePercent < 0) {
+      insight = `Has gastado un ${changeText} en comparación con ${periodText}. ¡Excelente control! La categoría donde más gastas es ${topCat.category_name}.`;
+    } else {
+      insight = `Has gastado un ${changeText} en comparación con ${periodText}. La categoría donde más gastas es ${topCat.category_name} con ${formatCurrency(topCat.total)}. Considera revisar estos gastos.`;
+    }
+    
+    setInsightText(insight);
+  };
 
-    // Calcular gastos por día
-    const dailyExpenses = last7Days.map((date, index) => {
-      const dayStart = new Date(date);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(date);
-      dayEnd.setHours(23, 59, 59, 999);
+  const calculateMonthlyTrend = (movements: any[], range: DateRange) => {
+    // Determinar si mostrar días o semanas según el rango
+    const periodDays = Math.ceil((range.end.getTime() - range.start.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (periodDays <= 31) {
+      // Mostrar últimos 7 días
+      const now = range.end;
+      const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
       
-      const dayExpenses = movements.filter((m: any) => {
-        if (m.type !== 'expense') return false;
-        const movementDate = new Date(m.date);
-        return movementDate >= dayStart && movementDate <= dayEnd;
+      const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const date = new Date(now);
+        date.setDate(date.getDate() - (6 - i));
+        return date;
       });
-      
-      const total = dayExpenses.reduce((sum: number, m: any) => sum + m.amount, 0);
-      const dayOfWeek = date.getDay();
-      const isToday = index === 6;
-      
-      return {
-        label: daysOfWeek[dayOfWeek],
-        amount: total,
-        height: 0,
-        active: isToday,
-        weekend: dayOfWeek === 0 || dayOfWeek === 6,
-      };
-    });
 
-    // Calcular alturas relativas
-    const maxAmount = Math.max(...dailyExpenses.map(d => d.amount), 1);
-    const trendData = dailyExpenses.map(day => ({
-      ...day,
-      height: maxAmount > 0 ? (day.amount / maxAmount) * 100 : 20,
-    }));
+      const dailyExpenses = last7Days.map((date, index) => {
+        const dayStart = new Date(date);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(date);
+        dayEnd.setHours(23, 59, 59, 999);
+        
+        const dayExpenses = movements.filter((m: any) => {
+          if (m.type !== 'expense') return false;
+          const movementDate = new Date(m.date);
+          return movementDate >= dayStart && movementDate <= dayEnd;
+        });
+        
+        const total = dayExpenses.reduce((sum: number, m: any) => sum + m.amount, 0);
+        const dayOfWeek = date.getDay();
+        const isToday = date.toDateString() === now.toDateString();
+        
+        return {
+          label: daysOfWeek[dayOfWeek],
+          amount: total,
+          height: 0,
+          active: isToday,
+          weekend: dayOfWeek === 0 || dayOfWeek === 6,
+        };
+      });
 
-    setMonthlyTrend(trendData);
+      const maxAmount = Math.max(...dailyExpenses.map(d => d.amount), 1);
+      const trendData = dailyExpenses.map(day => ({
+        ...day,
+        height: maxAmount > 0 ? (day.amount / maxAmount) * 100 : 20,
+      }));
+
+      setMonthlyTrend(trendData);
+    } else {
+      // Mostrar por semanas para periodos más largos
+      const weeks = Math.min(Math.ceil(periodDays / 7), 7);
+      const weeklyData: MonthlyTrend[] = [];
+      
+      for (let i = 0; i < weeks; i++) {
+        const weekEnd = new Date(range.end);
+        weekEnd.setDate(weekEnd.getDate() - (i * 7));
+        const weekStart = new Date(weekEnd);
+        weekStart.setDate(weekStart.getDate() - 6);
+        
+        const weekExpenses = movements.filter((m: any) => {
+          if (m.type !== 'expense') return false;
+          const movementDate = new Date(m.date);
+          return movementDate >= weekStart && movementDate <= weekEnd;
+        });
+        
+        const total = weekExpenses.reduce((sum: number, m: any) => sum + m.amount, 0);
+        
+        weeklyData.unshift({
+          label: `S${weeks - i}`,
+          amount: total,
+          height: 0,
+          active: i === 0,
+          weekend: false,
+        });
+      }
+      
+      const maxAmount = Math.max(...weeklyData.map(w => w.amount), 1);
+      const trendData = weeklyData.map(week => ({
+        ...week,
+        height: maxAmount > 0 ? (week.amount / maxAmount) * 100 : 20,
+      }));
+      
+      setMonthlyTrend(trendData);
+    }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchData();
     setRefreshing(false);
+  };
+
+  const handleFilterChange = (filter: string) => {
+    setActiveFilter(filter);
+    if (filter !== 'Personalizado') {
+      const range = getDateRangeForFilter(filter);
+      setDateRange(range);
+      fetchData(range);
+    }
+    // TODO: Para "Personalizado", abrir date picker
   };
 
   useFocusEffect(
@@ -315,7 +436,7 @@ export default function ReportesScreen() {
                   ? styles.filterPillActive
                   : { backgroundColor: chipBg, borderColor: chipBorder, borderWidth: 1 },
               ]}
-              onPress={() => setActiveFilter(filter)}
+              onPress={() => handleFilterChange(filter)}
             >
               <ThemedText
                 style={[
@@ -483,12 +604,10 @@ export default function ReportesScreen() {
           </View>
           <View style={styles.insightContent}>
             <ThemedText style={[styles.insightTitle, { color: textMain }]}>
-              Salud Financiera: Excelente
+              {expenseChange <= -5 ? 'Salud Financiera: Excelente' : expenseChange >= 10 ? 'Salud Financiera: Atención' : 'Salud Financiera: Buena'}
             </ThemedText>
             <ThemedText style={[styles.insightText, { color: textMuted }]}>
-              Has gastado un{' '}
-              <ThemedText style={{ fontWeight: '700', color: primary }}>12% menos</ThemedText>
-              {' '}en comida comparado con el mes anterior. ¡Sigue así para alcanzar tu meta de ahorro!
+              {insightText || 'Cargando análisis...'}
             </ThemedText>
           </View>
         </View>

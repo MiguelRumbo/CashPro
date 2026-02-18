@@ -1,6 +1,7 @@
 import { ScrollView, View, StyleSheet, TouchableOpacity, Switch, Modal, Alert } from 'react-native';
-import { useState } from 'react';
-import { router } from 'expo-router';
+import { useState, useEffect } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -73,6 +74,8 @@ export default function SettingsScreen() {
   const [notifications, setNotifications] = useState(true);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState('MXN - Peso Mexicano');
+  const [profileName, setProfileName] = useState('Usuario');
+  const [profileEmail, setProfileEmail] = useState('');
 
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1c2b21' }, 'surface');
@@ -89,6 +92,81 @@ export default function SettingsScreen() {
     'USD - Dólar Estadounidense',
     'EUR - Euro',
   ];
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfile();
+    }, [])
+  );
+
+  const fetchProfile = async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/profile`);
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setProfileName(result.data.name || 'Usuario');
+        setProfileEmail(result.data.email || '');
+        
+        // Cargar moneda guardada
+        if (result.data.currency) {
+          const currencyMap: { [key: string]: string } = {
+            'MXN': 'MXN - Peso Mexicano',
+            'USD': 'USD - Dólar Estadounidense',
+            'EUR': 'EUR - Euro',
+          };
+          setSelectedCurrency(currencyMap[result.data.currency] || 'MXN - Peso Mexicano');
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar perfil:', error);
+    }
+  };
+
+  const handleCurrencyChange = async (currency: string) => {
+    setSelectedCurrency(currency);
+    setShowCurrencyModal(false);
+    
+    // Guardar en el perfil
+    try {
+      // Extraer código de moneda (MXN, USD, EUR)
+      const currencyCode = currency.split(' - ')[0];
+      
+      const response = await fetch(`${API_CONFIG.BASE_URL}/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: profileName,
+          email: profileEmail,
+          currency: currencyCode,
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        Alert.alert('Error', 'No se pudo guardar la moneda');
+      }
+    } catch (error) {
+      console.error('Error al guardar moneda:', error);
+      Alert.alert('Error', 'No se pudo conectar con el servidor');
+    }
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return 'U';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
 
   const handleDeleteAllData = () => {
     Alert.alert(
@@ -121,6 +199,111 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleExportCSV = async () => {
+    try {
+      // Obtener todos los movimientos
+      const response = await fetch(`${API_CONFIG.BASE_URL}/movements`);
+      const result = await response.json();
+      
+      if (!result.success) {
+        Alert.alert('Error', 'No se pudieron obtener los movimientos');
+        return;
+      }
+      
+      const movements = result.data;
+      
+      if (movements.length === 0) {
+        Alert.alert('Sin datos', 'No hay movimientos para exportar');
+        return;
+      }
+      
+      // Crear CSV
+      const headers = 'Fecha,Tipo,Título,Categoría,Monto,Cuenta,Notas\n';
+      const rows = movements.map((m: any) => {
+        const date = new Date(m.date).toLocaleDateString('es-MX');
+        const type = m.type === 'expense' ? 'Gasto' : m.type === 'income' ? 'Ingreso' : 'Transferencia';
+        const title = m.title || '';
+        const category = m.category_name || '';
+        const amount = m.amount || 0;
+        const account = m.account_name || '';
+        const notes = (m.notes || '').replace(/,/g, ';'); // Reemplazar comas en notas
+        
+        return `${date},${type},${title},${category},${amount},${account},${notes}`;
+      }).join('\n');
+      
+      const csv = headers + rows;
+      
+      // Guardar archivo
+      const FileSystem = require('expo-file-system');
+      const Sharing = require('expo-sharing');
+      
+      const fileName = `cashpro_movimientos_${new Date().toISOString().split('T')[0]}.csv`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+      
+      await FileSystem.writeAsStringAsync(fileUri, csv, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      
+      // Compartir archivo
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri);
+      } else {
+        Alert.alert('Éxito', `Archivo guardado en: ${fileUri}`);
+      }
+    } catch (error) {
+      console.error('Error al exportar CSV:', error);
+      Alert.alert('Error', 'No se pudo exportar el archivo');
+    }
+  };
+
+  const handleExportBackup = async () => {
+    try {
+      // Obtener todos los datos
+      const [accountsRes, movementsRes, budgetsRes] = await Promise.all([
+        fetch(`${API_CONFIG.BASE_URL}/accounts`),
+        fetch(`${API_CONFIG.BASE_URL}/movements`),
+        fetch(`${API_CONFIG.BASE_URL}/budgets`),
+      ]);
+      
+      const [accountsData, movementsData, budgetsData] = await Promise.all([
+        accountsRes.json(),
+        movementsRes.json(),
+        budgetsRes.json(),
+      ]);
+      
+      const backup = {
+        version: '1.0.0',
+        exportDate: new Date().toISOString(),
+        data: {
+          accounts: accountsData.success ? accountsData.data : [],
+          movements: movementsData.success ? movementsData.data : [],
+          budgets: budgetsData.success ? budgetsData.data : [],
+        },
+      };
+      
+      // Guardar archivo JSON
+      const FileSystem = require('expo-file-system');
+      const Sharing = require('expo-sharing');
+      
+      const fileName = `cashpro_backup_${new Date().toISOString().split('T')[0]}.json`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+      
+      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(backup, null, 2), {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      
+      // Compartir archivo
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri);
+      } else {
+        Alert.alert('Éxito', `Respaldo guardado en: ${fileUri}`);
+      }
+    } catch (error) {
+      console.error('Error al exportar respaldo:', error);
+      Alert.alert('Error', 'No se pudo crear el respaldo');
+    }
+  };
+
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
       {/* Header */}
@@ -139,18 +322,23 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* User Profile Card */}
-        <View style={[styles.profileCard, { backgroundColor: surfaceColor }]}>
+        <TouchableOpacity 
+          style={[styles.profileCard, { backgroundColor: surfaceColor }]}
+          onPress={() => router.push('/settings/edit-profile')}
+        >
           <View style={styles.profileAvatar}>
-            <ThemedText style={styles.profileInitials}>MR</ThemedText>
+            <ThemedText style={styles.profileInitials}>{getInitials(profileName)}</ThemedText>
           </View>
           <View style={styles.profileInfo}>
-            <ThemedText style={[styles.profileName, { color: textMain }]}>Miguel Rumbo</ThemedText>
-            <ThemedText style={[styles.profileEmail, { color: textMuted }]}>miguel.rumbo@cashpro.com</ThemedText>
+            <ThemedText style={[styles.profileName, { color: textMain }]}>{profileName}</ThemedText>
+            <ThemedText style={[styles.profileEmail, { color: textMuted }]}>
+              {profileEmail || 'Toca para editar perfil'}
+            </ThemedText>
           </View>
-          <TouchableOpacity style={[styles.editButton, { backgroundColor: editButtonBg }]}>
+          <View style={[styles.editButton, { backgroundColor: editButtonBg }]}>
             <IconSymbol size={20} name="pencil" color={textMuted} />
-          </TouchableOpacity>
-        </View>
+          </View>
+        </TouchableOpacity>
 
         {/* PREFERENCIAS */}
         <ThemedText style={styles.sectionLabel}>PREFERENCIAS</ThemedText>
@@ -230,26 +418,46 @@ export default function SettingsScreen() {
         {/* DATOS */}
         <ThemedText style={styles.sectionLabel}>DATOS</ThemedText>
         <View style={[styles.sectionCard, { backgroundColor: surfaceColor }]}>
-          <SettingsRow
-            icon="arrow.down.circle.fill"
-            iconColor={dataIconColor}
-            iconBg={dataIconBg}
-            title="Exportar CSV"
-            hasArrow
-            textMain={textMain}
-            textMuted={textMuted}
-            borderColor={borderColor}
-          />
-          <SettingsRow
-            icon="arrow.up.circle.fill"
-            iconColor={dataIconColor}
-            iconBg={dataIconBg}
-            title="Importar Respaldo"
-            hasArrow
-            textMain={textMain}
-            textMuted={textMuted}
-            borderColor={borderColor}
-          />
+          <TouchableOpacity
+            style={[styles.settingsRow, { borderBottomWidth: 1, borderBottomColor: borderColor }]}
+            onPress={handleExportCSV}
+          >
+            <View style={styles.settingsRowLeft}>
+              <View style={[styles.settingsIcon, { backgroundColor: dataIconBg }]}>
+                <IconSymbol size={22} name="arrow.down.circle.fill" color={dataIconColor} />
+              </View>
+              <View>
+                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>
+                  Exportar CSV
+                </ThemedText>
+                <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
+                  Movimientos en formato CSV
+                </ThemedText>
+              </View>
+            </View>
+            <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.settingsRow, { borderBottomWidth: 1, borderBottomColor: borderColor }]}
+            onPress={handleExportBackup}
+          >
+            <View style={styles.settingsRowLeft}>
+              <View style={[styles.settingsIcon, { backgroundColor: dataIconBg }]}>
+                <IconSymbol size={22} name="arrow.up.circle.fill" color={dataIconColor} />
+              </View>
+              <View>
+                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>
+                  Exportar Respaldo
+                </ThemedText>
+                <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
+                  Todos los datos en JSON
+                </ThemedText>
+              </View>
+            </View>
+            <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />
+          </TouchableOpacity>
+          
           <TouchableOpacity
             style={[styles.settingsRow]}
             onPress={handleDeleteAllData}
@@ -309,10 +517,7 @@ export default function SettingsScreen() {
                     { borderBottomColor: borderColor },
                     currency === currencies[currencies.length - 1] && { borderBottomWidth: 0 },
                   ]}
-                  onPress={() => {
-                    setSelectedCurrency(currency);
-                    setShowCurrencyModal(false);
-                  }}
+                  onPress={() => handleCurrencyChange(currency)}
                 >
                   <ThemedText style={[styles.currencyText, { color: textMain }]}>
                     {currency}

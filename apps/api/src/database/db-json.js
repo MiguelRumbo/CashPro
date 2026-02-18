@@ -13,6 +13,8 @@ const initialData = {
   nextCategoryId: 1,
   budgets: [],
   nextBudgetId: 1,
+  user_profile: [],
+  nextProfileId: 1,
 };
 
 // Leer la base de datos
@@ -57,6 +59,9 @@ const db = {
         if (!data.budgets) {
           data.budgets = [];
         }
+        if (!data.user_profile) {
+          data.user_profile = [];
+        }
         
         // Para movimientos
         if (sql.includes('FROM movements')) {
@@ -74,6 +79,11 @@ const db = {
           });
         }
         
+        // Para perfil de usuario
+        if (sql.includes('FROM user_profile')) {
+          return data.user_profile;
+        }
+        
         // Para cuentas - Ordenar por is_primary DESC, created_at DESC
         return [...data.accounts].sort((a, b) => {
           if (a.is_primary !== b.is_primary) {
@@ -89,6 +99,7 @@ const db = {
         if (!data.accounts) data.accounts = [];
         if (!data.movements) data.movements = [];
         if (!data.budgets) data.budgets = [];
+        if (!data.user_profile) data.user_profile = [];
         
         if (sql.includes('stats') || sql.includes('SUM')) {
           // Calcular estadísticas de cuentas
@@ -143,6 +154,11 @@ const db = {
         // Buscar presupuesto por ID
         if (sql.includes('FROM budgets')) {
           return data.budgets.find(b => b.id === parseInt(id));
+        }
+        
+        // Buscar perfil por ID
+        if (sql.includes('FROM user_profile')) {
+          return data.user_profile.find(p => p.id === parseInt(id));
         }
         
         // Buscar cuenta por ID
@@ -218,6 +234,30 @@ const db = {
           return { lastInsertRowid: newBudget.id };
         }
         
+        if (sql.includes('INSERT INTO user_profile')) {
+          // Crear perfil de usuario
+          const [name, email, currency] = params;
+          
+          // Asegurar que user_profile existe
+          if (!data.user_profile) {
+            data.user_profile = [];
+          }
+          
+          const newProfile = {
+            id: data.nextProfileId++,
+            name,
+            email: email || '',
+            currency: currency || 'MXN',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+          
+          data.user_profile.push(newProfile);
+          writeDB(data);
+          
+          return { lastInsertRowid: newProfile.id };
+        }
+        
         if (sql.includes('INSERT INTO accounts')) {
           // Crear nueva cuenta
           const [
@@ -260,28 +300,66 @@ const db = {
           const id = params[params.length - 1];
           const accountIndex = data.accounts.findIndex(a => a.id === parseInt(id));
           
+          console.log('=== UPDATE ACCOUNTS DEBUG ===');
+          console.log('SQL:', sql);
+          console.log('Params:', params);
+          console.log('ID:', id);
+          console.log('Account Index:', accountIndex);
+          
           if (accountIndex !== -1) {
             // Parsear los campos del UPDATE
             const updateMatch = sql.match(/SET (.+) WHERE/);
             if (updateMatch) {
-              const fields = updateMatch[1].split(',').map(f => f.trim().split('=')[0].trim());
-              fields.forEach((field, index) => {
-                if (field !== 'updated_at') {
-                  // Para balance, sumar o restar
-                  if (field === 'balance' && sql.includes('balance -')) {
-                    data.accounts[accountIndex].balance -= params[0];
-                  } else if (field === 'balance' && sql.includes('balance +')) {
-                    data.accounts[accountIndex].balance += params[0];
-                  } else {
-                    data.accounts[accountIndex][field] = params[index];
-                  }
+              const setPart = updateMatch[1];
+              const assignments = setPart.split(',').map(s => s.trim());
+              
+              console.log('Assignments:', assignments);
+              
+              let paramIndex = 0;
+              assignments.forEach(assignment => {
+                const parts = assignment.split('=').map(s => s.trim());
+                const field = parts[0];
+                const operation = parts[1];
+                
+                console.log(`Processing: ${field} = ${operation}, param: ${params[paramIndex]}`);
+                
+                if (field === 'updated_at' && operation === 'CURRENT_TIMESTAMP') {
+                  data.accounts[accountIndex].updated_at = new Date().toISOString();
+                  console.log('Set updated_at to current timestamp');
+                } else if (field === 'updated_at' && operation === '?') {
+                  data.accounts[accountIndex].updated_at = params[paramIndex];
+                  paramIndex++;
+                  console.log('Set updated_at from param');
+                } else if (operation && operation.includes('balance -')) {
+                  // Restar del balance
+                  data.accounts[accountIndex].balance -= params[paramIndex];
+                  paramIndex++;
+                } else if (operation && operation.includes('balance +')) {
+                  // Sumar al balance
+                  data.accounts[accountIndex].balance += params[paramIndex];
+                  paramIndex++;
+                } else if (operation && operation.includes('current_balance -')) {
+                  // Restar del current_balance
+                  data.accounts[accountIndex].current_balance -= params[paramIndex];
+                  paramIndex++;
+                } else if (operation && operation.includes('current_balance +')) {
+                  // Sumar al current_balance
+                  data.accounts[accountIndex].current_balance += params[paramIndex];
+                  paramIndex++;
+                } else if (operation === '?') {
+                  // Asignación directa con placeholder
+                  data.accounts[accountIndex][field] = params[paramIndex];
+                  console.log(`Set ${field} = ${params[paramIndex]}`);
+                  paramIndex++;
                 }
               });
-              data.accounts[accountIndex].updated_at = new Date().toISOString();
+              
+              console.log('Account after update:', data.accounts[accountIndex]);
             }
             writeDB(data);
           }
           
+          console.log('=== FIN UPDATE ACCOUNTS DEBUG ===');
           return { changes: accountIndex !== -1 ? 1 : 0 };
         } else if (sql.includes('UPDATE movements')) {
           // Actualizar movimiento
@@ -323,6 +401,54 @@ const db = {
           }
           
           return { changes: budgetIndex !== -1 ? 1 : 0 };
+        } else if (sql.includes('UPDATE user_profile')) {
+          // Actualizar perfil de usuario
+          const id = params[params.length - 1];
+          const profileIndex = data.user_profile.findIndex(p => p.id === parseInt(id));
+          
+          console.log('=== UPDATE USER_PROFILE DEBUG ===');
+          console.log('SQL:', sql);
+          console.log('Params:', params);
+          console.log('ID:', id);
+          console.log('Profile Index:', profileIndex);
+          
+          if (profileIndex !== -1) {
+            const updateMatch = sql.match(/SET (.+) WHERE/);
+            if (updateMatch) {
+              const setPart = updateMatch[1];
+              const assignments = setPart.split(',').map(s => s.trim());
+              
+              console.log('Assignments:', assignments);
+              
+              let paramIndex = 0;
+              assignments.forEach(assignment => {
+                const parts = assignment.split('=').map(s => s.trim());
+                const field = parts[0];
+                const operation = parts[1];
+                
+                console.log(`Processing: ${field} = ${operation}, param: ${params[paramIndex]}`);
+                
+                if (field === 'updated_at' && operation === 'CURRENT_TIMESTAMP') {
+                  data.user_profile[profileIndex].updated_at = new Date().toISOString();
+                  console.log('Set updated_at to current timestamp');
+                } else if (field === 'updated_at' && operation === '?') {
+                  data.user_profile[profileIndex].updated_at = params[paramIndex];
+                  paramIndex++;
+                  console.log('Set updated_at from param');
+                } else if (operation === '?') {
+                  data.user_profile[profileIndex][field] = params[paramIndex];
+                  console.log(`Set ${field} = ${params[paramIndex]}`);
+                  paramIndex++;
+                }
+              });
+              
+              console.log('Profile after update:', data.user_profile[profileIndex]);
+            }
+            writeDB(data);
+          }
+          
+          console.log('=== FIN UPDATE USER_PROFILE DEBUG ===');
+          return { changes: profileIndex !== -1 ? 1 : 0 };
         } else if (sql.includes('DELETE FROM movements')) {
           // Eliminar movimiento
           const id = params[0];

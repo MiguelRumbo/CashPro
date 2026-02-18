@@ -1,4 +1,4 @@
-import { ScrollView, View, StyleSheet, TouchableOpacity, Image, RefreshControl } from 'react-native';
+import { ScrollView, View, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
 import { useState, useCallback } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
@@ -36,6 +36,8 @@ export default function DashboardScreen() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [profileName, setProfileName] = useState('Usuario');
+  const [profileInitials, setProfileInitials] = useState('U');
 
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
@@ -48,6 +50,22 @@ export default function DashboardScreen() {
 
   const fetchData = async () => {
     try {
+      // Obtener perfil
+      const profileResponse = await fetch(`${API_CONFIG.BASE_URL}/profile`);
+      const profileResult = await profileResponse.json();
+      if (profileResult.success && profileResult.data) {
+        const name = profileResult.data.name || 'Usuario';
+        setProfileName(name);
+        
+        // Generar iniciales
+        const parts = name.trim().split(' ');
+        if (parts.length >= 2) {
+          setProfileInitials((parts[0][0] + parts[1][0]).toUpperCase());
+        } else {
+          setProfileInitials(name.substring(0, 2).toUpperCase());
+        }
+      }
+      
       // Obtener balance total
       const balanceResponse = await fetch(`${API_CONFIG.BASE_URL}/accounts/stats/total-balance`);
       const balanceResult = await balanceResponse.json();
@@ -173,13 +191,14 @@ export default function DashboardScreen() {
       <View style={[styles.header, { backgroundColor }]}>
         <View>
           <ThemedText style={[styles.greeting, { color: textMuted }]}>Buenos días,</ThemedText>
-          <ThemedText style={[styles.title, { color: textMain }]}>CashPro</ThemedText>
+          <ThemedText style={[styles.title, { color: textMain }]}>{profileName}</ThemedText>
         </View>
         <TouchableOpacity style={styles.profileContainer}>
-          <Image
-            source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCmKchyVrOr1KKQEzb8UGkEhD5OS2tcFCwgjBO2jX5tLuPQktpvrkgOSNtsd7J0IyZAEIaJ3rDYAxX5mVfttUj7OBBrO-h0Q2kYkdCvfVqV6qOeI26KhreoRI7FI4rCcQiexb7qf_oVxowxZ0MFyqp2ZhUikMtc5bhDaVDJ2RJOQ0SjvsXZD_B3XnVW1dBADZAFFOCgK7OeIfx4dONiV5oDWbA9yrGz0YnreW-9Ksur_Rx3x-J0G3PFgM0Jl1qoGpiin6Bc0Msd6QbY' }}
-            style={[styles.profileImage, { borderColor: surfaceColor }]}
-          />
+          <View style={[styles.profileImage, { borderColor: surfaceColor, backgroundColor: primary }]}>
+            <ThemedText style={{ color: '#ffffff', fontSize: 18, fontWeight: '700' }}>
+              {profileInitials}
+            </ThemedText>
+          </View>
           <View style={[styles.statusDot, { backgroundColor: primary, borderColor: backgroundColor }]} />
         </TouchableOpacity>
       </View>
@@ -447,6 +466,8 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statusDot: {
     position: 'absolute',
