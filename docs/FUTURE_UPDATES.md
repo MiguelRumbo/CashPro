@@ -27,19 +27,21 @@
 | Backend | Express.js 5.2.1 (Node.js) |
 | Base de Datos | JSON file temporal (`data.json`) |
 | BD Prevista | better-sqlite3 (no funcional actualmente) |
-| Estado | React local (`useState`) sin estado global |
+| Estado | React local (`useState`) + Context API (CurrencyContext) |
 | Monorepo | pnpm workspaces |
 
 ### Funcionalidades Actuales (funcionando)
 - CRUD completo de cuentas (efectivo, banco, debito, credito)
 - CRUD de movimientos (gasto, ingreso, transferencia)
-- Actualizacion automatica de balance al crear/editar/eliminar movimientos (solo cuentas no-credito)
-- CRUD de presupuestos (seguimiento manual unicamente)
-- Dashboard con datos reales de la API
+- Actualizacion automatica de balance al crear/editar/eliminar movimientos (incluye cuentas de credito)
+- CRUD de presupuestos con actualizacion automatica vinculada a categorias
+- Dashboard con datos reales de la API filtrados por mes actual
 - Tema claro/oscuro en toda la app
-- Formateo de moneda MXN
+- Formateo de moneda global (MXN, USD, EUR) con Context API
 - Pull-to-refresh en todas las pantallas con listas
 - Eliminacion total de datos (reset)
+- Busqueda y filtros funcionales en movimientos y estadisticas
+- Exportacion de datos (CSV y JSON)
 
 ### Pantallas Actuales
 | Tab | Pantalla | Estado |
@@ -216,12 +218,13 @@
 - Indicador visual en la lista de presupuestos (color rojo/amarillo).
 - **Estado:** 🔄 Parcial - Indicador visual implementado (banner de advertencia al exceder 100%). Notificaciones push pendientes (requiere módulo de notificaciones - Fase 3).
 
-#### REQ-PRES-06: Vista mejorada de presupuestos ✅ RESUELTO
+#### REQ-PRES-06: Vista mejorada de presupuestos 🔄 PARCIAL
 - Barra de progreso con colores: verde (<60%), amarillo (60-80%), rojo (>80%).
 - Mostrar monto gastado / monto total y porcentaje.
 - Mostrar dias restantes del periodo actual.
 - Grafica de tendencia de gasto dentro del periodo.
-- **Estado:** ✅ Resuelto - Barra de progreso con colores implementada. Muestra monto gastado/total y porcentaje. Badge con porcentaje. Banner de advertencia cuando se excede. Días restantes y gráfica de tendencia pendientes para futuras mejoras.
+- **Estado:** 🔄 Parcial - Barra de progreso con colores implementada ✅. Muestra monto gastado/total y porcentaje ✅. Badge con porcentaje ✅. Banner de advertencia cuando se excede ✅. **Días restantes ⏳ y gráfica de tendencia ⏳ pendientes para futuras mejoras.**
+- **Archivos**: `apps/mobile/app/budgets/index.tsx`
 
 ---
 
@@ -306,7 +309,10 @@
 #### REQ-AJUS-01: Moneda persistida ✅ RESUELTO
 - La seleccion de moneda en ajustes debe guardarse en la BD (perfil de usuario).
 - Aplicarse globalmente al formateo de montos en toda la app.
-- **Estado:** ✅ Resuelto - Campo `currency` agregado al perfil de usuario. La moneda se guarda al seleccionarla en ajustes. Aplicación global del formato pendiente (requiere context o estado global).
+- **Estado:** ✅ Resuelto - Campo `currency` agregado al perfil de usuario. La moneda se guarda al seleccionarla en ajustes. **Aplicación global implementada mediante CurrencyContext** (Context API). Todas las pantallas usan el hook `useCurrency()` para formatear montos. Soporta MXN, USD y EUR con sus respectivos formatos y símbolos.
+- **Archivos modificados**: 
+  - Creado: `apps/mobile/contexts/CurrencyContext.tsx`
+  - Modificados: `apps/mobile/app/_layout.tsx`, `apps/mobile/app/(tabs)/settings.tsx`, `apps/mobile/app/(tabs)/index.tsx`, `apps/mobile/app/(tabs)/explore.tsx`, `apps/mobile/app/(tabs)/movements.tsx`, `apps/mobile/app/budgets/index.tsx`
 
 #### REQ-AJUS-02: Exportar CSV ✅ RESUELTO
 - Generar archivo CSV con todos los movimientos.
@@ -743,3 +749,37 @@ Mantenimiento {
 ---
 
 > **Nota:** Este documento es una hoja de ruta viva. Cada fase puede ajustarse segun se avance en el desarrollo. Se recomienda completar cada fase antes de avanzar a la siguiente para mantener la estabilidad del proyecto.
+
+
+---
+
+## Historial de Actualizaciones
+
+### Actualización 2026-02-18 - Revisión y Correcciones
+
+**Cambios implementados:**
+
+1. ✅ **REQ-AJUS-01 completado**: Implementada aplicación global de moneda mediante Context API
+   - Creado `CurrencyContext.tsx` para gestión centralizada
+   - Todas las pantallas principales actualizadas para usar `useCurrency()` hook
+   - Soporta MXN, USD y EUR con formateo correcto
+   - Cambio de moneda es instantáneo y global
+
+2. 🔄 **REQ-PRES-06 estado corregido**: Cambiado de ✅ a 🔄 PARCIAL
+   - Implementado: Barra de progreso, porcentajes, badge, banner de advertencia
+   - Pendiente: Días restantes del periodo y gráfica de tendencia
+
+3. 📊 **Stack tecnológico actualizado**: Agregado Context API al stack de estado
+
+4. 📝 **Funcionalidades actuales actualizadas**: Reflejado el estado real de implementación
+
+**Validaciones realizadas:**
+- Todos los requerimientos marcados como ✅ fueron verificados contra el código
+- Inconsistencias documentadas en `VERIFICACION_REQUERIMIENTOS.md`
+- Cambios detallados en `CAMBIOS_REALIZADOS.md`
+
+**Próximos pasos recomendados:**
+1. Completar días restantes y gráfica en presupuestos (REQ-PRES-06)
+2. Implementar date picker UI para filtros personalizados
+3. Reset periódico de presupuestos (REQ-PRES-03)
+4. Categorías personalizadas (REQ-MOV-03)

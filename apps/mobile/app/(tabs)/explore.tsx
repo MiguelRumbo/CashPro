@@ -6,7 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { API_CONFIG } from '@/config/api';
-import { formatCurrency } from '@/utils/format';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 const DATE_FILTERS = ['Este mes', 'Mes pasado', '3 meses', 'Personalizado'];
 
@@ -123,6 +123,7 @@ export default function ReportesScreen() {
   const [dateRange, setDateRange] = useState<DateRange | null>(null);
   const [topCategory, setTopCategory] = useState<string>('');
   const [insightText, setInsightText] = useState<string>('');
+  const { formatCurrency } = useCurrency();
   
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c22' }, 'surface');

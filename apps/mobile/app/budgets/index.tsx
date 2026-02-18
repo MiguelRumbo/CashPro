@@ -6,7 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { API_CONFIG } from '@/config/api';
-import { formatCurrency } from '@/utils/format';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 type Budget = {
   id: number;
@@ -23,6 +23,7 @@ type Budget = {
 export default function BudgetsScreen() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const { formatCurrency } = useCurrency();
   
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');

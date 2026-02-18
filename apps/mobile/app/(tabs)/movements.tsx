@@ -6,7 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { API_CONFIG } from '@/config/api';
-import { formatCurrency } from '@/utils/format';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 const FILTERS = ['Mes', 'Hoy', 'Semana', 'Año', 'Personalizado'];
 
@@ -35,6 +35,7 @@ export default function MovementsScreen() {
   const [filteredMovements, setFilteredMovements] = useState<Transaction[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const { formatCurrency } = useCurrency();
   
   const backgroundColor = useThemeColor({ light: '#ffffff', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#112116' }, 'surface');

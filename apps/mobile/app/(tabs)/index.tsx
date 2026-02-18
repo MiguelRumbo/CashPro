@@ -5,8 +5,8 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { formatCurrency } from '@/utils/format';
 import { API_CONFIG } from '@/config/api';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 type Account = {
   id: number;
@@ -38,6 +38,7 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [profileName, setProfileName] = useState('Usuario');
   const [profileInitials, setProfileInitials] = useState('U');
+  const { formatCurrency } = useCurrency();
 
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');

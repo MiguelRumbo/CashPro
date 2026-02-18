@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { API_CONFIG } from '@/config/api';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 type SettingsRowProps = {
   icon: React.ComponentProps<typeof IconSymbol>['name'];
@@ -73,9 +74,9 @@ function SettingsRow({
 export default function SettingsScreen() {
   const [notifications, setNotifications] = useState(true);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
-  const [selectedCurrency, setSelectedCurrency] = useState('MXN - Peso Mexicano');
   const [profileName, setProfileName] = useState('Usuario');
   const [profileEmail, setProfileEmail] = useState('');
+  const { currency, setCurrency: setGlobalCurrency } = useCurrency();
 
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1c2b21' }, 'surface');
@@ -88,10 +89,15 @@ export default function SettingsScreen() {
   const primary = '#20df60';
 
   const currencies = [
-    'MXN - Peso Mexicano',
-    'USD - Dólar Estadounidense',
-    'EUR - Euro',
+    { code: 'MXN', label: 'MXN - Peso Mexicano' },
+    { code: 'USD', label: 'USD - Dólar Estadounidense' },
+    { code: 'EUR', label: 'EUR - Euro' },
   ];
+
+  const getSelectedCurrencyLabel = () => {
+    const curr = currencies.find(c => c.code === currency);
+    return curr ? curr.label : 'MXN - Peso Mexicano';
+  };
 
   useEffect(() => {
     fetchProfile();
@@ -111,52 +117,15 @@ export default function SettingsScreen() {
       if (result.success && result.data) {
         setProfileName(result.data.name || 'Usuario');
         setProfileEmail(result.data.email || '');
-        
-        // Cargar moneda guardada
-        if (result.data.currency) {
-          const currencyMap: { [key: string]: string } = {
-            'MXN': 'MXN - Peso Mexicano',
-            'USD': 'USD - Dólar Estadounidense',
-            'EUR': 'EUR - Euro',
-          };
-          setSelectedCurrency(currencyMap[result.data.currency] || 'MXN - Peso Mexicano');
-        }
       }
     } catch (error) {
       console.error('Error al cargar perfil:', error);
     }
   };
 
-  const handleCurrencyChange = async (currency: string) => {
-    setSelectedCurrency(currency);
+  const handleCurrencyChange = async (currencyCode: string) => {
     setShowCurrencyModal(false);
-    
-    // Guardar en el perfil
-    try {
-      // Extraer código de moneda (MXN, USD, EUR)
-      const currencyCode = currency.split(' - ')[0];
-      
-      const response = await fetch(`${API_CONFIG.BASE_URL}/profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: profileName,
-          email: profileEmail,
-          currency: currencyCode,
-        }),
-      });
-      
-      const result = await response.json();
-      
-      if (!result.success) {
-        Alert.alert('Error', 'No se pudo guardar la moneda');
-      }
-    } catch (error) {
-      console.error('Error al guardar moneda:', error);
-      Alert.alert('Error', 'No se pudo conectar con el servidor');
-    }
+    await setGlobalCurrency(currencyCode as 'MXN' | 'USD' | 'EUR');
   };
 
   const getInitials = (name: string) => {
@@ -354,7 +323,7 @@ export default function SettingsScreen() {
               <View>
                 <ThemedText style={[styles.settingsTitle, { color: textMain }]}>Moneda</ThemedText>
                 <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
-                  {selectedCurrency}
+                  {getSelectedCurrencyLabel()}
                 </ThemedText>
               </View>
             </View>
@@ -509,20 +478,20 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.currencyList}>
-              {currencies.map((currency) => (
+              {currencies.map((curr, index) => (
                 <TouchableOpacity
-                  key={currency}
+                  key={curr.code}
                   style={[
                     styles.currencyItem,
                     { borderBottomColor: borderColor },
-                    currency === currencies[currencies.length - 1] && { borderBottomWidth: 0 },
+                    index === currencies.length - 1 && { borderBottomWidth: 0 },
                   ]}
-                  onPress={() => handleCurrencyChange(currency)}
+                  onPress={() => handleCurrencyChange(curr.code)}
                 >
                   <ThemedText style={[styles.currencyText, { color: textMain }]}>
-                    {currency}
+                    {curr.label}
                   </ThemedText>
-                  {selectedCurrency === currency && (
+                  {currency === curr.code && (
                     <IconSymbol size={20} name="checkmark" color={primary} />
                   )}
                 </TouchableOpacity>
