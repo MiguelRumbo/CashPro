@@ -1,22 +1,25 @@
-import { ScrollView, View, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
-import { useState } from 'react';
+import { ScrollView, View, StyleSheet, TouchableOpacity, TextInput, RefreshControl, Alert } from 'react-native';
+import { useState, useCallback } from 'react';
+import { router, useFocusEffect } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { API_CONFIG } from '@/config/api';
+import { formatCurrency } from '@/utils/format';
 
 const FILTERS = ['Mes', 'Hoy', 'Semana', 'Año', 'Personalizado'];
 
 type Transaction = {
-  id: string;
-  name: string;
-  time: string;
-  category: string;
-  amount: string;
-  isIncome: boolean;
-  icon: React.ComponentProps<typeof IconSymbol>['name'];
-  iconColor: string;
-  iconBg: string;
+  id: number;
+  type: 'expense' | 'income' | 'transfer';
+  amount: number;
+  title: string;
+  category_name?: string;
+  category_icon?: string;
+  category_color?: string;
+  date: string;
+  notes?: string;
 };
 
 type Section = {
@@ -24,34 +27,11 @@ type Section = {
   data: Transaction[];
 };
 
-const SECTIONS: Section[] = [
-  {
-    title: 'Hoy',
-    data: [
-      { id: '1', name: 'Supermercado', time: '14:30 PM', category: 'Comestibles', amount: '-$45.00', isIncome: false, icon: 'bag.fill', iconColor: '#ea580c', iconBg: '#ffedd5' },
-      { id: '2', name: 'Transferencia recibida', time: '10:15 AM', category: 'Nómina', amount: '+$1,250.00', isIncome: true, icon: 'creditcard.fill', iconColor: '#20df60', iconBg: 'rgba(32, 223, 96, 0.2)' },
-      { id: '3', name: 'Starbucks', time: '08:45 AM', category: 'Desayuno', amount: '-$8.50', isIncome: false, icon: 'cup.and.saucer.fill', iconColor: '#b45309', iconBg: '#fef3c7' },
-    ],
-  },
-  {
-    title: 'Ayer',
-    data: [
-      { id: '4', name: 'Gasolinera Shell', time: '18:20 PM', category: 'Transporte', amount: '-$30.00', isIncome: false, icon: 'fuelpump.fill', iconColor: '#2563eb', iconBg: '#dbeafe' },
-      { id: '5', name: 'Netflix', time: '09:00 AM', category: 'Suscripción', amount: '-$15.99', isIncome: false, icon: 'film', iconColor: '#dc2626', iconBg: '#fee2e2' },
-      { id: '6', name: 'Pago Proyecto Web', time: '09:00 AM', category: 'Freelance', amount: '+$550.00', isIncome: true, icon: 'banknote', iconColor: '#20df60', iconBg: 'rgba(32, 223, 96, 0.2)' },
-    ],
-  },
-  {
-    title: '24 Octubre',
-    data: [
-      { id: '7', name: 'Gimnasio Planet', time: '19:30 PM', category: 'Salud', amount: '-$29.99', isIncome: false, icon: 'dumbbell', iconColor: '#9333ea', iconBg: '#f3e8ff' },
-      { id: '8', name: 'Farmacia Central', time: '14:15 PM', category: 'Salud', amount: '-$12.45', isIncome: false, icon: 'cross.case.fill', iconColor: '#0d9488', iconBg: '#ccfbf1' },
-    ],
-  },
-];
-
 export default function MovementsScreen() {
   const [activeFilter, setActiveFilter] = useState('Mes');
+  const [movements, setMovements] = useState<Transaction[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  
   const backgroundColor = useThemeColor({ light: '#ffffff', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#112116' }, 'surface');
   const textMain = useThemeColor({ light: '#1F2937', dark: '#ffffff' }, 'text');
@@ -59,6 +39,84 @@ export default function MovementsScreen() {
   const searchBg = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'surface');
   const textMuted = '#9CA3AF';
   const primary = '#20df60';
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchMovements();
+    }, [])
+  );
+
+  const fetchMovements = async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/movements`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setMovements(result.data);
+      }
+    } catch (error) {
+      console.error('Error al cargar movimientos:', error);
+      Alert.alert('Error', 'No se pudieron cargar los movimientos');
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchMovements();
+    setRefreshing(false);
+  };
+
+  const groupMovementsByDate = (): Section[] => {
+    const groups: { [key: string]: Transaction[] } = {};
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    movements.forEach((movement) => {
+      const movementDate = new Date(movement.date);
+      let dateKey: string;
+
+      if (movementDate.toDateString() === today.toDateString()) {
+        dateKey = 'Hoy';
+      } else if (movementDate.toDateString() === yesterday.toDateString()) {
+        dateKey = 'Ayer';
+      } else {
+        dateKey = movementDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
+      }
+
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(movement);
+    });
+
+    return Object.keys(groups).map(key => ({
+      title: key,
+      data: groups[key]
+    }));
+  };
+
+  const getMovementIcon = (movement: Transaction) => {
+    if (movement.type === 'transfer') {
+      return { name: 'arrow.left.arrow.right', color: '#3b82f6', bg: '#dbeafe' };
+    }
+    
+    if (movement.category_icon && movement.category_color) {
+      const bgColor = movement.category_color + '20';
+      return { name: movement.category_icon, color: movement.category_color, bg: bgColor };
+    }
+
+    return movement.type === 'income'
+      ? { name: 'arrow.down', color: primary, bg: 'rgba(32, 223, 96, 0.2)' }
+      : { name: 'arrow.up', color: '#ef4444', bg: '#fee2e2' };
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const sections = groupMovementsByDate();
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
@@ -122,55 +180,79 @@ export default function MovementsScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />
+        }
       >
-        {SECTIONS.map((section) => (
-          <View key={section.title}>
-            {/* Date Header */}
-            <View style={[styles.dateHeader, { backgroundColor }]}>
-              <ThemedText style={styles.dateHeaderText}>
-                {section.title}
-              </ThemedText>
-            </View>
-
-            {/* Transactions */}
-            {section.data.map((item, index) => (
-              <View key={item.id}>
-                <TouchableOpacity style={styles.transactionItem}>
-                  <View style={styles.transactionLeft}>
-                    <View style={[styles.transactionIcon, { backgroundColor: item.iconBg }]}>
-                      <IconSymbol size={24} name={item.icon} color={item.iconColor} />
-                    </View>
-                    <View style={styles.transactionInfo}>
-                      <ThemedText style={[styles.transactionName, { color: textMain }]} numberOfLines={1}>
-                        {item.name}
-                      </ThemedText>
-                      <ThemedText style={[styles.transactionMeta, { color: textMuted }]}>
-                        {item.time} • {item.category}
-                      </ThemedText>
-                    </View>
-                  </View>
-                  <ThemedText
-                    style={[
-                      styles.transactionAmount,
-                      { color: item.isIncome ? primary : textMain },
-                    ]}
-                  >
-                    {item.amount}
-                  </ThemedText>
-                </TouchableOpacity>
-                {/* Separator */}
-                {index < section.data.length - 1 && (
-                  <View style={[styles.separator, { backgroundColor: borderColor }]} />
-                )}
-              </View>
-            ))}
+        {sections.length === 0 ? (
+          <View style={styles.emptyState}>
+            <IconSymbol size={64} name="tray" color={textMuted} />
+            <ThemedText style={[styles.emptyText, { color: textMuted }]}>
+              No hay movimientos
+            </ThemedText>
+            <ThemedText style={[styles.emptySubtext, { color: textMuted }]}>
+              Agrega tu primer movimiento
+            </ThemedText>
           </View>
-        ))}
+        ) : (
+          sections.map((section) => (
+            <View key={section.title}>
+              {/* Date Header */}
+              <View style={[styles.dateHeader, { backgroundColor }]}>
+                <ThemedText style={styles.dateHeaderText}>
+                  {section.title}
+                </ThemedText>
+              </View>
+
+              {/* Transactions */}
+              {section.data.map((item, index) => {
+                const iconData = getMovementIcon(item);
+                const isIncome = item.type === 'income';
+                const isTransfer = item.type === 'transfer';
+                
+                return (
+                  <View key={item.id}>
+                    <TouchableOpacity style={styles.transactionItem}>
+                      <View style={styles.transactionLeft}>
+                        <View style={[styles.transactionIcon, { backgroundColor: iconData.bg }]}>
+                          <IconSymbol size={24} name={iconData.name as any} color={iconData.color} />
+                        </View>
+                        <View style={styles.transactionInfo}>
+                          <ThemedText style={[styles.transactionName, { color: textMain }]} numberOfLines={1}>
+                            {item.title}
+                          </ThemedText>
+                          <ThemedText style={[styles.transactionMeta, { color: textMuted }]}>
+                            {formatTime(item.date)} • {item.category_name || (isTransfer ? 'Transferencia' : 'Sin categoría')}
+                          </ThemedText>
+                        </View>
+                      </View>
+                      <ThemedText
+                        style={[
+                          styles.transactionAmount,
+                          { color: isIncome ? primary : isTransfer ? '#3b82f6' : textMain },
+                        ]}
+                      >
+                        {isIncome ? '+' : isTransfer ? '' : '-'}{formatCurrency(item.amount)}
+                      </ThemedText>
+                    </TouchableOpacity>
+                    {/* Separator */}
+                    {index < section.data.length - 1 && (
+                      <View style={[styles.separator, { backgroundColor: borderColor }]} />
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          ))
+        )}
         <View style={{ height: 100 }} />
       </ScrollView>
 
       {/* FAB */}
-      <TouchableOpacity style={styles.fab}>
+      <TouchableOpacity 
+        style={styles.fab}
+        onPress={() => router.push('/movements/add-movement')}
+      >
         <IconSymbol size={28} name="plus" color="white" />
       </TouchableOpacity>
     </ThemedView>
@@ -301,10 +383,24 @@ const styles = StyleSheet.create({
     height: 1,
     marginLeft: 80,
   },
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+    gap: 12,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  emptySubtext: {
+    fontSize: 14,
+  },
   // FAB
   fab: {
     position: 'absolute',
-    bottom: 88,
+    bottom: 120,
     right: 16,
     width: 56,
     height: 56,

@@ -7,6 +7,10 @@ const DB_FILE = path.join(__dirname, '../../data.json');
 const initialData = {
   accounts: [],
   nextAccountId: 1,
+  movements: [],
+  nextMovementId: 1,
+  categories: [],
+  nextCategoryId: 1,
 };
 
 // Leer la base de datos
@@ -40,8 +44,26 @@ const db = {
     return {
       all: () => {
         const data = readDB();
-        // Ordenar por is_primary DESC, created_at DESC
-        return data.accounts.sort((a, b) => {
+        
+        // Asegurar que existen las estructuras
+        if (!data.accounts) {
+          data.accounts = [];
+        }
+        if (!data.movements) {
+          data.movements = [];
+        }
+        
+        // Para movimientos
+        if (sql.includes('FROM movements')) {
+          return [...data.movements].sort((a, b) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            return dateB - dateA;
+          });
+        }
+        
+        // Para cuentas - Ordenar por is_primary DESC, created_at DESC
+        return [...data.accounts].sort((a, b) => {
           if (a.is_primary !== b.is_primary) {
             return b.is_primary - a.is_primary;
           }
@@ -50,27 +72,96 @@ const db = {
       },
       get: (id) => {
         const data = readDB();
+        
+        // Asegurar que existen las estructuras
+        if (!data.accounts) data.accounts = [];
+        if (!data.movements) data.movements = [];
+        
         if (sql.includes('stats') || sql.includes('SUM')) {
-          // Calcular estadísticas
-          let total_balance = 0;
-          let total_credit_debt = 0;
+          // Calcular estadísticas de cuentas
+          if (sql.includes('FROM accounts')) {
+            let total_balance = 0;
+            let total_credit_debt = 0;
+            
+            data.accounts.forEach(account => {
+              if (account.type !== 'credit') {
+                total_balance += account.balance || 0;
+              } else {
+                total_credit_debt += account.current_balance || 0;
+              }
+            });
+            
+            return { total_balance, total_credit_debt };
+          }
           
-          data.accounts.forEach(account => {
-            if (account.type !== 'credit') {
-              total_balance += account.balance || 0;
-            } else {
-              total_credit_debt += account.current_balance || 0;
-            }
-          });
-          
-          return { total_balance, total_credit_debt };
+          // Calcular estadísticas de movimientos
+          if (sql.includes('FROM movements')) {
+            let total_income = 0;
+            let total_expense = 0;
+            
+            data.movements.forEach(movement => {
+              if (movement.type === 'income') {
+                total_income += movement.amount || 0;
+              } else if (movement.type === 'expense') {
+                total_expense += movement.amount || 0;
+              }
+            });
+            
+            return { 
+              total_income, 
+              total_expense,
+              total_movements: data.movements.length 
+            };
+          }
         }
+        
+        // Buscar movimiento por ID
+        if (sql.includes('FROM movements')) {
+          return data.movements.find(m => m.id === parseInt(id));
+        }
+        
+        // Buscar cuenta por ID
         return data.accounts.find(a => a.id === parseInt(id));
       },
       run: (...params) => {
         const data = readDB();
         
-        if (sql.includes('INSERT')) {
+        if (sql.includes('INSERT INTO movements')) {
+          // Crear nuevo movimiento
+          const [
+            type, amount, title, category_id, category_name, category_icon, category_color,
+            account_id, to_account_id, date, notes
+          ] = params;
+          
+          // Asegurar que movements existe
+          if (!data.movements) {
+            data.movements = [];
+          }
+          
+          const newMovement = {
+            id: data.nextMovementId++,
+            type,
+            amount: amount || 0,
+            title,
+            category_id,
+            category_name,
+            category_icon,
+            category_color,
+            account_id,
+            to_account_id,
+            date: date || new Date().toISOString(),
+            notes,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+          
+          data.movements.push(newMovement);
+          writeDB(data);
+          
+          return { lastInsertRowid: newMovement.id };
+        }
+        
+        if (sql.includes('INSERT INTO accounts')) {
           // Crear nueva cuenta
           const [
             name, type, balance, currency, icon, color,
@@ -107,7 +198,7 @@ const db = {
           writeDB(data);
           
           return { lastInsertRowid: newAccount.id };
-        } else if (sql.includes('UPDATE')) {
+        } else if (sql.includes('UPDATE accounts')) {
           // Actualizar cuenta
           const id = params[params.length - 1];
           const accountIndex = data.accounts.findIndex(a => a.id === parseInt(id));
@@ -119,7 +210,14 @@ const db = {
               const fields = updateMatch[1].split(',').map(f => f.trim().split('=')[0].trim());
               fields.forEach((field, index) => {
                 if (field !== 'updated_at') {
-                  data.accounts[accountIndex][field] = params[index];
+                  // Para balance, sumar o restar
+                  if (field === 'balance' && sql.includes('balance -')) {
+                    data.accounts[accountIndex].balance -= params[0];
+                  } else if (field === 'balance' && sql.includes('balance +')) {
+                    data.accounts[accountIndex].balance += params[0];
+                  } else {
+                    data.accounts[accountIndex][field] = params[index];
+                  }
                 }
               });
               data.accounts[accountIndex].updated_at = new Date().toISOString();
@@ -128,7 +226,35 @@ const db = {
           }
           
           return { changes: accountIndex !== -1 ? 1 : 0 };
-        } else if (sql.includes('DELETE')) {
+        } else if (sql.includes('UPDATE movements')) {
+          // Actualizar movimiento
+          const id = params[params.length - 1];
+          const movementIndex = data.movements.findIndex(m => m.id === parseInt(id));
+          
+          if (movementIndex !== -1) {
+            const updateMatch = sql.match(/SET (.+) WHERE/);
+            if (updateMatch) {
+              const fields = updateMatch[1].split(',').map(f => f.trim().split('=')[0].trim());
+              fields.forEach((field, index) => {
+                if (field !== 'updated_at') {
+                  data.movements[movementIndex][field] = params[index];
+                }
+              });
+              data.movements[movementIndex].updated_at = new Date().toISOString();
+            }
+            writeDB(data);
+          }
+          
+          return { changes: movementIndex !== -1 ? 1 : 0 };
+        } else if (sql.includes('DELETE FROM movements')) {
+          // Eliminar movimiento
+          const id = params[0];
+          const initialLength = data.movements.length;
+          data.movements = data.movements.filter(m => m.id !== parseInt(id));
+          writeDB(data);
+          
+          return { changes: initialLength - data.movements.length };
+        } else if (sql.includes('DELETE FROM accounts')) {
           // Eliminar cuenta
           const id = params[0];
           const initialLength = data.accounts.length;

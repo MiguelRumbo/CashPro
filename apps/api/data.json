@@ -4,7 +4,7 @@
       "id": 1,
       "name": "Efectivo",
       "type": "cash",
-      "balance": 100,
+      "balance": 5100,
       "currency": "MXN",
       "card_last_four": null,
       "generates_interest": 0,
@@ -13,13 +13,13 @@
       "current_balance": 0,
       "is_primary": 0,
       "created_at": "2026-02-18T19:34:10.855Z",
-      "updated_at": "2026-02-18T19:34:10.855Z"
+      "updated_at": "2026-02-18T20:22:27.911Z"
     },
     {
       "id": 3,
       "name": "BBVA",
       "type": "debit",
-      "balance": 24544,
+      "balance": 19544,
       "currency": "MXN",
       "clabe": "",
       "bank_name": "BBVA",
@@ -31,7 +31,7 @@
       "current_balance": 0,
       "is_primary": 0,
       "created_at": "2026-02-18T19:36:21.405Z",
-      "updated_at": "2026-02-18T19:42:48.169Z"
+      "updated_at": "2026-02-18T20:20:18.099Z"
     },
     {
       "id": 4,
@@ -71,7 +71,7 @@
       "id": 6,
       "name": "Billete",
       "type": "cash",
-      "balance": 250,
+      "balance": 4750,
       "currency": "MXN",
       "card_last_four": null,
       "generates_interest": 0,
@@ -80,13 +80,13 @@
       "current_balance": 0,
       "is_primary": 0,
       "created_at": "2026-02-18T19:45:18.300Z",
-      "updated_at": "2026-02-18T19:45:18.300Z"
+      "updated_at": "2026-02-18T20:21:54.156Z"
     },
     {
       "id": 7,
       "name": "Banamex Cuenta",
       "type": "bank",
-      "balance": 25064,
+      "balance": 20064,
       "currency": "MXN",
       "clabe": "134949864389498346",
       "bank_name": "Banamex",
@@ -97,8 +97,55 @@
       "current_balance": 0,
       "is_primary": 0,
       "created_at": "2026-02-18T19:45:49.164Z",
-      "updated_at": "2026-02-18T19:45:49.164Z"
+      "updated_at": "2026-02-18T20:22:27.910Z"
     }
   ],
-  "nextAccountId": 8
+  "nextAccountId": 8,
+  "movements": [
+    {
+      "id": 1,
+      "type": "expense",
+      "amount": 5000,
+      "title": "Supermercado",
+      "category_id": "1",
+      "category_name": "Comida",
+      "category_icon": "fork.knife",
+      "category_color": "#ea580c",
+      "account_id": 3,
+      "date": "2026-02-18T20:19:00.000Z",
+      "notes": "",
+      "created_at": "2026-02-18T20:20:18.097Z",
+      "updated_at": "2026-02-18T20:20:18.097Z"
+    },
+    {
+      "id": 2,
+      "type": "income",
+      "amount": 4500,
+      "title": "Salario",
+      "category_id": "9",
+      "category_name": "Trabajo",
+      "category_icon": "briefcase.fill",
+      "category_color": "#92400e",
+      "account_id": 6,
+      "date": "2026-02-18T20:21:31.755Z",
+      "notes": "",
+      "created_at": "2026-02-18T20:21:54.154Z",
+      "updated_at": "2026-02-18T20:21:54.154Z"
+    },
+    {
+      "id": 3,
+      "type": "transfer",
+      "amount": 5000,
+      "title": "Transferencia",
+      "account_id": 7,
+      "to_account_id": 1,
+      "date": "2026-02-18T20:22:01.688Z",
+      "notes": "",
+      "created_at": "2026-02-18T20:22:27.909Z",
+      "updated_at": "2026-02-18T20:22:27.909Z"
+    }
+  ],
+  "nextMovementId": 4,
+  "categories": [],
+  "nextCategoryId": 1
 }

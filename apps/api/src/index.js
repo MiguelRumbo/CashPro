@@ -3,6 +3,7 @@ const cors = require('cors');
 // Usar base de datos JSON temporal (cambiar a db.js cuando better-sqlite3 esté compilado)
 const { initDatabase } = require('./database/db-json');
 const accountsRouter = require('./routes/accounts');
+const movementsRouter = require('./routes/movements');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,6 +25,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/accounts', accountsRouter);
+app.use('/api/movements', movementsRouter);
 
 // Manejo de errores
 app.use((err, req, res, next) => {
