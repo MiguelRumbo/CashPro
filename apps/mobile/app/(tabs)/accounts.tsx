@@ -185,7 +185,7 @@ export default function AccountsScreen() {
                 <TouchableOpacity
                   key={account.id}
                   style={[styles.accountItem, { backgroundColor: surfaceColor }]}
-                  onPress={() => router.push(`/account-detail?id=${account.id}`)}
+                  onPress={() => router.push(`/accounts/account-detail?id=${account.id}`)}
                   onLongPress={() => handleDeleteAccount(account.id, account.name)}
                 >
                   <View style={[styles.accountIcon, { backgroundColor: iconData.bg }]}>
@@ -225,7 +225,7 @@ export default function AccountsScreen() {
         {/* Add Account Button */}
         <TouchableOpacity 
           style={styles.addButton}
-          onPress={() => router.push('/add-account')}
+          onPress={() => router.push('/accounts/add-account')}
         >
           <IconSymbol size={24} name="plus.circle.fill" color="white" />
           <ThemedText style={styles.addButtonText}>Agregar nueva cuenta</ThemedText>

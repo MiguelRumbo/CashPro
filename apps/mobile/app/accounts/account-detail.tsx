@@ -87,7 +87,7 @@ export default function AccountDetailScreen() {
   };
 
   const handleEdit = () => {
-    router.push(`/edit-account?id=${accountId}`);
+    router.push(`/accounts/edit-account?id=${accountId}`);
   };
 
   const handleDelete = () => {
