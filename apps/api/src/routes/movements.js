@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../database/db-json');
+const { updateBudgetsForMovement } = require('./budgets');
 
 // Obtener todos los movimientos
 router.get('/', (req, res) => {
@@ -154,6 +155,11 @@ router.post('/', (req, res) => {
 
     const newMovement = db.prepare('SELECT * FROM movements WHERE id = ?').get(result.lastInsertRowid);
 
+    // Actualizar presupuestos si es un gasto
+    if (type === 'expense' && category_id) {
+      updateBudgetsForMovement(category_id, amount, 'add');
+    }
+
     res.status(201).json({ 
       success: true, 
       data: newMovement,
@@ -265,6 +271,16 @@ router.put('/:id', (req, res) => {
       }
     }
 
+    // Actualizar presupuestos
+    // Primero restar el monto anterior si era un gasto
+    if (existingMovement.type === 'expense' && existingMovement.category_id) {
+      updateBudgetsForMovement(existingMovement.category_id, existingMovement.amount, 'subtract');
+    }
+    // Luego sumar el nuevo monto si es un gasto
+    if (updatedMovement.type === 'expense' && updatedMovement.category_id) {
+      updateBudgetsForMovement(updatedMovement.category_id, updatedMovement.amount, 'add');
+    }
+
     res.json({ 
       success: true, 
       data: updatedMovement,
@@ -318,6 +334,11 @@ router.delete('/:id', (req, res) => {
     }
 
     db.prepare('DELETE FROM movements WHERE id = ?').run(id);
+
+    // Actualizar presupuestos si era un gasto
+    if (existingMovement.type === 'expense' && existingMovement.category_id) {
+      updateBudgetsForMovement(existingMovement.category_id, existingMovement.amount, 'subtract');
+    }
 
     res.json({ 
       success: true, 

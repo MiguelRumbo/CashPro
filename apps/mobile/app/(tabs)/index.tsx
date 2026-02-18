@@ -17,6 +17,7 @@ type Account = {
   bank_name?: string;
   credit_limit?: number;
   current_balance?: number;
+  is_primary?: number;
 };
 
 type CategoryStat = {
@@ -106,6 +107,7 @@ export default function DashboardScreen() {
       const accountsResponse = await fetch(`${API_CONFIG.BASE_URL}/accounts`);
       const accountsResult = await accountsResponse.json();
       if (accountsResult.success) {
+        // Las cuentas ya vienen ordenadas por is_primary DESC desde la API
         setAccounts(accountsResult.data.slice(0, 3)); // Solo las primeras 3
       }
     } catch (error) {
@@ -279,10 +281,10 @@ export default function DashboardScreen() {
               </View>
             ) : (
               accounts.map((account, index) => {
-                const isFirst = index === 0;
+                const isPrimary = account.is_primary === 1;
                 const displayBalance = account.type === 'credit' ? account.current_balance || 0 : account.balance;
                 
-                if (isFirst) {
+                if (isPrimary) {
                   return (
                     <TouchableOpacity 
                       key={account.id}

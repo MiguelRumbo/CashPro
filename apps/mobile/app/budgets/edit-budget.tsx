@@ -12,6 +12,26 @@ import { API_CONFIG } from '@/config/api';
 type BudgetType = 'saving' | 'expense';
 type BudgetPeriod = 'weekly' | 'monthly';
 
+type Category = {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+};
+
+const CATEGORIES: Category[] = [
+  { id: '1', name: 'Comida', icon: 'fork.knife', color: '#ea580c' },
+  { id: '2', name: 'Comestibles', icon: 'cart.fill', color: '#16a34a' },
+  { id: '3', name: 'Compras', icon: 'bag.fill', color: '#dc2626' },
+  { id: '4', name: 'Transporte', icon: 'car.fill', color: '#2563eb' },
+  { id: '5', name: 'Entretenimiento', icon: 'film', color: '#db2777' },
+  { id: '6', name: 'Facturas', icon: 'doc.text.fill', color: '#059669' },
+  { id: '7', name: 'Regalos', icon: 'gift.fill', color: '#dc2626' },
+  { id: '8', name: 'Belleza', icon: 'sparkles', color: '#d946ef' },
+  { id: '9', name: 'Trabajo', icon: 'briefcase.fill', color: '#92400e' },
+  { id: '10', name: 'Viajes', icon: 'airplane', color: '#0891b2' },
+];
+
 const BUDGET_ICONS = [
   { icon: 'airplane', color: '#3b82f6', label: 'Viajes' },
   { icon: 'gift.fill', color: '#ec4899', label: 'Regalos' },
@@ -33,6 +53,7 @@ export default function EditBudgetScreen() {
   const [startDate, setStartDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedIcon, setSelectedIcon] = useState(BUDGET_ICONS[0]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#0a0f0d' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
@@ -57,6 +78,18 @@ export default function EditBudgetScreen() {
         setAmount(formatCurrencyInput(budget.amount.toString()));
         setPeriod(budget.period);
         setStartDate(new Date(budget.start_date));
+        
+        // Cargar categorías si existen
+        if (budget.category_ids) {
+          try {
+            const categoryIds = typeof budget.category_ids === 'string' 
+              ? JSON.parse(budget.category_ids) 
+              : budget.category_ids;
+            setSelectedCategories(categoryIds || []);
+          } catch (e) {
+            setSelectedCategories([]);
+          }
+        }
         
         const icon = BUDGET_ICONS.find(i => i.icon === budget.icon);
         if (icon) {
@@ -90,6 +123,16 @@ export default function EditBudgetScreen() {
     return date.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
   };
 
+  const toggleCategory = (categoryId: string) => {
+    setSelectedCategories(prev => {
+      if (prev.includes(categoryId)) {
+        return prev.filter(id => id !== categoryId);
+      } else {
+        return [...prev, categoryId];
+      }
+    });
+  };
+
   const handleSave = async () => {
     // Validaciones
     if (!name.trim()) {
@@ -110,6 +153,7 @@ export default function EditBudgetScreen() {
       start_date: startDate.toISOString(),
       icon: selectedIcon.icon,
       color: selectedIcon.color,
+      category_ids: budgetType === 'expense' && selectedCategories.length > 0 ? selectedCategories : null,
     };
 
     try {
@@ -280,6 +324,57 @@ export default function EditBudgetScreen() {
           </View>
           <IconSymbol size={20} name="chevron.right" color={textSub} />
         </TouchableOpacity>
+
+        {/* Category Selector - Solo para presupuestos de gasto */}
+        {budgetType === 'expense' && (
+          <View style={[styles.categorySection, { backgroundColor: surfaceColor }]}>
+            <View style={styles.categorySectionHeader}>
+              <ThemedText style={[styles.categorySectionTitle, { color: textMain }]}>
+                Categorías a Rastrear
+              </ThemedText>
+              <ThemedText style={[styles.categorySectionSubtitle, { color: textSub }]}>
+                {selectedCategories.length === 0 
+                  ? 'Opcional - Rastrea todas las categorías' 
+                  : `${selectedCategories.length} seleccionada${selectedCategories.length > 1 ? 's' : ''}`}
+              </ThemedText>
+            </View>
+            <View style={styles.categoryGrid}>
+              {CATEGORIES.map((category) => {
+                const isSelected = selectedCategories.includes(category.id);
+                return (
+                  <TouchableOpacity
+                    key={category.id}
+                    style={[
+                      styles.categoryOption,
+                      isSelected && styles.categoryOptionActive,
+                      { 
+                        backgroundColor: isSelected ? category.color + '20' : borderColor,
+                        borderColor: isSelected ? category.color : 'transparent'
+                      }
+                    ]}
+                    onPress={() => toggleCategory(category.id)}
+                  >
+                    <IconSymbol size={20} name={category.icon as any} color={category.color} />
+                    <ThemedText 
+                      style={[
+                        styles.categoryOptionText, 
+                        { color: isSelected ? category.color : textSub }
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {category.name}
+                    </ThemedText>
+                    {isSelected && (
+                      <View style={[styles.categoryCheck, { backgroundColor: category.color }]}>
+                        <IconSymbol size={12} name="checkmark" color="#ffffff" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {/* Icon Selector */}
         <View style={[styles.iconSection, { backgroundColor: surfaceColor }]}>
@@ -477,6 +572,53 @@ const styles = StyleSheet.create({
   },
   iconOptionActive: {
     borderWidth: 2,
+  },
+  // Category Section
+  categorySection: {
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  categorySectionHeader: {
+    marginBottom: 16,
+  },
+  categorySectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  categorySectionSubtitle: {
+    fontSize: 13,
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  categoryOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 2,
+    position: 'relative',
+  },
+  categoryOptionActive: {
+    borderWidth: 2,
+  },
+  categoryOptionText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  categoryCheck: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 2,
   },
   // Save Button
   saveButton: {

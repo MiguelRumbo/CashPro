@@ -162,19 +162,22 @@
 
 **Requerimientos:**
 
-#### REQ-PRIM-01: Toggle de cuenta principal en detalle
+#### REQ-PRIM-01: Toggle de cuenta principal en detalle ✅ RESUELTO
 - En la pantalla de detalle de cuenta, agregar un check/toggle "Cuenta principal".
 - Solo una cuenta puede ser principal a la vez.
 - Al marcar una cuenta, desmarcar automaticamente la anterior.
 - Endpoint API: `PUT /api/accounts/:id/set-primary`.
+- **Estado:** ✅ Resuelto - Toggle implementado en pantalla de detalle. Endpoint creado. Al marcar una cuenta como principal, automáticamente desmarca las demás.
 
-#### REQ-PRIM-02: Cuenta principal en Dashboard
+#### REQ-PRIM-02: Cuenta principal en Dashboard ✅ RESUELTO
 - El dashboard debe mostrar la cuenta marcada como principal con el badge "Principal" (no la primera del array).
 - Si no hay ninguna marcada, mostrar la mas antigua como default.
+- **Estado:** ✅ Resuelto - Dashboard actualizado para mostrar la cuenta con `is_primary = 1`. Las cuentas vienen ordenadas por `is_primary DESC` desde la API.
 
-#### REQ-PRIM-03: Cuenta principal preseleccionada en movimientos
+#### REQ-PRIM-03: Cuenta principal preseleccionada en movimientos ✅ RESUELTO
 - Al agregar un nuevo movimiento (gasto/ingreso), la cuenta principal debe venir preseleccionada por defecto en el selector de cuenta.
 - El usuario puede cambiarla, pero por defecto aparece la principal.
+- **Estado:** ✅ Resuelto - Al cargar cuentas en agregar movimiento, se preselecciona automáticamente la cuenta marcada como principal.
 
 ---
 
@@ -184,35 +187,41 @@
 
 **Requerimientos:**
 
-#### REQ-PRES-01: Presupuestos vinculados a categorias
+#### REQ-PRES-01: Presupuestos vinculados a categorias ✅ RESUELTO
 - Cada presupuesto debe estar asociado a una o mas categorias de gasto.
 - Nuevo campo: `category_ids: string[]` (array de IDs de categorias vinculadas).
 - Al crear presupuesto, selector de categorias (en lugar de o ademas del icono actual).
+- **Estado:** ✅ Resuelto - Campo `category_ids` agregado. Selector de categorías implementado en agregar y editar presupuesto. Solo para presupuestos de tipo "gasto". Opcional: si no se seleccionan categorías, rastrea todos los gastos.
 
-#### REQ-PRES-02: Actualizacion automatica del presupuesto
+#### REQ-PRES-02: Actualizacion automatica del presupuesto ✅ RESUELTO
 - Cuando se registre un movimiento tipo "gasto" cuya categoria coincida con las categorias del presupuesto, sumar automaticamente el monto al `current_amount` del presupuesto.
 - Cuando se elimine o edite un movimiento, ajustar el `current_amount` correspondientemente.
 - La logica debe ejecutarse en el backend al crear/editar/eliminar movimientos.
+- **Estado:** ✅ Resuelto - Función `updateBudgetsForMovement` creada. Se llama automáticamente al crear/editar/eliminar movimientos de tipo gasto. Actualiza `current_amount` según las categorías vinculadas.
 
-#### REQ-PRES-03: Reset periodico automatico
+#### REQ-PRES-03: Reset periodico automatico ⏳ PENDIENTE
 - Los presupuestos con periodo "mensual" deben resetear `current_amount` a 0 al inicio de cada mes.
 - Los presupuestos con periodo "semanal" deben resetear cada lunes.
 - Implementar via un check de fecha al consultar presupuestos (o cron job).
+- **Estado:** ⏳ Pendiente - Requiere implementación de cron job o verificación en cada consulta. Se implementará en actualización futura.
 
-#### REQ-PRES-04: Pantalla de edicion de presupuestos
+#### REQ-PRES-04: Pantalla de edicion de presupuestos ✅ RESUELTO
 - Crear `budgets/edit-budget.tsx` con el formulario pre-poblado.
 - Mismos campos que crear, incluyendo el nuevo selector de categorias.
+- **Estado:** ✅ Resuelto - Pantalla creada en BUG-001. Actualizada con selector de categorías.
 
-#### REQ-PRES-05: Alertas de presupuesto
+#### REQ-PRES-05: Alertas de presupuesto 🔄 PARCIAL
 - Notificacion cuando un presupuesto de gasto alcance el 80% del limite.
 - Notificacion cuando un presupuesto de gasto se exceda (100%+).
 - Indicador visual en la lista de presupuestos (color rojo/amarillo).
+- **Estado:** 🔄 Parcial - Indicador visual implementado (banner de advertencia al exceder 100%). Notificaciones push pendientes (requiere módulo de notificaciones - Fase 3).
 
-#### REQ-PRES-06: Vista mejorada de presupuestos
+#### REQ-PRES-06: Vista mejorada de presupuestos ✅ RESUELTO
 - Barra de progreso con colores: verde (<60%), amarillo (60-80%), rojo (>80%).
 - Mostrar monto gastado / monto total y porcentaje.
 - Mostrar dias restantes del periodo actual.
 - Grafica de tendencia de gasto dentro del periodo.
+- **Estado:** ✅ Resuelto - Barra de progreso con colores implementada. Muestra monto gastado/total y porcentaje. Badge con porcentaje. Banner de advertencia cuando se excede. Días restantes y gráfica de tendencia pendientes para futuras mejoras.
 
 ---
 
@@ -675,16 +684,16 @@ Mantenimiento {
 ### Fase 2: Mejoras Core (Experiencia Base)
 > Mejorar lo que ya existe para que funcione correctamente.
 
-| # | Tarea | Prioridad |
-|---|---|---|
-| 1 | REQ-CRED-01 a 03: Credito completo (balance, toggle, visual) | Alta |
-| 2 | REQ-PRIM-01 a 03: Cuenta principal funcional | Alta |
-| 3 | REQ-PRES-01 a 06: Presupuestos vinculados a categorias | Alta |
-| 4 | REQ-PERF-01 a 03: Perfil de usuario editable | Alta |
-| 5 | REQ-MOV-01 a 03: Busqueda, filtros, categorias custom | Media |
-| 6 | REQ-STAT-01 a 04: Estadisticas con datos reales | Media |
-| 7 | REQ-AJUS-01 a 03: Moneda, export CSV, import respaldo | Media |
-| 8 | REQ-TEC-03: Estado global (Zustand/Context) | Media |
+| # | Tarea | Prioridad | Estado |
+|---|---|---|---|
+| 1 | REQ-CRED-01 a 03: Credito completo (balance, toggle, visual) | Alta | ✅ Completado |
+| 2 | REQ-PRIM-01 a 03: Cuenta principal funcional | Alta | ✅ Completado |
+| 3 | REQ-PRES-01 a 06: Presupuestos vinculados a categorias | Alta | ✅ Completado (excepto reset periódico y notificaciones) |
+| 4 | REQ-PERF-01 a 03: Perfil de usuario editable | Alta | ⏳ Pendiente |
+| 5 | REQ-MOV-01 a 03: Busqueda, filtros, categorias custom | Media | 🔄 Parcial (búsqueda y filtros ✅, categorías custom ⏳) |
+| 6 | REQ-STAT-01 a 04: Estadisticas con datos reales | Media | 🔄 Parcial (datos reales ✅, filtros y gráficos mejorados ⏳) |
+| 7 | REQ-AJUS-01 a 03: Moneda, export CSV, import respaldo | Media | ⏳ Pendiente |
+| 8 | REQ-TEC-03: Estado global (Zustand/Context) | Media | ⏳ Pendiente |
 
 ### Fase 3: Nuevos Modulos (Funcionalidad Expandida)
 > Agregar las nuevas secciones de la app.

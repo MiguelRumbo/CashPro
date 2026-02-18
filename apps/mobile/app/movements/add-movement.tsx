@@ -24,6 +24,7 @@ type Account = {
   name: string;
   type: string;
   balance: number;
+  is_primary?: number;
 };
 
 const CATEGORIES: Category[] = [
@@ -75,6 +76,12 @@ export default function AddMovementScreen() {
       
       if (result.success) {
         setAccounts(result.data);
+        
+        // Preseleccionar la cuenta principal
+        const primaryAccount = result.data.find((acc: Account) => acc.is_primary === 1);
+        if (primaryAccount && !selectedAccount) {
+          setSelectedAccount(primaryAccount);
+        }
       }
     } catch (error) {
       console.error('Error al cargar cuentas:', error);

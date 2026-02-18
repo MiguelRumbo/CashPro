@@ -189,7 +189,7 @@ const db = {
         if (sql.includes('INSERT INTO budgets')) {
           // Crear nuevo presupuesto
           const [
-            name, type, amount, period, start_date, icon, color, current_amount
+            name, type, amount, period, start_date, icon, color, current_amount, category_ids
           ] = params;
           
           // Asegurar que budgets existe
@@ -207,6 +207,7 @@ const db = {
             icon,
             color,
             current_amount: current_amount || 0,
+            category_ids: category_ids || null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           };

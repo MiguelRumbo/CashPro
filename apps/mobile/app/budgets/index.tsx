@@ -100,7 +100,7 @@ export default function BudgetsScreen() {
     <ThemedView style={[styles.container, { backgroundColor }]}>
       <Stack.Screen
         options={{
-          title: 'Presupuestos',
+          title: 'Objetivos y Presupuestos',
           headerStyle: { backgroundColor: surfaceColor },
           headerTintColor: textMain,
         }}
@@ -117,10 +117,10 @@ export default function BudgetsScreen() {
         {/* Header Info */}
         <View style={[styles.headerCard, { backgroundColor: surfaceColor }]}>
           <ThemedText style={[styles.headerTitle, { color: textMain }]}>
-            Gestiona tus Metas
+            Gestiona tus Metas y Presupuestos
           </ThemedText>
           <ThemedText style={[styles.headerSubtitle, { color: textMuted }]}>
-            Crea presupuestos de ahorro o límites de gasto para alcanzar tus objetivos financieros
+            Crea objetivos de ahorro o límites de presupuesto para alcanzar tus metas financieras
           </ThemedText>
         </View>
 
@@ -131,10 +131,10 @@ export default function BudgetsScreen() {
               <IconSymbol size={48} name="chart.pie" color={textMuted} />
             </View>
             <ThemedText style={[styles.emptyText, { color: textMain }]}>
-              No hay presupuestos
+              No hay objetivos ni presupuestos
             </ThemedText>
             <ThemedText style={[styles.emptySubtext, { color: textMuted }]}>
-              Crea tu primer presupuesto para comenzar a gestionar tus finanzas
+              Crea tu primer objetivo o presupuesto para comenzar a gestionar tus finanzas
             </ThemedText>
           </View>
         ) : (
@@ -162,13 +162,13 @@ export default function BudgetsScreen() {
                           {budget.name}
                         </ThemedText>
                         <ThemedText style={[styles.budgetPeriod, { color: textMuted }]}>
-                          {getPeriodText(budget.period)} • {budget.type === 'saving' ? 'Ahorro' : 'Gasto'}
+                          {getPeriodText(budget.period)} • {budget.type === 'saving' ? 'Objetivo' : 'Presupuesto'}
                         </ThemedText>
                       </View>
                     </View>
                     <View style={[styles.budgetBadge, { backgroundColor: budget.color + '20' }]}>
                       <ThemedText style={[styles.budgetBadgeText, { color: budget.color }]}>
-                        {progress.toFixed(0)}%
+                        {progress.toFixed(1)}%
                       </ThemedText>
                     </View>
                   </View>
@@ -195,7 +195,7 @@ export default function BudgetsScreen() {
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
                       <ThemedText style={[styles.amountLabel, { color: textMuted }]}>
-                        {budget.type === 'saving' ? 'Meta' : 'Límite'}
+                        {budget.type === 'saving' ? 'Meta' : 'Presupuesto'}
                       </ThemedText>
                       <ThemedText style={[styles.amountValue, { color: textMain }]}>
                         {formatCurrency(budget.amount)}
@@ -208,7 +208,7 @@ export default function BudgetsScreen() {
                     <View style={[styles.warningBanner, { backgroundColor: '#fee2e2' }]}>
                       <IconSymbol size={16} name="exclamationmark.triangle.fill" color="#ef4444" />
                       <ThemedText style={[styles.warningText, { color: '#ef4444' }]}>
-                        Has excedido tu límite de gasto
+                        Has excedido tu presupuesto
                       </ThemedText>
                     </View>
                   )}

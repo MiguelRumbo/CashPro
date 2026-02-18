@@ -111,7 +111,7 @@ function DonutChart({
       >
         <ThemedText style={[styles.donutTopLabel, { color: textMuted }]}>Top</ThemedText>
         <ThemedText style={[styles.donutPercentage, { color: textMain }]}>
-          {topPercentage.toFixed(0)}%
+          {topPercentage.toFixed(1)}%
         </ThemedText>
       </View>
     </View>
@@ -356,7 +356,7 @@ export default function ReportesScreen() {
               </View>
               <View style={[styles.percentBadge, { backgroundColor: expenseChange < 0 ? '#fff1f2' : '#dcfce7' }]}>
                 <ThemedText style={[styles.percentBadgeText, { color: expenseChange < 0 ? '#e11d48' : '#16a34a' }]}>
-                  {expenseChange > 0 ? '+' : ''}{expenseChange}%
+                  {expenseChange > 0 ? '+' : ''}{expenseChange.toFixed(1)}%
                 </ThemedText>
               </View>
             </View>
@@ -366,7 +366,7 @@ export default function ReportesScreen() {
                 ${Math.floor(totalExpense).toLocaleString('en-US')}
               </ThemedText>
               <ThemedText style={[styles.summaryAmountCents, { color: textMuted }]}>
-                .{(totalExpense % 1).toFixed(2).split('.')[1]}
+                .{((totalExpense % 1) * 10).toFixed(0)}
               </ThemedText>
             </View>
           </View>

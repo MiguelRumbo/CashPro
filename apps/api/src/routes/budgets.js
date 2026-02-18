@@ -39,7 +39,8 @@ router.post('/', (req, res) => {
       period,
       start_date,
       icon,
-      color
+      color,
+      category_ids
     } = req.body;
 
     // Validaciones básicas
@@ -64,10 +65,13 @@ router.post('/', (req, res) => {
       });
     }
 
+    // Convertir category_ids a JSON string si es un array
+    const categoryIdsStr = Array.isArray(category_ids) ? JSON.stringify(category_ids) : null;
+
     const stmt = db.prepare(`
       INSERT INTO budgets (
-        name, type, amount, period, start_date, icon, color, current_amount
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        name, type, amount, period, start_date, icon, color, current_amount, category_ids
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const result = stmt.run(
@@ -78,7 +82,8 @@ router.post('/', (req, res) => {
       start_date || new Date().toISOString(),
       icon || (type === 'saving' ? 'arrow.up.circle.fill' : 'arrow.down.circle.fill'),
       color || (type === 'saving' ? '#20df60' : '#ef4444'),
-      0
+      0,
+      categoryIdsStr
     );
 
     const newBudget = db.prepare('SELECT * FROM budgets WHERE id = ?').get(result.lastInsertRowid);
@@ -106,7 +111,7 @@ router.put('/:id', (req, res) => {
     }
 
     const allowedFields = [
-      'name', 'type', 'amount', 'period', 'start_date', 'icon', 'color', 'current_amount'
+      'name', 'type', 'amount', 'period', 'start_date', 'icon', 'color', 'current_amount', 'category_ids'
     ];
 
     const updateFields = [];
@@ -115,7 +120,12 @@ router.put('/:id', (req, res) => {
     Object.keys(updates).forEach(key => {
       if (allowedFields.includes(key)) {
         updateFields.push(`${key} = ?`);
-        values.push(updates[key]);
+        // Convertir category_ids a JSON string si es un array
+        if (key === 'category_ids' && Array.isArray(updates[key])) {
+          values.push(JSON.stringify(updates[key]));
+        } else {
+          values.push(updates[key]);
+        }
       }
     });
 
@@ -193,4 +203,49 @@ router.get('/stats/summary', (req, res) => {
   }
 });
 
+// Función auxiliar para actualizar presupuestos cuando se crea/edita/elimina un movimiento
+function updateBudgetsForMovement(categoryId, amount, operation = 'add') {
+  try {
+    if (!categoryId) return;
+
+    // Obtener todos los presupuestos de tipo gasto
+    const budgets = db.prepare('SELECT * FROM budgets WHERE type = ?').all('expense');
+    
+    budgets.forEach(budget => {
+      // Si el presupuesto no tiene categorías, rastrea todos los gastos
+      // Si tiene categorías, solo rastrea las seleccionadas
+      let shouldUpdate = false;
+      
+      if (!budget.category_ids || budget.category_ids === 'null') {
+        shouldUpdate = true;
+      } else {
+        try {
+          const categoryIds = JSON.parse(budget.category_ids);
+          shouldUpdate = categoryIds.includes(categoryId.toString());
+        } catch (e) {
+          shouldUpdate = false;
+        }
+      }
+      
+      if (shouldUpdate) {
+        const currentAmount = budget.current_amount || 0;
+        let newAmount = currentAmount;
+        
+        if (operation === 'add') {
+          newAmount = currentAmount + amount;
+        } else if (operation === 'subtract') {
+          newAmount = Math.max(0, currentAmount - amount);
+        }
+        
+        db.prepare('UPDATE budgets SET current_amount = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+          .run(newAmount, budget.id);
+      }
+    });
+  } catch (error) {
+    console.error('Error al actualizar presupuestos:', error);
+  }
+}
+
+// Exportar el router y la función
 module.exports = router;
+module.exports.updateBudgetsForMovement = updateBudgetsForMovement;

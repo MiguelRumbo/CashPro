@@ -25,6 +25,7 @@ interface Account {
   cut_off_day?: number;
   payment_due_day?: number;
   include_in_balance?: number;
+  is_primary?: number;
   created_at: string;
   updated_at: string;
 }
@@ -36,6 +37,7 @@ export default function AccountDetailScreen() {
   const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
   const [includeInBalance, setIncludeInBalance] = useState(true);
+  const [isPrimary, setIsPrimary] = useState(false);
 
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1c2e24' }, 'surface');
@@ -56,6 +58,7 @@ export default function AccountDetailScreen() {
       if (result.success) {
         setAccount(result.data);
         setIncludeInBalance(result.data.include_in_balance === 1 || result.data.include_in_balance === undefined);
+        setIsPrimary(result.data.is_primary === 1);
       } else {
         Alert.alert('Error', 'No se pudo cargar la cuenta');
         router.back();
@@ -118,6 +121,59 @@ export default function AccountDetailScreen() {
     } catch (error) {
       console.error('Error al actualizar cuenta:', error);
       Alert.alert('Error', 'No se pudo actualizar la configuración');
+    }
+  };
+
+  const handleTogglePrimary = async (value: boolean) => {
+    try {
+      if (value) {
+        // Marcar como principal
+        const response = await fetch(`${API_CONFIG.BASE_URL}/accounts/${accountId}/set-primary`, {
+          method: 'PUT',
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          setIsPrimary(true);
+          setAccount(result.data);
+          Alert.alert(
+            'Actualizado', 
+            'Esta cuenta ahora es tu cuenta principal. Los cambios se verán reflejados en el dashboard.',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  // Forzar recarga del dashboard al regresar
+                  router.back();
+                }
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Error', result.error);
+        }
+      } else {
+        // Desmarcar como principal
+        const response = await fetch(`${API_CONFIG.BASE_URL}/accounts/${accountId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_primary: 0 }),
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          setIsPrimary(false);
+          setAccount(result.data);
+          Alert.alert('Actualizado', 'Esta cuenta ya no es la principal');
+        } else {
+          Alert.alert('Error', result.error);
+        }
+      }
+    } catch (error) {
+      console.error('Error al establecer cuenta principal:', error);
+      Alert.alert('Error', 'No se pudo actualizar la cuenta principal');
     }
   };
 
@@ -209,6 +265,28 @@ export default function AccountDetailScreen() {
           <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
             Información General
           </ThemedText>
+
+          {/* Toggle Cuenta Principal */}
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleInfo}>
+              <ThemedText style={[styles.toggleTitle, { color: textMain }]}>
+                Cuenta Principal
+              </ThemedText>
+              <ThemedText style={[styles.toggleDescription, { color: textSub }]}>
+                {isPrimary 
+                  ? 'Esta es tu cuenta principal para transacciones' 
+                  : 'Marca como principal para usar por defecto'}
+              </ThemedText>
+            </View>
+            <Switch
+              value={isPrimary}
+              onValueChange={handleTogglePrimary}
+              trackColor={{ false: '#d1d5db', true: primary }}
+              thumbColor="#ffffff"
+            />
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: borderColor }]} />
 
           <View style={styles.infoRow}>
             <ThemedText style={[styles.infoLabel, { color: textSub }]}>Tipo de Cuenta</ThemedText>

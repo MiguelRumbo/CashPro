@@ -220,4 +220,37 @@ router.get('/stats/total-balance', (req, res) => {
   }
 });
 
+// Establecer cuenta principal
+router.put('/:id/set-primary', (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Verificar que la cuenta existe
+    const existingAccount = db.prepare('SELECT * FROM accounts WHERE id = ?').get(id);
+    if (!existingAccount) {
+      return res.status(404).json({ success: false, error: 'Cuenta no encontrada' });
+    }
+
+    // Desmarcar todas las cuentas como principal
+    const allAccounts = db.prepare('SELECT * FROM accounts').all();
+    allAccounts.forEach(account => {
+      db.prepare('UPDATE accounts SET is_primary = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(account.id);
+    });
+
+    // Marcar la cuenta seleccionada como principal
+    db.prepare('UPDATE accounts SET is_primary = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(id);
+
+    const updatedAccount = db.prepare('SELECT * FROM accounts WHERE id = ?').get(id);
+
+    res.json({ 
+      success: true, 
+      data: updatedAccount,
+      message: 'Cuenta principal actualizada exitosamente' 
+    });
+  } catch (error) {
+    console.error('Error al establecer cuenta principal:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;
