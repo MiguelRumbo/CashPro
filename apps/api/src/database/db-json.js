@@ -11,6 +11,8 @@ const initialData = {
   nextMovementId: 1,
   categories: [],
   nextCategoryId: 1,
+  budgets: [],
+  nextBudgetId: 1,
 };
 
 // Leer la base de datos
@@ -52,6 +54,9 @@ const db = {
         if (!data.movements) {
           data.movements = [];
         }
+        if (!data.budgets) {
+          data.budgets = [];
+        }
         
         // Para movimientos
         if (sql.includes('FROM movements')) {
@@ -59,6 +64,13 @@ const db = {
             const dateA = new Date(a.date);
             const dateB = new Date(b.date);
             return dateB - dateA;
+          });
+        }
+        
+        // Para presupuestos
+        if (sql.includes('FROM budgets')) {
+          return [...data.budgets].sort((a, b) => {
+            return new Date(b.created_at) - new Date(a.created_at);
           });
         }
         
@@ -76,6 +88,7 @@ const db = {
         // Asegurar que existen las estructuras
         if (!data.accounts) data.accounts = [];
         if (!data.movements) data.movements = [];
+        if (!data.budgets) data.budgets = [];
         
         if (sql.includes('stats') || sql.includes('SUM')) {
           // Calcular estadísticas de cuentas
@@ -120,6 +133,11 @@ const db = {
           return data.movements.find(m => m.id === parseInt(id));
         }
         
+        // Buscar presupuesto por ID
+        if (sql.includes('FROM budgets')) {
+          return data.budgets.find(b => b.id === parseInt(id));
+        }
+        
         // Buscar cuenta por ID
         return data.accounts.find(a => a.id === parseInt(id));
       },
@@ -159,6 +177,37 @@ const db = {
           writeDB(data);
           
           return { lastInsertRowid: newMovement.id };
+        }
+        
+        if (sql.includes('INSERT INTO budgets')) {
+          // Crear nuevo presupuesto
+          const [
+            name, type, amount, period, start_date, icon, color, current_amount
+          ] = params;
+          
+          // Asegurar que budgets existe
+          if (!data.budgets) {
+            data.budgets = [];
+          }
+          
+          const newBudget = {
+            id: data.nextBudgetId++,
+            name,
+            type,
+            amount: amount || 0,
+            period,
+            start_date: start_date || new Date().toISOString(),
+            icon,
+            color,
+            current_amount: current_amount || 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+          
+          data.budgets.push(newBudget);
+          writeDB(data);
+          
+          return { lastInsertRowid: newBudget.id };
         }
         
         if (sql.includes('INSERT INTO accounts')) {
@@ -246,6 +295,26 @@ const db = {
           }
           
           return { changes: movementIndex !== -1 ? 1 : 0 };
+        } else if (sql.includes('UPDATE budgets')) {
+          // Actualizar presupuesto
+          const id = params[params.length - 1];
+          const budgetIndex = data.budgets.findIndex(b => b.id === parseInt(id));
+          
+          if (budgetIndex !== -1) {
+            const updateMatch = sql.match(/SET (.+) WHERE/);
+            if (updateMatch) {
+              const fields = updateMatch[1].split(',').map(f => f.trim().split('=')[0].trim());
+              fields.forEach((field, index) => {
+                if (field !== 'updated_at') {
+                  data.budgets[budgetIndex][field] = params[index];
+                }
+              });
+              data.budgets[budgetIndex].updated_at = new Date().toISOString();
+            }
+            writeDB(data);
+          }
+          
+          return { changes: budgetIndex !== -1 ? 1 : 0 };
         } else if (sql.includes('DELETE FROM movements')) {
           // Eliminar movimiento
           const id = params[0];
@@ -254,6 +323,14 @@ const db = {
           writeDB(data);
           
           return { changes: initialLength - data.movements.length };
+        } else if (sql.includes('DELETE FROM budgets')) {
+          // Eliminar presupuesto
+          const id = params[0];
+          const initialLength = data.budgets.length;
+          data.budgets = data.budgets.filter(b => b.id !== parseInt(id));
+          writeDB(data);
+          
+          return { changes: initialLength - data.budgets.length };
         } else if (sql.includes('DELETE FROM accounts')) {
           // Eliminar cuenta
           const id = params[0];

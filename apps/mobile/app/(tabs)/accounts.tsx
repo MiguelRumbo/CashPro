@@ -158,9 +158,6 @@ export default function AccountsScreen() {
         {/* Action Bar */}
         <View style={styles.actionBar}>
           <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Cuentas Activas</ThemedText>
-          <TouchableOpacity>
-            <ThemedText style={[styles.linkText, { color: primary }]}>Ver todo</ThemedText>
-          </TouchableOpacity>
         </View>
 
         {/* Account List */}

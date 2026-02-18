@@ -4,6 +4,7 @@ const cors = require('cors');
 const { initDatabase } = require('./database/db-json');
 const accountsRouter = require('./routes/accounts');
 const movementsRouter = require('./routes/movements');
+const budgetsRouter = require('./routes/budgets');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,6 +27,44 @@ app.get('/', (req, res) => {
 
 app.use('/api/accounts', accountsRouter);
 app.use('/api/movements', movementsRouter);
+app.use('/api/budgets', budgetsRouter);
+
+// Endpoint para resetear todos los datos
+app.post('/api/reset', (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const DB_FILE = path.join(__dirname, '../data.json');
+    
+    // Estructura inicial limpia
+    const initialData = {
+      accounts: [],
+      nextAccountId: 1,
+      movements: [],
+      nextMovementId: 1,
+      categories: [],
+      nextCategoryId: 1,
+      budgets: [],
+      nextBudgetId: 1,
+    };
+    
+    // Escribir datos limpios
+    fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2));
+    
+    console.log('✅ Base de datos reseteada correctamente');
+    
+    res.json({ 
+      success: true, 
+      message: 'Todos los datos han sido eliminados correctamente' 
+    });
+  } catch (error) {
+    console.error('❌ Error al resetear la base de datos:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'No se pudieron eliminar los datos' 
+    });
+  }
+});
 
 // Manejo de errores
 app.use((err, req, res, next) => {

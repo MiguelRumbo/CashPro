@@ -1,9 +1,11 @@
-import { ScrollView, View, StyleSheet, TouchableOpacity, Switch } from 'react-native';
+import { ScrollView, View, StyleSheet, TouchableOpacity, Switch, Modal, Alert } from 'react-native';
 import { useState } from 'react';
+import { router } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { API_CONFIG } from '@/config/api';
 
 type SettingsRowProps = {
   icon: React.ComponentProps<typeof IconSymbol>['name'];
@@ -68,16 +70,56 @@ function SettingsRow({
 }
 
 export default function SettingsScreen() {
-  const [darkMode, setDarkMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
-  const [faceId, setFaceId] = useState(true);
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState('MXN - Peso Mexicano');
 
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1c2b21' }, 'surface');
   const textMain = useThemeColor({ light: '#111827', dark: '#ffffff' }, 'text');
   const borderColor = useThemeColor({ light: '#f3f4f6', dark: 'rgba(55, 65, 81, 0.5)' }, 'border');
   const textMuted = useThemeColor({ light: '#6b7280', dark: '#9ca3af' }, 'text');
+  const editButtonBg = useThemeColor({ light: '#f9fafb', dark: '#374151' }, 'surface');
+  const dataIconColor = useThemeColor({ light: '#4b5563', dark: '#d1d5db' }, 'text');
+  const dataIconBg = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'surface');
   const primary = '#20df60';
+
+  const currencies = [
+    'MXN - Peso Mexicano',
+    'USD - Dólar Estadounidense',
+    'EUR - Euro',
+  ];
+
+  const handleDeleteAllData = () => {
+    Alert.alert(
+      'Eliminar Todos los Datos',
+      '¿Estás seguro de que deseas eliminar TODOS los datos? Esta acción no se puede deshacer.\n\nSe eliminarán:\n• Todas las cuentas\n• Todos los movimientos\n• Todas las categorías',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar Todo',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await fetch(`${API_CONFIG.BASE_URL}/reset`, {
+                method: 'POST',
+              });
+              const result = await response.json();
+              
+              if (result.success) {
+                Alert.alert('Éxito', 'Todos los datos han sido eliminados correctamente');
+              } else {
+                Alert.alert('Error', result.error || 'No se pudieron eliminar los datos');
+              }
+            } catch (error) {
+              console.error('Error al eliminar datos:', error);
+              Alert.alert('Error', 'No se pudo conectar con el servidor');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
@@ -99,13 +141,13 @@ export default function SettingsScreen() {
         {/* User Profile Card */}
         <View style={[styles.profileCard, { backgroundColor: surfaceColor }]}>
           <View style={styles.profileAvatar}>
-            <ThemedText style={styles.profileInitials}>JD</ThemedText>
+            <ThemedText style={styles.profileInitials}>MR</ThemedText>
           </View>
           <View style={styles.profileInfo}>
-            <ThemedText style={[styles.profileName, { color: textMain }]}>John Doe</ThemedText>
-            <ThemedText style={[styles.profileEmail, { color: textMuted }]}>john.doe@cashpro.app</ThemedText>
+            <ThemedText style={[styles.profileName, { color: textMain }]}>Miguel Rumbo</ThemedText>
+            <ThemedText style={[styles.profileEmail, { color: textMuted }]}>miguel.rumbo@cashpro.com</ThemedText>
           </View>
-          <TouchableOpacity style={[styles.editButton, { backgroundColor: useThemeColor({ light: '#f9fafb', dark: '#374151' }, 'surface') }]}>
+          <TouchableOpacity style={[styles.editButton, { backgroundColor: editButtonBg }]}>
             <IconSymbol size={20} name="pencil" color={textMuted} />
           </TouchableOpacity>
         </View>
@@ -113,46 +155,47 @@ export default function SettingsScreen() {
         {/* PREFERENCIAS */}
         <ThemedText style={styles.sectionLabel}>PREFERENCIAS</ThemedText>
         <View style={[styles.sectionCard, { backgroundColor: surfaceColor }]}>
-          <SettingsRow
-            icon="banknote"
-            iconColor="#2563eb"
-            iconBg="#eff6ff"
-            title="Moneda"
-            subtitle="USD - Dólar Estadounidense"
-            hasArrow
-            textMain={textMain}
-            textMuted={textMuted}
-            borderColor={borderColor}
-          />
-          <SettingsRow
-            icon="chart.pie.fill"
-            iconColor="#9333ea"
-            iconBg="#faf5ff"
-            title="Presupuesto Mensual"
-            subtitle="$2,000.00 / Mes"
-            hasArrow
-            isLast
-            textMain={textMain}
-            textMuted={textMuted}
-            borderColor={borderColor}
-          />
+          <TouchableOpacity
+            style={[styles.settingsRow, { borderBottomWidth: 1, borderBottomColor: borderColor }]}
+            onPress={() => setShowCurrencyModal(true)}
+          >
+            <View style={styles.settingsRowLeft}>
+              <View style={[styles.settingsIcon, { backgroundColor: '#eff6ff' }]}>
+                <IconSymbol size={22} name="banknote" color="#2563eb" />
+              </View>
+              <View>
+                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>Moneda</ThemedText>
+                <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
+                  {selectedCurrency}
+                </ThemedText>
+              </View>
+            </View>
+            <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.settingsRow]}
+            onPress={() => router.push('/budgets')}
+          >
+            <View style={styles.settingsRowLeft}>
+              <View style={[styles.settingsIcon, { backgroundColor: '#faf5ff' }]}>
+                <IconSymbol size={22} name="chart.pie.fill" color="#9333ea" />
+              </View>
+              <View>
+                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>
+                  Presupuestos
+                </ThemedText>
+                <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
+                  Gestionar metas
+                </ThemedText>
+              </View>
+            </View>
+            <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />
+          </TouchableOpacity>
         </View>
 
         {/* APARIENCIA */}
         <ThemedText style={styles.sectionLabel}>APARIENCIA</ThemedText>
         <View style={[styles.sectionCard, { backgroundColor: surfaceColor }]}>
-          <SettingsRow
-            icon="moon.fill"
-            iconColor="#4f46e5"
-            iconBg="#eef2ff"
-            title="Modo Oscuro"
-            hasSwitch
-            switchValue={darkMode}
-            onSwitchChange={setDarkMode}
-            textMain={textMain}
-            textMuted={textMuted}
-            borderColor={borderColor}
-          />
           <SettingsRow
             icon="bell.fill"
             iconColor="#ea580c"
@@ -172,19 +215,6 @@ export default function SettingsScreen() {
         <ThemedText style={styles.sectionLabel}>SEGURIDAD</ThemedText>
         <View style={[styles.sectionCard, { backgroundColor: surfaceColor }]}>
           <SettingsRow
-            icon="faceid"
-            iconColor="#16a34a"
-            iconBg="#f0fdf4"
-            title="Face ID"
-            subtitle="Para iniciar sesión"
-            hasSwitch
-            switchValue={faceId}
-            onSwitchChange={setFaceId}
-            textMain={textMain}
-            textMuted={textMuted}
-            borderColor={borderColor}
-          />
-          <SettingsRow
             icon="number"
             iconColor="#0d9488"
             iconBg="#f0fdfa"
@@ -202,8 +232,8 @@ export default function SettingsScreen() {
         <View style={[styles.sectionCard, { backgroundColor: surfaceColor }]}>
           <SettingsRow
             icon="arrow.down.circle.fill"
-            iconColor={useThemeColor({ light: '#4b5563', dark: '#d1d5db' }, 'text')}
-            iconBg={useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'surface')}
+            iconColor={dataIconColor}
+            iconBg={dataIconBg}
             title="Exportar CSV"
             hasArrow
             textMain={textMain}
@@ -212,15 +242,33 @@ export default function SettingsScreen() {
           />
           <SettingsRow
             icon="arrow.up.circle.fill"
-            iconColor={useThemeColor({ light: '#4b5563', dark: '#d1d5db' }, 'text')}
-            iconBg={useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'surface')}
+            iconColor={dataIconColor}
+            iconBg={dataIconBg}
             title="Importar Respaldo"
             hasArrow
-            isLast
             textMain={textMain}
             textMuted={textMuted}
             borderColor={borderColor}
           />
+          <TouchableOpacity
+            style={[styles.settingsRow]}
+            onPress={handleDeleteAllData}
+          >
+            <View style={styles.settingsRowLeft}>
+              <View style={[styles.settingsIcon, { backgroundColor: '#fee2e2' }]}>
+                <IconSymbol size={22} name="trash.fill" color="#ef4444" />
+              </View>
+              <View>
+                <ThemedText style={[styles.settingsTitle, { color: '#ef4444' }]}>
+                  Eliminar Todos los Datos
+                </ThemedText>
+                <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
+                  Resetear aplicación
+                </ThemedText>
+              </View>
+            </View>
+            <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />
+          </TouchableOpacity>
         </View>
 
         {/* Logout */}
@@ -233,6 +281,51 @@ export default function SettingsScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Currency Modal */}
+      <Modal
+        visible={showCurrencyModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowCurrencyModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={[styles.modalTitle, { color: textMain }]}>
+                Seleccionar Moneda
+              </ThemedText>
+              <TouchableOpacity onPress={() => setShowCurrencyModal(false)}>
+                <IconSymbol size={24} name="xmark" color={textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.currencyList}>
+              {currencies.map((currency) => (
+                <TouchableOpacity
+                  key={currency}
+                  style={[
+                    styles.currencyItem,
+                    { borderBottomColor: borderColor },
+                    currency === currencies[currencies.length - 1] && { borderBottomWidth: 0 },
+                  ]}
+                  onPress={() => {
+                    setSelectedCurrency(currency);
+                    setShowCurrencyModal(false);
+                  }}
+                >
+                  <ThemedText style={[styles.currencyText, { color: textMain }]}>
+                    {currency}
+                  </ThemedText>
+                  {selectedCurrency === currency && (
+                    <IconSymbol size={20} name="checkmark" color={primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ThemedView>
   );
 }
@@ -388,5 +481,43 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     textAlign: 'center',
     marginTop: 16,
+  },
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
+    maxHeight: '50%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  currencyList: {
+    paddingHorizontal: 20,
+  },
+  currencyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  currencyText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
