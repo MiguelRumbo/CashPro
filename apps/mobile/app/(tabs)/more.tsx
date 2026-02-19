@@ -104,7 +104,17 @@ export default function MoreScreen() {
             textMain={textMain}
             textMuted={textMuted}
             borderColor={borderColor}
-            isLast
+          />
+          <MenuItem
+            icon="car"
+            iconColor="#3b82f6"
+            iconBg="#eff6ff"
+            title="Vehículos"
+            subtitle="Gasolina y mantenimiento"
+            onPress={() => router.push('/vehicles')}
+            textMain={textMain}
+            textMuted={textMuted}
+            borderColor={borderColor}
           />
         </View>
 

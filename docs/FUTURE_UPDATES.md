@@ -667,11 +667,11 @@ El system prompt debe incluir:
 
 ---
 
-### 4.5 Modulo de Suscripciones y Pagos Recurrentes
+### 4.5 Modulo de Suscripciones y Pagos Recurrentes ✅ COMPLETADO
 
 **Descripcion:** Gestion de pagos automaticos, suscripciones y ingresos recurrentes.
 
-#### REQ-SUB-01: Modelo de datos
+#### REQ-SUB-01: Modelo de datos ✅ RESUELTO
 ```
 Recurrente {
   id: number
@@ -694,28 +694,51 @@ Recurrente {
   updated_at: datetime
 }
 ```
+- **Estado:** ✅ Resuelto - Estructura de BD implementada en `apps/api/src/database/db-json.js`
+- **Archivos:** `apps/api/src/database/db-json.js` (agregado `recurring_payments`)
 
-#### REQ-SUB-02: Funcionalidades
-- CRUD completo de pagos recurrentes.
-- Vista tipo calendario mostrando proximos cobros del mes.
-- Resumen mensual: total de suscripciones, total de ingresos recurrentes.
-- Registro automatico: al llegar la fecha, crear el movimiento automaticamente en la cuenta correspondiente.
-- Si `auto_register = false`, solo notificar y que el usuario confirme.
-- Historial de cobros pasados por cada suscripcion.
-- Alerta de total de suscripciones vs ingresos (ej: "Tus suscripciones representan el 15% de tu salario").
+#### REQ-SUB-02: Funcionalidades ✅ RESUELTO
+- ✅ CRUD completo de pagos recurrentes implementado en API REST
+- ✅ Vista con lista de pagos activos e inactivos
+- ✅ Resumen mensual: total de suscripciones, gastos recurrentes e ingresos recurrentes
+- ✅ Registro manual de cobros/depósitos con botón
+- ✅ Indicador visual de registro automático (badge)
+- ✅ Alerta de porcentaje de gastos recurrentes vs ingresos
+- ✅ Cálculo de días hasta próximo cobro con indicadores visuales
+- ✅ Cálculo de costo mensual y anual por pago
+- ✅ Filtrado por tipo: suscripciones, salarios, gastos recurrentes
+- ⏳ Registro automático al llegar la fecha (requiere cron job - futuras versiones)
+- ⏳ Historial de cobros pasados (requiere tabla de historial - futuras versiones)
 
-#### REQ-SUB-03: Programacion
-- El usuario define la frecuencia y fecha exacta.
-- Ejemplos:
-  - Netflix: mensual, dia 15.
-  - Salario: quincenal, dias 1 y 15.
-  - Salario: catorcena, dias 14 y 28.
-  - Spotify: mensual, dia 3.
-  - Renta: mensual, dia 1.
+**API Endpoints implementados:**
+- `GET /api/recurring-payments` - Listar pagos recurrentes
+- `GET /api/recurring-payments/:id` - Obtener pago específico
+- `POST /api/recurring-payments` - Crear pago recurrente
+- `PUT /api/recurring-payments/:id` - Actualizar pago recurrente
+- `DELETE /api/recurring-payments/:id` - Eliminar pago recurrente
+- `POST /api/recurring-payments/:id/register` - Registrar cobro manualmente (crea movimiento)
+- `GET /api/recurring-payments/stats/summary` - Estadísticas generales
 
-#### REQ-SUB-04: Navegacion
-- Seccion accesible desde ajustes o tab principal.
-- Card resumen en el dashboard con "Proximos cobros esta semana".
+**Pantallas implementadas:**
+- `apps/mobile/app/subscriptions/index.tsx` - Lista de pagos con resumen y filtros
+- `apps/mobile/app/subscriptions/add-subscription.tsx` - Formulario para crear pago recurrente
+- `apps/mobile/app/subscriptions/sub-detail.tsx` - Detalle con información completa y opciones
+
+**Archivos:** `apps/api/src/routes/recurring-payments.js`, `apps/api/src/index.js`, pantallas en `apps/mobile/app/subscriptions/`
+
+#### REQ-SUB-03: Programacion ✅ RESUELTO
+- ✅ Usuario define frecuencia: semanal, quincenal, mensual, anual
+- ✅ Día del mes para pagos mensuales
+- ✅ Fechas específicas para quincenales (ej: 1,15 o 14,28)
+- ✅ Cálculo automático de próxima fecha de cobro
+- ✅ Ejemplos implementados: Netflix (mensual día 15), Salario (quincenal 1,15), Renta (mensual día 1)
+
+#### REQ-SUB-04: Navegacion ✅ RESUELTO
+- ✅ Sección accesible desde settings (Más)
+- ✅ Navegación fluida entre pantallas
+- ⏳ Card resumen en dashboard pendiente (se agregará en próxima actualización)
+
+**Archivos:** `apps/mobile/app/(tabs)/settings.tsx` (agregada opción de suscripciones)
 
 ---
 
@@ -802,6 +825,171 @@ Mantenimiento {
 
 #### REQ-AUTO-05: Integracion con movimientos
 - Las cargas de gasolina y mantenimientos deben crear automaticamente un movimiento de tipo "gasto" en la cuenta seleccionada, con categoria "Transporte" o "Vehiculo".
+
+---
+
+### 4.6 Módulo de Vehículo ✅ COMPLETADO (19 Feb 2026)
+
+**Descripción:** Seguimiento de gastos y datos del vehículo personal.
+
+#### REQ-AUTO-01: Modelo de datos ✅ RESUELTO
+```
+Vehiculo {
+  id: number
+  name: string                 // "Mi Carro", "Civic 2020"
+  brand: string
+  model: string
+  year: number
+  license_plate: string | null
+  odometer: number             // Kilometraje actual
+  fuel_type: string            // "gasoline" | "diesel" | "electric" | "hybrid"
+  tank_capacity: number | null // Litros del tanque
+  created_at: datetime
+}
+
+CargaGasolina {
+  id: number
+  vehicle_id: number
+  liters: number               // Litros cargados
+  price_per_liter: number      // Precio por litro
+  total_cost: number           // Costo total
+  odometer: number             // Kilometraje al momento de cargar
+  station_name: string | null  // Gasolinera (opcional)
+  is_full_tank: boolean        // Si lleno el tanque
+  date: datetime
+  account_id: number           // Cuenta de pago
+  notes: string | null
+  created_at: datetime
+}
+
+Mantenimiento {
+  id: number
+  vehicle_id: number
+  type: string                 // "oil_change" | "tires" | "brakes" | "service" | "repair" | "other"
+  description: string
+  cost: number
+  odometer: number
+  workshop_name: string | null // Taller/mecanico
+  date: datetime
+  next_date: date | null       // Proximo mantenimiento programado
+  next_odometer: number | null // Proximo mantenimiento por km
+  account_id: number
+  notes: string | null
+  created_at: datetime
+}
+```
+- **Estado:** ✅ Resuelto - Estructura de BD implementada en `apps/api/src/database/db-json.js`
+- **Archivos:** `apps/api/src/database/db-json.js` (agregados `vehicles`, `fuel_loads`, `maintenance`)
+
+#### REQ-AUTO-02: Submodulo de Gasolina ✅ RESUELTO
+- ✅ Registro de cada carga de gasolina: litros, precio, total, kilometraje
+- ✅ Cálculo de rendimiento (km/litro promedio) basado en cargas consecutivas
+- ✅ Historial completo de cargas ordenado por fecha
+- ✅ Actualización automática del kilometraje del vehículo
+- ✅ Creación automática de movimiento de gasto en la cuenta seleccionada
+- ✅ Selector de cuenta con balance visible
+- ✅ Estadísticas: total gastado en gasolina, gasto del mes actual
+- ⏳ Frecuencia de carga, gasto diario/semanal promedio (futuras versiones)
+- ⏳ Predicción de gasto mensual (futuras versiones)
+- ⏳ Gráficas de gasto y rendimiento (futuras versiones)
+
+**API Endpoints implementados:**
+- `GET /api/vehicles/:id/fuel-loads` - Listar cargas de gasolina
+- `POST /api/vehicles/:id/fuel-loads` - Registrar carga (crea movimiento y actualiza balance)
+
+**Pantallas implementadas:**
+- `apps/mobile/app/vehicles/vehicle-detail.tsx` - Tab de gasolina con historial y modal para agregar
+
+**Archivos:** `apps/api/src/routes/vehicles.js`, pantallas en `apps/mobile/app/vehicles/`
+
+#### REQ-AUTO-03: Submodulo de Mantenimiento ✅ RESUELTO
+- ✅ Registro de cada mantenimiento/reparación con costo
+- ✅ Tipos predefinidos: cambio aceite, llantas, frenos, servicio general, reparación, otro
+- ✅ Total histórico gastado en mantenimiento
+- ✅ Historial completo ordenado por fecha
+- ✅ Actualización automática del kilometraje del vehículo
+- ✅ Creación automática de movimiento de gasto en la cuenta seleccionada
+- ✅ Selector de cuenta con balance visible
+- ⏳ Total por tipo de mantenimiento (futuras versiones)
+- ⏳ Recordatorio programado de próximo mantenimiento (requiere notificaciones - Fase 3)
+
+**API Endpoints implementados:**
+- `GET /api/vehicles/:id/maintenance` - Listar mantenimientos
+- `POST /api/vehicles/:id/maintenance` - Registrar mantenimiento (crea movimiento y actualiza balance)
+
+**Pantallas implementadas:**
+- `apps/mobile/app/vehicles/vehicle-detail.tsx` - Tab de mantenimiento con historial y modal para agregar
+
+**Archivos:** `apps/api/src/routes/vehicles.js`, pantallas en `apps/mobile/app/vehicles/`
+
+#### REQ-AUTO-04: Dashboard del Vehiculo ✅ RESUELTO
+- ✅ Vista general con información del vehículo
+- ✅ Kilometraje actual
+- ✅ Rendimiento promedio (km/L)
+- ✅ Gasto total del mes en el vehículo (gasolina + mantenimiento)
+- ✅ Gasto total histórico
+- ✅ Desglose de gastos: gasolina vs mantenimiento
+- ✅ Tabs para navegar entre gasolina y mantenimiento
+- ⏳ Último mantenimiento y próximo (futuras versiones)
+
+**Pantallas implementadas:**
+- `apps/mobile/app/vehicles/vehicle-detail.tsx` - Dashboard completo con estadísticas y tabs
+
+**Archivos:** `apps/mobile/app/vehicles/vehicle-detail.tsx`
+
+#### REQ-AUTO-05: Integracion con movimientos ✅ RESUELTO
+- ✅ Las cargas de gasolina crean automáticamente un movimiento de tipo "gasto"
+- ✅ Los mantenimientos crean automáticamente un movimiento de tipo "gasto"
+- ✅ Categoría "Transporte" con iconos diferenciados (car para gasolina, wrench para mantenimiento)
+- ✅ Actualización automática del balance de la cuenta seleccionada
+- ✅ Soporte para cuentas de crédito (incrementa current_balance)
+- ✅ Soporte para otras cuentas (decrementa balance)
+- ✅ Los movimientos aparecen en la lista general de movimientos
+
+**Archivos:** `apps/api/src/routes/vehicles.js` (lógica de creación de movimientos)
+
+#### REQ-AUTO-06: Navegación ✅ RESUELTO
+- ✅ Card resumen en dashboard mostrando primer vehículo con estadísticas
+- ✅ Navegación desde dashboard a pantalla de vehículos
+- ✅ Opción en menú "Más" para acceder a vehículos
+- ✅ Lista de vehículos con información resumida
+- ✅ Pantalla de agregar vehículo con todos los campos
+- ✅ Pantalla de detalle con tabs de gasolina y mantenimiento
+- ✅ Solo se muestra card en dashboard si hay vehículos registrados
+
+**Pantallas implementadas:**
+- `apps/mobile/app/vehicles/index.tsx` - Lista de vehículos con estadísticas
+- `apps/mobile/app/vehicles/add-vehicle.tsx` - Formulario para agregar vehículo
+- `apps/mobile/app/vehicles/vehicle-detail.tsx` - Detalle completo con tabs
+
+**Archivos:** 
+- Dashboard: `apps/mobile/app/(tabs)/index.tsx` (agregado card de vehículos)
+- Menú Más: `apps/mobile/app/(tabs)/more.tsx` (agregada opción de vehículos)
+
+**API Endpoints completos:**
+- `GET /api/vehicles` - Listar vehículos
+- `GET /api/vehicles/:id` - Obtener vehículo específico
+- `POST /api/vehicles` - Crear vehículo
+- `PUT /api/vehicles/:id` - Actualizar vehículo
+- `DELETE /api/vehicles/:id` - Eliminar vehículo (elimina también cargas y mantenimientos)
+- `GET /api/vehicles/:id/fuel-loads` - Listar cargas de gasolina
+- `POST /api/vehicles/:id/fuel-loads` - Registrar carga de gasolina
+- `GET /api/vehicles/:id/maintenance` - Listar mantenimientos
+- `POST /api/vehicles/:id/maintenance` - Registrar mantenimiento
+- `GET /api/vehicles/:id/stats` - Estadísticas del vehículo
+
+**Archivos backend:**
+- `apps/api/src/routes/vehicles.js` - Rutas completas del módulo
+- `apps/api/src/database/db-json.js` - Handlers de BD para vehículos
+- `apps/api/src/index.js` - Registro de rutas
+
+**Pendiente para futuras versiones:**
+- Gráficas de gasto en gasolina por mes
+- Gráfica de rendimiento km/L a lo largo del tiempo
+- Cálculo de frecuencia de carga y gastos promedio
+- Predicción de gasto mensual
+- Recordatorios de mantenimiento programado (requiere notificaciones - Fase 3)
+- Soporte para múltiples vehículos en dashboard (actualmente solo muestra el primero)
 
 ---
 
@@ -906,11 +1094,11 @@ Mantenimiento {
 
 | # | Tarea | Prioridad | Estado |
 |---|---|---|---|
-| 1 | REQ-SUB-01 a 04: Suscripciones y pagos recurrentes | Alta | ⏳ Pendiente |
+| 1 | REQ-SUB-01 a 04: Suscripciones y pagos recurrentes | Alta | ✅ Completado |
 | 2 | REQ-OBJ-01 a 03: Objetivos de ahorro | Alta | ✅ Completado |
 | 3 | REQ-PREST-01 a 03: Modulo de prestamos | Media | ✅ Completado |
 | 4 | REQ-NOTIF-01 a 03: Notificaciones push completas | Media | ⏳ Pendiente |
-| 5 | REQ-AUTO-01 a 05: Modulo de vehiculo (gasolina + mantenimiento) | Media | ⏳ Pendiente |
+| 5 | REQ-AUTO-01 a 06: Modulo de vehiculo (gasolina + mantenimiento) | Media | ✅ Completado |
 | 6 | REQ-TEC-10: Reorganizar navegacion para nuevos modulos | Media | ⏳ Pendiente |
 
 ### Fase 4: Inteligencia Artificial (Diferenciador)
@@ -1083,3 +1271,77 @@ Mantenimiento {
 2. Implementar date picker UI para filtros personalizados
 3. Reset periódico de presupuestos (REQ-PRES-03)
 4. Categorías personalizadas (REQ-MOV-03)
+
+
+---
+
+### Actualización 2026-02-19 (Parte 3) - Módulos de Suscripciones y Vehículos
+
+**Módulo 4.5 - Suscripciones y Pagos Recurrentes completado:**
+
+1. ✅ **REQ-SUB-01 a 04**: Módulo completo implementado
+   - Modelo de datos con soporte para suscripciones, salarios, gastos e ingresos recurrentes
+   - Frecuencias: semanal, quincenal, mensual, anual
+   - Configuración de días específicos para pagos
+   - Registro automático o manual de cobros
+   - Cálculo de próxima fecha de cobro
+   - Resumen mensual de gastos e ingresos recurrentes
+   - Alerta de porcentaje de gastos vs ingresos
+   - Próximos cobros con indicadores visuales
+   - API REST completa con 7 endpoints
+   - 3 pantallas: lista, agregar y detalle
+   - Opción en menú "Más"
+
+**Módulo 4.6 - Vehículos completado:**
+
+1. ✅ **REQ-AUTO-01 a 06**: Módulo completo implementado
+   - Modelo de datos para vehículos, cargas de gasolina y mantenimientos
+   - Submodulo de gasolina con registro de cargas y cálculo de rendimiento
+   - Submodulo de mantenimiento con tipos predefinidos
+   - Dashboard del vehículo con estadísticas completas
+   - Integración automática con movimientos y cuentas
+   - Selector de cuenta con balance visible
+   - Actualización automática de kilometraje
+   - Card en dashboard mostrando primer vehículo
+   - Opción en menú "Más"
+   - API REST completa con 10 endpoints
+   - 3 pantallas: lista, agregar y detalle con tabs
+
+**Archivos creados/modificados:**
+
+Backend:
+- `apps/api/src/routes/vehicles.js` - Rutas completas del módulo de vehículos
+- `apps/api/src/database/db-json.js` - Handlers para vehicles, fuel_loads y maintenance
+- `apps/api/src/index.js` - Registro de rutas de vehículos
+
+Frontend:
+- `apps/mobile/app/vehicles/index.tsx` - Lista de vehículos con estadísticas
+- `apps/mobile/app/vehicles/add-vehicle.tsx` - Formulario para agregar vehículo
+- `apps/mobile/app/vehicles/vehicle-detail.tsx` - Detalle con tabs de gasolina y mantenimiento
+- `apps/mobile/app/(tabs)/index.tsx` - Card de vehículos en dashboard
+- `apps/mobile/app/(tabs)/more.tsx` - Opción de vehículos en menú Más
+
+Documentación:
+- `docs/FUTURE_UPDATES.md` - Actualizado con módulos 4.5 y 4.6 completados
+
+**Características implementadas:**
+- Registro de cargas de gasolina con cálculo automático de rendimiento
+- Registro de mantenimientos con tipos predefinidos
+- Creación automática de movimientos en la cuenta seleccionada
+- Actualización automática de balance de cuentas
+- Soporte para cuentas de crédito y otras cuentas
+- Estadísticas: rendimiento, gastos totales, gastos del mes
+- Historial completo de cargas y mantenimientos
+- Selector de cuenta con balance visible
+- Modales simplificados para agregar cargas y mantenimientos
+- Tabs para navegar entre gasolina y mantenimiento
+- Card en dashboard con resumen del primer vehículo
+
+**Pendiente para futuras versiones:**
+- Gráficas de gasto y rendimiento a lo largo del tiempo
+- Cálculo de frecuencia de carga y gastos promedio
+- Predicción de gasto mensual
+- Recordatorios de mantenimiento programado (requiere notificaciones)
+- Registro automático de suscripciones al llegar la fecha (requiere cron job)
+- Historial de cobros pasados de suscripciones
+- Soporte para múltiples vehículos en dashboard

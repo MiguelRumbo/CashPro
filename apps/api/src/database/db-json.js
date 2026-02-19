@@ -25,6 +25,12 @@ const initialData = {
   nextLoanPaymentId: 1,
   recurring_payments: [],
   nextRecurringPaymentId: 1,
+  vehicles: [],
+  nextVehicleId: 1,
+  fuel_loads: [],
+  nextFuelLoadId: 1,
+  maintenance: [],
+  nextMaintenanceId: 1,
 };
 
 // Leer la base de datos
@@ -86,6 +92,15 @@ const db = {
         }
         if (!data.recurring_payments) {
           data.recurring_payments = [];
+        }
+        if (!data.vehicles) {
+          data.vehicles = [];
+        }
+        if (!data.fuel_loads) {
+          data.fuel_loads = [];
+        }
+        if (!data.maintenance) {
+          data.maintenance = [];
         }
 
         // Para movimientos
@@ -153,6 +168,44 @@ const db = {
           return [...data.recurring_payments].sort((a, b) => {
             return new Date(b.created_at) - new Date(a.created_at);
           });
+        }
+        
+        // Para vehículos
+        if (sql.includes('FROM vehicles')) {
+          return [...data.vehicles].sort((a, b) => {
+            return new Date(b.created_at) - new Date(a.created_at);
+          });
+        }
+        
+        // Para cargas de gasolina
+        if (sql.includes('FROM fuel_loads')) {
+          let loads = [...data.fuel_loads];
+          
+          // Filtrar por vehicle_id si se proporciona en WHERE
+          if (sql.includes('WHERE vehicle_id = ?') && params.length > 0) {
+            const vehicleId = parseInt(params[0]);
+            loads = loads.filter(l => parseInt(l.vehicle_id) === vehicleId);
+          }
+          
+          // Ordenar por fecha
+          if (sql.includes('ORDER BY date ASC')) {
+            return loads.sort((a, b) => new Date(a.date) - new Date(b.date));
+          }
+          
+          return loads.sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+        
+        // Para mantenimientos
+        if (sql.includes('FROM maintenance')) {
+          let maintenance = [...data.maintenance];
+          
+          // Filtrar por vehicle_id si se proporciona en WHERE
+          if (sql.includes('WHERE vehicle_id = ?') && params.length > 0) {
+            const vehicleId = parseInt(params[0]);
+            maintenance = maintenance.filter(m => parseInt(m.vehicle_id) === vehicleId);
+          }
+          
+          return maintenance.sort((a, b) => new Date(b.date) - new Date(a.date));
         }
 
         // Para perfil de usuario
@@ -260,6 +313,21 @@ const db = {
         // Buscar pago recurrente por ID
         if (sql.includes('FROM recurring_payments')) {
           return data.recurring_payments.find(r => r.id === parseInt(id));
+        }
+        
+        // Buscar vehículo por ID
+        if (sql.includes('FROM vehicles')) {
+          return data.vehicles.find(v => v.id === parseInt(id));
+        }
+        
+        // Buscar carga de gasolina por ID
+        if (sql.includes('FROM fuel_loads')) {
+          return data.fuel_loads.find(f => f.id === parseInt(id));
+        }
+        
+        // Buscar mantenimiento por ID
+        if (sql.includes('FROM maintenance')) {
+          return data.maintenance.find(m => m.id === parseInt(id));
         }
 
         // Buscar perfil por ID
@@ -812,6 +880,146 @@ const db = {
           writeDB(data);
           
           return { changes: initialLength - data.loan_payments.length };
+        } else if (sql.includes('INSERT INTO vehicles')) {
+          // Crear nuevo vehículo
+          const [name, brand, model, year, license_plate, odometer, fuel_type, tank_capacity, created_at] = params;
+          
+          if (!data.vehicles) {
+            data.vehicles = [];
+          }
+          if (!data.nextVehicleId) {
+            data.nextVehicleId = 1;
+          }
+          
+          const newVehicle = {
+            id: data.nextVehicleId++,
+            name,
+            brand,
+            model,
+            year: parseInt(year),
+            license_plate: license_plate || null,
+            odometer: parseFloat(odometer),
+            fuel_type,
+            tank_capacity: tank_capacity ? parseFloat(tank_capacity) : null,
+            created_at,
+          };
+          
+          data.vehicles.push(newVehicle);
+          writeDB(data);
+          
+          return { lastInsertRowid: newVehicle.id };
+        } else if (sql.includes('UPDATE vehicles')) {
+          // Actualizar vehículo
+          const id = params[params.length - 1];
+          const vehicleIndex = data.vehicles.findIndex(v => v.id === parseInt(id));
+          
+          if (vehicleIndex !== -1) {
+            const updateMatch = sql.match(/SET ([\s\S]+?) WHERE/);
+            if (updateMatch) {
+              const setPart = updateMatch[1];
+              const assignments = setPart.split(',').map(s => s.trim());
+              
+              let paramIndex = 0;
+              assignments.forEach(assignment => {
+                const parts = assignment.split('=').map(s => s.trim());
+                const field = parts[0];
+                const operation = parts[1];
+                
+                if (operation === '?') {
+                  data.vehicles[vehicleIndex][field] = params[paramIndex];
+                  paramIndex++;
+                }
+              });
+            }
+            writeDB(data);
+          }
+          
+          return { changes: vehicleIndex !== -1 ? 1 : 0 };
+        } else if (sql.includes('DELETE FROM vehicles')) {
+          // Eliminar vehículo
+          const id = params[0];
+          const initialLength = data.vehicles.length;
+          data.vehicles = data.vehicles.filter(v => v.id !== parseInt(id));
+          writeDB(data);
+          
+          return { changes: initialLength - data.vehicles.length };
+        } else if (sql.includes('INSERT INTO fuel_loads')) {
+          // Crear nueva carga de gasolina
+          const [vehicle_id, liters, price_per_liter, total_cost, odometer, station_name, is_full_tank, date, account_id, notes, created_at] = params;
+          
+          if (!data.fuel_loads) {
+            data.fuel_loads = [];
+          }
+          if (!data.nextFuelLoadId) {
+            data.nextFuelLoadId = 1;
+          }
+          
+          const newLoad = {
+            id: data.nextFuelLoadId++,
+            vehicle_id: parseInt(vehicle_id),
+            liters: parseFloat(liters),
+            price_per_liter: parseFloat(price_per_liter),
+            total_cost: parseFloat(total_cost),
+            odometer: parseFloat(odometer),
+            station_name: station_name || null,
+            is_full_tank: is_full_tank ? 1 : 0,
+            date,
+            account_id: parseInt(account_id),
+            notes: notes || null,
+            created_at,
+          };
+          
+          data.fuel_loads.push(newLoad);
+          writeDB(data);
+          
+          return { lastInsertRowid: newLoad.id };
+        } else if (sql.includes('DELETE FROM fuel_loads')) {
+          // Eliminar carga de gasolina
+          const id = params[0];
+          const initialLength = data.fuel_loads.length;
+          data.fuel_loads = data.fuel_loads.filter(f => f.id !== parseInt(id) && f.vehicle_id !== parseInt(id));
+          writeDB(data);
+          
+          return { changes: initialLength - data.fuel_loads.length };
+        } else if (sql.includes('INSERT INTO maintenance')) {
+          // Crear nuevo mantenimiento
+          const [vehicle_id, type, description, cost, odometer, workshop_name, date, next_date, next_odometer, account_id, notes, created_at] = params;
+          
+          if (!data.maintenance) {
+            data.maintenance = [];
+          }
+          if (!data.nextMaintenanceId) {
+            data.nextMaintenanceId = 1;
+          }
+          
+          const newMaintenance = {
+            id: data.nextMaintenanceId++,
+            vehicle_id: parseInt(vehicle_id),
+            type,
+            description,
+            cost: parseFloat(cost),
+            odometer: parseFloat(odometer),
+            workshop_name: workshop_name || null,
+            date,
+            next_date: next_date || null,
+            next_odometer: next_odometer ? parseFloat(next_odometer) : null,
+            account_id: parseInt(account_id),
+            notes: notes || null,
+            created_at,
+          };
+          
+          data.maintenance.push(newMaintenance);
+          writeDB(data);
+          
+          return { lastInsertRowid: newMaintenance.id };
+        } else if (sql.includes('DELETE FROM maintenance')) {
+          // Eliminar mantenimiento
+          const id = params[0];
+          const initialLength = data.maintenance.length;
+          data.maintenance = data.maintenance.filter(m => m.id !== parseInt(id) && m.vehicle_id !== parseInt(id));
+          writeDB(data);
+          
+          return { changes: initialLength - data.maintenance.length };
         }
         
         return {};

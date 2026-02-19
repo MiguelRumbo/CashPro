@@ -9,6 +9,7 @@ const profileRouter = require('./routes/profile');
 const savingsGoalsRouter = require('./routes/savings-goals');
 const loansRouter = require('./routes/loans');
 const recurringPaymentsRouter = require('./routes/recurring-payments');
+const vehiclesRouter = require('./routes/vehicles');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,6 +37,7 @@ app.use('/api/profile', profileRouter);
 app.use('/api/savings-goals', savingsGoalsRouter);
 app.use('/api/loans', loansRouter);
 app.use('/api/recurring-payments', recurringPaymentsRouter);
+app.use('/api/vehicles', vehiclesRouter);
 
 // Endpoint para resetear todos los datos
 app.post('/api/reset', (req, res) => {
@@ -73,6 +75,12 @@ app.post('/api/reset', (req, res) => {
       nextLoanPaymentId: 1,
       recurring_payments: [],
       nextRecurringPaymentId: 1,
+      vehicles: [],
+      nextVehicleId: 1,
+      fuel_loads: [],
+      nextFuelLoadId: 1,
+      maintenance: [],
+      nextMaintenanceId: 1,
     };
     
     // Escribir datos limpios

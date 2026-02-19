@@ -82,6 +82,7 @@ export default function DashboardScreen() {
   const [loansSummary, setLoansSummary] = useState<LoansSummary | null>(null);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [subscriptionsSummary, setSubscriptionsSummary] = useState<SubscriptionsSummary | null>(null);
+  const [vehiclesSummary, setVehiclesSummary] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [profileName, setProfileName] = useState('Usuario');
   const [profileInitials, setProfileInitials] = useState('U');
@@ -203,6 +204,23 @@ export default function DashboardScreen() {
       const subsResult = await subsResponse.json();
       if (subsResult.success) {
         setSubscriptionsSummary(subsResult.data);
+      }
+
+      // Obtener resumen de vehículos
+      const vehiclesResponse = await fetch(`${API_CONFIG.BASE_URL}/vehicles`);
+      const vehiclesResult = await vehiclesResponse.json();
+      if (vehiclesResult.success && vehiclesResult.data.length > 0) {
+        // Obtener estadísticas del primer vehículo
+        const firstVehicle = vehiclesResult.data[0];
+        const statsResponse = await fetch(`${API_CONFIG.BASE_URL}/vehicles/${firstVehicle.id}/stats`);
+        const statsResult = await statsResponse.json();
+        if (statsResult.success) {
+          setVehiclesSummary({
+            vehicle: firstVehicle,
+            stats: statsResult.data,
+            total_vehicles: vehiclesResult.data.length,
+          });
+        }
       }
     } catch (error) {
       console.error('Error al cargar datos:', error);
@@ -689,6 +707,67 @@ export default function DashboardScreen() {
                 ))}
               </View>
             )}
+          </TouchableOpacity>
+        )}
+
+        {/* Vehicles Section */}
+        {vehiclesSummary && (
+          <TouchableOpacity
+            style={[styles.vehiclesCard, { backgroundColor: surfaceColor, borderColor }]}
+            onPress={() => router.push('/vehicles')}
+          >
+            <View style={styles.vehiclesHeader}>
+              <View style={styles.vehiclesHeaderLeft}>
+                <View style={[styles.vehiclesIcon, { backgroundColor: 'rgba(59, 130, 246, 0.2)' }]}>
+                  <IconSymbol size={24} name="car" color="#3b82f6" />
+                </View>
+                <View>
+                  <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
+                    Vehículo
+                  </ThemedText>
+                  <ThemedText style={[styles.vehiclesSubtitle, { color: textMuted }]}>
+                    {vehiclesSummary.vehicle.name}
+                  </ThemedText>
+                </View>
+              </View>
+              <IconSymbol size={20} name="chevron.right" color={textMuted} />
+            </View>
+
+            <View style={styles.vehiclesStats}>
+              <View style={styles.vehicleStatItem}>
+                <IconSymbol name="speedometer" size={16} color={textMuted} />
+                <ThemedText style={[styles.vehicleStatValue, { color: textMain }]}>
+                  {vehiclesSummary.vehicle.odometer.toLocaleString()} km
+                </ThemedText>
+              </View>
+              {vehiclesSummary.stats.avg_efficiency > 0 && (
+                <View style={styles.vehicleStatItem}>
+                  <IconSymbol name="gauge" size={16} color={textMuted} />
+                  <ThemedText style={[styles.vehicleStatValue, { color: textMain }]}>
+                    {vehiclesSummary.stats.avg_efficiency.toFixed(1)} km/L
+                  </ThemedText>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.vehiclesAmounts}>
+              <View>
+                <ThemedText style={[styles.vehiclesLabel, { color: textMuted }]}>
+                  Gasto este mes
+                </ThemedText>
+                <ThemedText style={[styles.vehiclesAmount, { color: '#ef4444' }]}>
+                  {formatCurrency(vehiclesSummary.stats.month_total_cost)}
+                </ThemedText>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <ThemedText style={[styles.vehiclesLabel, { color: textMuted }]}>
+                  Gasto total
+                </ThemedText>
+                <ThemedText style={[styles.vehiclesAmount, { color: textMain }]}>
+                  {formatCurrency(vehiclesSummary.stats.total_cost)}
+                </ThemedText>
+              </View>
+            </View>
           </TouchableOpacity>
         )}
 
@@ -1411,5 +1490,66 @@ const styles = StyleSheet.create({
   upcomingItemDate: {
     fontSize: 11,
     marginTop: 2,
+  },
+  // Vehicles Card
+  vehiclesCard: {
+    padding: 20,
+    borderRadius: 16,
+    marginTop: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 2,
+    borderWidth: 1,
+  },
+  vehiclesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  vehiclesHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  vehiclesIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vehiclesSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  vehiclesStats: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 16,
+  },
+  vehicleStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  vehicleStatValue: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  vehiclesAmounts: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  vehiclesLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  vehiclesAmount: {
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
