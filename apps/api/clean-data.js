@@ -11,6 +11,7 @@ const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
 console.log('📊 Estado actual:');
 console.log(`- Cuentas: ${data.accounts.length}`);
 console.log(`- Perfiles: ${data.user_profile.length}`);
+console.log(`- Vehículos: ${data.vehicles ? data.vehicles.length : 0}`);
 
 // Limpiar perfiles duplicados - mantener solo el último con datos válidos
 if (data.user_profile && data.user_profile.length > 0) {
@@ -50,6 +51,17 @@ data.accounts.forEach(account => {
   console.log(`- ${account.name}: is_primary = ${account.is_primary}`);
 });
 
+// Inicializar estructuras de vehículos si no existen
+if (!data.vehicles) {
+  console.log('\n⚠️  Estructura de vehículos no existe, inicializando...');
+  data.vehicles = [];
+  data.nextVehicleId = 1;
+  data.fuel_loads = [];
+  data.nextFuelLoadId = 1;
+  data.maintenance = [];
+  data.nextMaintenanceId = 1;
+}
+
 // Escribir datos limpios
 fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 
@@ -57,4 +69,5 @@ console.log('\n✅ Datos limpiados exitosamente');
 console.log('📊 Estado final:');
 console.log(`- Cuentas: ${data.accounts.length}`);
 console.log(`- Perfiles: ${data.user_profile.length}`);
+console.log(`- Vehículos: ${data.vehicles.length}`);
 console.log(`- Perfil activo:`, data.user_profile[0]);

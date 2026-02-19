@@ -742,92 +742,6 @@ Recurrente {
 
 ---
 
-### 4.6 Modulo de Vehiculo
-
-**Descripcion:** Seguimiento de gastos y datos del vehiculo personal.
-
-#### REQ-AUTO-01: Modelo de datos
-```
-Vehiculo {
-  id: number
-  name: string                 // "Mi Carro", "Civic 2020"
-  brand: string
-  model: string
-  year: number
-  license_plate: string | null
-  odometer: number             // Kilometraje actual
-  fuel_type: string            // "gasoline" | "diesel" | "electric" | "hybrid"
-  tank_capacity: number | null // Litros del tanque
-  created_at: datetime
-}
-
-CargaGasolina {
-  id: number
-  vehicle_id: number
-  liters: number               // Litros cargados
-  price_per_liter: number      // Precio por litro
-  total_cost: number           // Costo total
-  odometer: number             // Kilometraje al momento de cargar
-  station_name: string | null  // Gasolinera (opcional)
-  is_full_tank: boolean        // Si lleno el tanque
-  date: datetime
-  account_id: number           // Cuenta de pago
-  notes: string | null
-  created_at: datetime
-}
-
-Mantenimiento {
-  id: number
-  vehicle_id: number
-  type: string                 // "oil_change" | "tires" | "brakes" | "service" | "repair" | "other"
-  description: string
-  cost: number
-  odometer: number
-  workshop_name: string | null // Taller/mecanico
-  date: datetime
-  next_date: date | null       // Proximo mantenimiento programado
-  next_odometer: number | null // Proximo mantenimiento por km
-  account_id: number
-  notes: string | null
-  created_at: datetime
-}
-```
-
-#### REQ-AUTO-02: Submodulo de Gasolina
-- Registro de cada carga de gasolina: litros, precio, total, kilometraje.
-- Estadisticas calculadas por la IA o algoritmicamente:
-  - **Rendimiento:** km/litro promedio (requiere al menos 2 cargas con kilometraje).
-  - **Frecuencia:** cada cuantos dias carga gasolina en promedio.
-  - **Gasto diario promedio:** total gastado en gasolina / dias del periodo.
-  - **Gasto mensual promedio.**
-  - **Gasto semanal promedio.**
-  - **Prediccion:** "Al ritmo actual, gastaras $X este mes en gasolina."
-  - **Comparacion:** "Este mes gastaste X% mas/menos en gasolina que el anterior."
-- Grafica de gasto en gasolina por mes (barras).
-- Grafica de rendimiento km/L a lo largo del tiempo.
-
-#### REQ-AUTO-03: Submodulo de Mantenimiento
-- Registro de cada mantenimiento/reparacion con costo.
-- Tipos predefinidos: cambio aceite, llantas, frenos, servicio general, reparacion, otro.
-- Total historico gastado en mantenimiento.
-- Total por tipo de mantenimiento.
-- Recordatorio programado: "Tu proximo cambio de aceite es en X km / X dias."
-- Historial completo ordenado por fecha.
-
-#### REQ-AUTO-04: Dashboard del Vehiculo
-- Vista general:
-  - Kilometraje actual.
-  - Ultimo mantenimiento y proximo.
-  - Ultima carga de gasolina.
-  - Gasto total del mes en el vehiculo (gasolina + mantenimiento).
-  - Rendimiento promedio.
-- Resumen tipo card accesible desde el dashboard principal.
-
-#### REQ-AUTO-05: Integracion con movimientos
-- Las cargas de gasolina y mantenimientos deben crear automaticamente un movimiento de tipo "gasto" en la cuenta seleccionada, con categoria "Transporte" o "Vehiculo".
-
----
-
 ### 4.6 Módulo de Vehículo ✅ COMPLETADO (19 Feb 2026)
 
 **Descripción:** Seguimiento de gastos y datos del vehículo personal.
@@ -887,8 +801,10 @@ Mantenimiento {
 - ✅ Historial completo de cargas ordenado por fecha
 - ✅ Actualización automática del kilometraje del vehículo
 - ✅ Creación automática de movimiento de gasto en la cuenta seleccionada
-- ✅ Selector de cuenta con balance visible
+- ✅ Selector de cuenta con balance visible y radio buttons
+- ✅ Cálculo de total en tiempo real (litros × precio)
 - ✅ Estadísticas: total gastado en gasolina, gasto del mes actual
+- ✅ Modal mejorado con campos: litros, precio, kilometraje, gasolinera, cuenta, notas
 - ⏳ Frecuencia de carga, gasto diario/semanal promedio (futuras versiones)
 - ⏳ Predicción de gasto mensual (futuras versiones)
 - ⏳ Gráficas de gasto y rendimiento (futuras versiones)
@@ -898,18 +814,20 @@ Mantenimiento {
 - `POST /api/vehicles/:id/fuel-loads` - Registrar carga (crea movimiento y actualiza balance)
 
 **Pantallas implementadas:**
-- `apps/mobile/app/vehicles/vehicle-detail.tsx` - Tab de gasolina con historial y modal para agregar
+- `apps/mobile/app/vehicles/vehicle-detail.tsx` - Tab de gasolina con historial y modal mejorado
 
 **Archivos:** `apps/api/src/routes/vehicles.js`, pantallas en `apps/mobile/app/vehicles/`
 
 #### REQ-AUTO-03: Submodulo de Mantenimiento ✅ RESUELTO
 - ✅ Registro de cada mantenimiento/reparación con costo
-- ✅ Tipos predefinidos: cambio aceite, llantas, frenos, servicio general, reparación, otro
+- ✅ Tipos predefinidos con iconos: cambio aceite, llantas, frenos, servicio general, reparación, otro
 - ✅ Total histórico gastado en mantenimiento
 - ✅ Historial completo ordenado por fecha
 - ✅ Actualización automática del kilometraje del vehículo
 - ✅ Creación automática de movimiento de gasto en la cuenta seleccionada
-- ✅ Selector de cuenta con balance visible
+- ✅ Selector de cuenta con balance visible y radio buttons
+- ✅ Selector visual de tipo de mantenimiento con chips e iconos
+- ✅ Modal mejorado con campos: tipo, descripción, costo, kilometraje, taller, cuenta, notas
 - ⏳ Total por tipo de mantenimiento (futuras versiones)
 - ⏳ Recordatorio programado de próximo mantenimiento (requiere notificaciones - Fase 3)
 
@@ -918,18 +836,19 @@ Mantenimiento {
 - `POST /api/vehicles/:id/maintenance` - Registrar mantenimiento (crea movimiento y actualiza balance)
 
 **Pantallas implementadas:**
-- `apps/mobile/app/vehicles/vehicle-detail.tsx` - Tab de mantenimiento con historial y modal para agregar
+- `apps/mobile/app/vehicles/vehicle-detail.tsx` - Tab de mantenimiento con historial y modal mejorado
 
 **Archivos:** `apps/api/src/routes/vehicles.js`, pantallas en `apps/mobile/app/vehicles/`
 
 #### REQ-AUTO-04: Dashboard del Vehiculo ✅ RESUELTO
-- ✅ Vista general con información del vehículo
+- ✅ Vista general con información del vehículo (marca, modelo, año)
 - ✅ Kilometraje actual
 - ✅ Rendimiento promedio (km/L)
 - ✅ Gasto total del mes en el vehículo (gasolina + mantenimiento)
 - ✅ Gasto total histórico
-- ✅ Desglose de gastos: gasolina vs mantenimiento
+- ✅ Desglose de gastos: gasolina vs mantenimiento con colores diferenciados
 - ✅ Tabs para navegar entre gasolina y mantenimiento
+- ✅ FAB (botón flotante) para agregar carga o mantenimiento según tab activo
 - ⏳ Último mantenimiento y próximo (futuras versiones)
 
 **Pantallas implementadas:**
@@ -945,29 +864,68 @@ Mantenimiento {
 - ✅ Soporte para cuentas de crédito (incrementa current_balance)
 - ✅ Soporte para otras cuentas (decrementa balance)
 - ✅ Los movimientos aparecen en la lista general de movimientos
+- ✅ Formato correcto de precio con símbolo $ en las notas
 
 **Archivos:** `apps/api/src/routes/vehicles.js` (lógica de creación de movimientos)
 
 #### REQ-AUTO-06: Navegación ✅ RESUELTO
 - ✅ Card resumen en dashboard mostrando primer vehículo con estadísticas
 - ✅ Navegación desde dashboard a pantalla de vehículos
-- ✅ Opción en menú "Más" para acceder a vehículos
+- ✅ Opción en menú "Más" para acceder a vehículos (dentro de sección FINANZAS)
 - ✅ Lista de vehículos con información resumida
 - ✅ Pantalla de agregar vehículo con todos los campos
 - ✅ Pantalla de detalle con tabs de gasolina y mantenimiento
 - ✅ Solo se muestra card en dashboard si hay vehículos registrados
+- ✅ Eliminada sección duplicada de "CONFIGURACIÓN" en menú Más
 
 **Pantallas implementadas:**
 - `apps/mobile/app/vehicles/index.tsx` - Lista de vehículos con estadísticas
 - `apps/mobile/app/vehicles/add-vehicle.tsx` - Formulario para agregar vehículo
-- `apps/mobile/app/vehicles/vehicle-detail.tsx` - Detalle completo con tabs
+- `apps/mobile/app/vehicles/vehicle-detail.tsx` - Detalle completo con tabs y modales mejorados
 
 **Archivos:** 
 - Dashboard: `apps/mobile/app/(tabs)/index.tsx` (agregado card de vehículos)
-- Menú Más: `apps/mobile/app/(tabs)/more.tsx` (agregada opción de vehículos)
+- Menú Más: `apps/mobile/app/(tabs)/more.tsx` (agregada opción de vehículos, eliminada sección duplicada)
 
 **API Endpoints completos:**
 - `GET /api/vehicles` - Listar vehículos
+- `GET /api/vehicles/:id` - Obtener vehículo específico
+- `POST /api/vehicles` - Crear vehículo
+- `PUT /api/vehicles/:id` - Actualizar vehículo
+- `DELETE /api/vehicles/:id` - Eliminar vehículo
+- `GET /api/vehicles/:id/fuel-loads` - Listar cargas de gasolina
+- `POST /api/vehicles/:id/fuel-loads` - Registrar carga
+- `GET /api/vehicles/:id/maintenance` - Listar mantenimientos
+- `POST /api/vehicles/:id/maintenance` - Registrar mantenimiento
+- `GET /api/vehicles/:id/stats` - Estadísticas del vehículo
+
+**Correcciones Técnicas (19 Feb 2026):**
+1. ✅ Corregida importación de db en vehicles.js: `const { db } = require('../database/db-json')`
+2. ✅ Corregido data.json: vehículo con id=1, nextVehicleId=2, agregadas estructuras fuel_loads y maintenance
+3. ✅ Agregadas validaciones de inicialización de IDs en db-json.js
+4. ✅ Corregido orden de parámetros en INSERT de movements (type, amount, title, category_id, category_name, category_icon, category_color, account_id, to_account_id, date, notes)
+5. ✅ Formato de precio corregido con símbolo $ en las notas
+6. ✅ Modales mejorados con selector de cuentas, radio buttons, balance visible, cálculo de total en tiempo real
+7. ✅ Agregados todos los estilos necesarios para los nuevos componentes de modales
+
+**Archivos Backend:**
+- `apps/api/src/routes/vehicles.js` - Rutas completas con 10 endpoints
+- `apps/api/src/database/db-json.js` - Handlers para vehicles, fuel_loads, maintenance
+- `apps/api/src/index.js` - Registro de rutas
+- `apps/api/data.json` - Estructuras de BD
+
+**Archivos Frontend:**
+- `apps/mobile/app/vehicles/index.tsx` - Lista de vehículos
+- `apps/mobile/app/vehicles/add-vehicle.tsx` - Agregar vehículo
+- `apps/mobile/app/vehicles/vehicle-detail.tsx` - Detalle con modales mejorados
+- `apps/mobile/app/(tabs)/index.tsx` - Card en dashboard
+- `apps/mobile/app/(tabs)/more.tsx` - Opción en menú
+
+**Documentación:**
+- `docs/FUTURE_UPDATES.md` - Módulo marcado como completado
+
+---
+
 - `GET /api/vehicles/:id` - Obtener vehículo específico
 - `POST /api/vehicles` - Crear vehículo
 - `PUT /api/vehicles/:id` - Actualizar vehículo

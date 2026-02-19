@@ -90,17 +90,13 @@ export default function VehicleDetailScreen() {
 
   const fetchData = async () => {
     try {
-      console.log('Fetching vehicle data for id:', id);
-      
       // Cargar vehículo
       const vehicleRes = await fetch(`${API_CONFIG.BASE_URL}/vehicles/${id}`);
       const vehicleData = await vehicleRes.json();
-      console.log('Vehicle data:', vehicleData);
       
       if (vehicleData.success) {
         setVehicle(vehicleData.data);
       } else {
-        console.error('Error loading vehicle:', vehicleData.error);
         Alert.alert('Error', 'No se pudo cargar el vehículo');
         return;
       }
@@ -108,7 +104,6 @@ export default function VehicleDetailScreen() {
       // Cargar cargas de gasolina
       const fuelRes = await fetch(`${API_CONFIG.BASE_URL}/vehicles/${id}/fuel-loads`);
       const fuelData = await fuelRes.json();
-      console.log('Fuel loads:', fuelData);
       if (fuelData.success) {
         setFuelLoads(fuelData.data);
       }
@@ -116,7 +111,6 @@ export default function VehicleDetailScreen() {
       // Cargar mantenimientos
       const maintRes = await fetch(`${API_CONFIG.BASE_URL}/vehicles/${id}/maintenance`);
       const maintData = await maintRes.json();
-      console.log('Maintenance:', maintData);
       if (maintData.success) {
         setMaintenance(maintData.data);
       }
@@ -124,7 +118,6 @@ export default function VehicleDetailScreen() {
       // Cargar estadísticas
       const statsRes = await fetch(`${API_CONFIG.BASE_URL}/vehicles/${id}/stats`);
       const statsData = await statsRes.json();
-      console.log('Stats:', statsData);
       if (statsData.success) {
         setStats(statsData.data);
       }
@@ -132,7 +125,6 @@ export default function VehicleDetailScreen() {
       // Cargar cuentas
       const accountsRes = await fetch(`${API_CONFIG.BASE_URL}/accounts`);
       const accountsData = await accountsRes.json();
-      console.log('Accounts:', accountsData);
       if (accountsData.success) {
         setAccounts(accountsData.data);
         const primary = accountsData.data.find((a: Account) => (a as any).is_primary === 1);
@@ -405,101 +397,300 @@ export default function VehicleDetailScreen() {
         <IconSymbol name="plus" size={24} color="#ffffff" />
       </TouchableOpacity>
 
-      {/* Modal Gasolina - Simplificado */}
+      {/* Modal Gasolina - Mejorado */}
       <Modal visible={showFuelModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
-            <ThemedText style={[styles.modalTitle, { color: textMain }]}>Registrar Carga</ThemedText>
+            <View style={styles.modalHeader}>
+              <ThemedText style={[styles.modalTitle, { color: textMain }]}>Registrar Carga de Gasolina</ThemedText>
+              <TouchableOpacity onPress={() => setShowFuelModal(false)}>
+                <IconSymbol name="xmark" size={24} color={textMuted} />
+              </TouchableOpacity>
+            </View>
             
-            <TextInput
-              style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
-              value={fuelLiters}
-              onChangeText={setFuelLiters}
-              placeholder="Litros"
-              placeholderTextColor={textMuted}
-              keyboardType="decimal-pad"
-            />
-            
-            <TextInput
-              style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
-              value={fuelPrice}
-              onChangeText={setFuelPrice}
-              placeholder="Precio por litro"
-              placeholderTextColor={textMuted}
-              keyboardType="decimal-pad"
-            />
-            
-            <TextInput
-              style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
-              value={fuelOdometer}
-              onChangeText={setFuelOdometer}
-              placeholder="Kilometraje"
-              placeholderTextColor={textMuted}
-              keyboardType="decimal-pad"
-            />
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              {/* Litros */}
+              <ThemedText style={[styles.modalLabel, { color: textMain }]}>Litros</ThemedText>
+              <TextInput
+                style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
+                value={fuelLiters}
+                onChangeText={setFuelLiters}
+                placeholder="25.5"
+                placeholderTextColor={textMuted}
+                keyboardType="decimal-pad"
+              />
+              
+              {/* Precio por litro */}
+              <ThemedText style={[styles.modalLabel, { color: textMain }]}>Precio por litro</ThemedText>
+              <TextInput
+                style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
+                value={fuelPrice}
+                onChangeText={setFuelPrice}
+                placeholder="22.50"
+                placeholderTextColor={textMuted}
+                keyboardType="decimal-pad"
+              />
+              
+              {/* Total calculado */}
+              {fuelLiters && fuelPrice && (
+                <View style={[styles.totalBox, { backgroundColor: primary + '15', borderColor: primary + '30' }]}>
+                  <ThemedText style={[styles.totalLabel, { color: textMuted }]}>Total a pagar</ThemedText>
+                  <ThemedText style={[styles.totalValue, { color: primary }]}>
+                    {formatCurrency(parseFloat(fuelLiters) * parseFloat(fuelPrice))}
+                  </ThemedText>
+                </View>
+              )}
+              
+              {/* Kilometraje */}
+              <ThemedText style={[styles.modalLabel, { color: textMain }]}>Kilometraje actual</ThemedText>
+              <TextInput
+                style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
+                value={fuelOdometer}
+                onChangeText={setFuelOdometer}
+                placeholder={vehicle?.odometer.toString()}
+                placeholderTextColor={textMuted}
+                keyboardType="decimal-pad"
+              />
+              
+              {/* Gasolinera */}
+              <ThemedText style={[styles.modalLabel, { color: textMain }]}>Gasolinera (opcional)</ThemedText>
+              <TextInput
+                style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
+                value={fuelStation}
+                onChangeText={setFuelStation}
+                placeholder="Ej: Pemex, Shell, BP"
+                placeholderTextColor={textMuted}
+              />
+              
+              {/* Selector de cuenta */}
+              <ThemedText style={[styles.modalLabel, { color: textMain }]}>Cuenta de pago</ThemedText>
+              <View style={styles.accountsList}>
+                {accounts.map((account) => (
+                  <TouchableOpacity
+                    key={account.id}
+                    style={[
+                      styles.accountOption,
+                      {
+                        backgroundColor: fuelAccount === account.id ? primary + '20' : inputBg,
+                        borderColor: fuelAccount === account.id ? primary : borderColor,
+                      },
+                    ]}
+                    onPress={() => setFuelAccount(account.id)}
+                  >
+                    <View style={styles.accountOptionLeft}>
+                      <View style={[
+                        styles.accountRadio,
+                        {
+                          borderColor: fuelAccount === account.id ? primary : borderColor,
+                          backgroundColor: fuelAccount === account.id ? primary : 'transparent',
+                        },
+                      ]}>
+                        {fuelAccount === account.id && (
+                          <IconSymbol name="checkmark" size={12} color="#ffffff" />
+                        )}
+                      </View>
+                      <View>
+                        <ThemedText style={[styles.accountName, { color: textMain }]}>
+                          {account.name}
+                        </ThemedText>
+                        <ThemedText style={[styles.accountBalance, { color: textMuted }]}>
+                          {formatCurrency(account.balance)}
+                        </ThemedText>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              {/* Notas */}
+              <ThemedText style={[styles.modalLabel, { color: textMain }]}>Notas (opcional)</ThemedText>
+              <TextInput
+                style={[styles.input, styles.textArea, { backgroundColor: inputBg, borderColor, color: textMain }]}
+                value={fuelNotes}
+                onChangeText={setFuelNotes}
+                placeholder="Notas adicionales..."
+                placeholderTextColor={textMuted}
+                multiline
+                numberOfLines={3}
+              />
+            </ScrollView>
             
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: borderColor }]}
+                style={[styles.modalButton, styles.cancelButton, { backgroundColor: borderColor }]}
                 onPress={() => setShowFuelModal(false)}
               >
-                <ThemedText style={{ color: textMain }}>Cancelar</ThemedText>
+                <ThemedText style={[styles.buttonText, { color: textMain }]}>Cancelar</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: primary }]}
+                style={[styles.modalButton, styles.saveButton, { backgroundColor: primary }]}
                 onPress={handleAddFuel}
               >
-                <ThemedText style={{ color: '#ffffff' }}>Guardar</ThemedText>
+                <ThemedText style={[styles.buttonText, { color: '#ffffff' }]}>Guardar</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* Modal Mantenimiento - Simplificado */}
+      {/* Modal Mantenimiento - Mejorado */}
       <Modal visible={showMaintenanceModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
-            <ThemedText style={[styles.modalTitle, { color: textMain }]}>Registrar Mantenimiento</ThemedText>
+            <View style={styles.modalHeader}>
+              <ThemedText style={[styles.modalTitle, { color: textMain }]}>Registrar Mantenimiento</ThemedText>
+              <TouchableOpacity onPress={() => setShowMaintenanceModal(false)}>
+                <IconSymbol name="xmark" size={24} color={textMuted} />
+              </TouchableOpacity>
+            </View>
             
-            <TextInput
-              style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
-              value={maintDescription}
-              onChangeText={setMaintDescription}
-              placeholder="Descripción"
-              placeholderTextColor={textMuted}
-            />
-            
-            <TextInput
-              style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
-              value={maintCost}
-              onChangeText={setMaintCost}
-              placeholder="Costo"
-              placeholderTextColor={textMuted}
-              keyboardType="decimal-pad"
-            />
-            
-            <TextInput
-              style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
-              value={maintOdometer}
-              onChangeText={setMaintOdometer}
-              placeholder="Kilometraje"
-              placeholderTextColor={textMuted}
-              keyboardType="decimal-pad"
-            />
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              {/* Tipo */}
+              <ThemedText style={[styles.modalLabel, { color: textMain }]}>Tipo de mantenimiento</ThemedText>
+              <View style={styles.typeGrid}>
+                {[
+                  { value: 'oil_change', label: 'Aceite', icon: 'drop.fill' },
+                  { value: 'tires', label: 'Llantas', icon: 'circle' },
+                  { value: 'brakes', label: 'Frenos', icon: 'exclamationmark.triangle' },
+                  { value: 'service', label: 'Servicio', icon: 'wrench' },
+                  { value: 'repair', label: 'Reparación', icon: 'hammer' },
+                  { value: 'other', label: 'Otro', icon: 'ellipsis' },
+                ].map((t) => (
+                  <TouchableOpacity
+                    key={t.value}
+                    style={[
+                      styles.typeChip,
+                      {
+                        backgroundColor: maintType === t.value ? '#f59e0b' + '20' : inputBg,
+                        borderColor: maintType === t.value ? '#f59e0b' : borderColor,
+                      },
+                    ]}
+                    onPress={() => setMaintType(t.value)}
+                  >
+                    <IconSymbol
+                      name={t.icon as any}
+                      size={16}
+                      color={maintType === t.value ? '#f59e0b' : textMuted}
+                    />
+                    <ThemedText
+                      style={[
+                        styles.typeChipText,
+                        { color: maintType === t.value ? '#f59e0b' : textMuted },
+                      ]}
+                    >
+                      {t.label}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              {/* Descripción */}
+              <ThemedText style={[styles.modalLabel, { color: textMain }]}>Descripción</ThemedText>
+              <TextInput
+                style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
+                value={maintDescription}
+                onChangeText={setMaintDescription}
+                placeholder="Ej: Cambio de aceite y filtro"
+                placeholderTextColor={textMuted}
+              />
+              
+              {/* Costo */}
+              <ThemedText style={[styles.modalLabel, { color: textMain }]}>Costo</ThemedText>
+              <TextInput
+                style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
+                value={maintCost}
+                onChangeText={setMaintCost}
+                placeholder="0.00"
+                placeholderTextColor={textMuted}
+                keyboardType="decimal-pad"
+              />
+              
+              {/* Kilometraje */}
+              <ThemedText style={[styles.modalLabel, { color: textMain }]}>Kilometraje actual</ThemedText>
+              <TextInput
+                style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
+                value={maintOdometer}
+                onChangeText={setMaintOdometer}
+                placeholder={vehicle?.odometer.toString()}
+                placeholderTextColor={textMuted}
+                keyboardType="decimal-pad"
+              />
+              
+              {/* Taller */}
+              <ThemedText style={[styles.modalLabel, { color: textMain }]}>Taller/Mecánico (opcional)</ThemedText>
+              <TextInput
+                style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
+                value={maintWorkshop}
+                onChangeText={setMaintWorkshop}
+                placeholder="Nombre del taller"
+                placeholderTextColor={textMuted}
+              />
+              
+              {/* Selector de cuenta */}
+              <ThemedText style={[styles.modalLabel, { color: textMain }]}>Cuenta de pago</ThemedText>
+              <View style={styles.accountsList}>
+                {accounts.map((account) => (
+                  <TouchableOpacity
+                    key={account.id}
+                    style={[
+                      styles.accountOption,
+                      {
+                        backgroundColor: maintAccount === account.id ? primary + '20' : inputBg,
+                        borderColor: maintAccount === account.id ? primary : borderColor,
+                      },
+                    ]}
+                    onPress={() => setMaintAccount(account.id)}
+                  >
+                    <View style={styles.accountOptionLeft}>
+                      <View style={[
+                        styles.accountRadio,
+                        {
+                          borderColor: maintAccount === account.id ? primary : borderColor,
+                          backgroundColor: maintAccount === account.id ? primary : 'transparent',
+                        },
+                      ]}>
+                        {maintAccount === account.id && (
+                          <IconSymbol name="checkmark" size={12} color="#ffffff" />
+                        )}
+                      </View>
+                      <View>
+                        <ThemedText style={[styles.accountName, { color: textMain }]}>
+                          {account.name}
+                        </ThemedText>
+                        <ThemedText style={[styles.accountBalance, { color: textMuted }]}>
+                          {formatCurrency(account.balance)}
+                        </ThemedText>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              {/* Notas */}
+              <ThemedText style={[styles.modalLabel, { color: textMain }]}>Notas (opcional)</ThemedText>
+              <TextInput
+                style={[styles.input, styles.textArea, { backgroundColor: inputBg, borderColor, color: textMain }]}
+                value={maintNotes}
+                onChangeText={setMaintNotes}
+                placeholder="Notas adicionales..."
+                placeholderTextColor={textMuted}
+                multiline
+                numberOfLines={3}
+              />
+            </ScrollView>
             
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: borderColor }]}
+                style={[styles.modalButton, styles.cancelButton, { backgroundColor: borderColor }]}
                 onPress={() => setShowMaintenanceModal(false)}
               >
-                <ThemedText style={{ color: textMain }}>Cancelar</ThemedText>
+                <ThemedText style={[styles.buttonText, { color: textMain }]}>Cancelar</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: primary }]}
+                style={[styles.modalButton, styles.saveButton, { backgroundColor: primary }]}
                 onPress={handleAddMaintenance}
               >
-                <ThemedText style={{ color: '#ffffff' }}>Guardar</ThemedText>
+                <ThemedText style={[styles.buttonText, { color: '#ffffff' }]}>Guardar</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
@@ -535,9 +726,28 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 14, marginTop: 12 },
   fab: { position: 'absolute', right: 20, bottom: 20, width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, minHeight: 400 },
-  modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 20 },
+  modalContent: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '90%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: '700' },
+  modalScroll: { maxHeight: 500 },
+  modalLabel: { fontSize: 14, fontWeight: '600', marginBottom: 8, marginTop: 4 },
   input: { borderWidth: 1, borderRadius: 12, padding: 14, fontSize: 16, marginBottom: 12 },
+  textArea: { height: 80, textAlignVertical: 'top' },
+  totalBox: { padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  totalLabel: { fontSize: 14 },
+  totalValue: { fontSize: 20, fontWeight: '700' },
+  typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  typeChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  typeChipText: { fontSize: 13, fontWeight: '600' },
+  accountsList: { marginBottom: 16 },
+  accountOption: { padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 8 },
+  accountOptionLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  accountRadio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
+  accountName: { fontSize: 15, fontWeight: '600' },
+  accountBalance: { fontSize: 13, marginTop: 2 },
   modalButtons: { flexDirection: 'row', gap: 12, marginTop: 20 },
   modalButton: { flex: 1, padding: 14, borderRadius: 12, alignItems: 'center' },
+  cancelButton: {},
+  saveButton: {},
+  buttonText: { fontSize: 16, fontWeight: '600' },
 });

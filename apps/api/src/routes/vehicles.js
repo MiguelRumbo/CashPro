@@ -182,21 +182,25 @@ router.post('/:id/fuel-loads', (req, res) => {
     // Actualizar kilometraje del vehículo
     db.prepare('UPDATE vehicles SET odometer = ? WHERE id = ?').run(parseFloat(odometer), id);
     
-    // Crear movimiento de gasto
+    // Crear movimiento de gasto con el formato correcto
     db.prepare(`
-      INSERT INTO movements (type, title, amount, date, category, category_icon, category_color, account_id, notes, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO movements (
+        type, amount, title, category_id, category_name, category_icon, category_color,
+        account_id, to_account_id, date, notes
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       'expense',
-      `Gasolina - ${vehicle.name}`,
       parseFloat(total_cost),
-      date || new Date().toISOString(),
+      `Gasolina - ${vehicle.name}`,
+      null,
       'Transporte',
       'car',
       '#3b82f6',
       parseInt(account_id),
-      `${liters}L @ $${price_per_liter}/L${station_name ? ` - ${station_name}` : ''}${notes ? ` - ${notes}` : ''}`,
-      new Date().toISOString()
+      null,
+      date || new Date().toISOString(),
+      `${liters}L @ $${price_per_liter}/L${station_name ? ` - ${station_name}` : ''}${notes ? ` - ${notes}` : ''}`
     );
     
     // Actualizar balance de la cuenta
@@ -219,7 +223,7 @@ router.post('/:id/fuel-loads', (req, res) => {
 // GET /api/vehicles/:id/maintenance - Listar mantenimientos
 router.get('/:id/maintenance', (req, res) => {
   try {
-    const { id } = req.params;
+    const { id} = req.params;
     const maintenance = db.prepare('SELECT * FROM maintenance WHERE vehicle_id = ? ORDER BY date DESC').all(id);
     res.json({ success: true, data: maintenance });
   } catch (error) {
@@ -272,7 +276,7 @@ router.post('/:id/maintenance', (req, res) => {
     // Actualizar kilometraje del vehículo
     db.prepare('UPDATE vehicles SET odometer = ? WHERE id = ?').run(parseFloat(odometer), id);
     
-    // Crear movimiento de gasto
+    // Crear movimiento de gasto con el formato correcto
     const typeLabels = {
       oil_change: 'Cambio de Aceite',
       tires: 'Llantas',
@@ -283,19 +287,23 @@ router.post('/:id/maintenance', (req, res) => {
     };
     
     db.prepare(`
-      INSERT INTO movements (type, title, amount, date, category, category_icon, category_color, account_id, notes, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO movements (
+        type, amount, title, category_id, category_name, category_icon, category_color,
+        account_id, to_account_id, date, notes
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       'expense',
-      `${typeLabels[type] || 'Mantenimiento'} - ${vehicle.name}`,
       parseFloat(cost),
-      date || new Date().toISOString(),
+      `${typeLabels[type] || 'Mantenimiento'} - ${vehicle.name}`,
+      null,
       'Transporte',
       'wrench',
       '#f59e0b',
       parseInt(account_id),
-      `${description}${workshop_name ? ` - ${workshop_name}` : ''}${notes ? ` - ${notes}` : ''}`,
-      new Date().toISOString()
+      null,
+      date || new Date().toISOString(),
+      `${description}${workshop_name ? ` - ${workshop_name}` : ''}${notes ? ` - ${notes}` : ''}`
     );
     
     // Actualizar balance de la cuenta
