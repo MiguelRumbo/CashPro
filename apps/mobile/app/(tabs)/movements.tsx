@@ -284,7 +284,7 @@ export default function MovementsScreen() {
                 
                 return (
                   <View key={item.id}>
-                    <TouchableOpacity style={styles.transactionItem}>
+                    <TouchableOpacity style={styles.transactionItem} onPress={() => router.push(`/movements/movement-detail?id=${item.id}`)}>
                       <View style={styles.transactionLeft}>
                         <View style={[styles.transactionIcon, { backgroundColor: iconData.bg }]}>
                           <IconSymbol size={24} name={iconData.name as any} color={iconData.color} />

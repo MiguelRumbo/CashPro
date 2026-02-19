@@ -7,6 +7,7 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { API_CONFIG } from '@/config/api';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { BottomNavBar } from '@/components/bottom-nav-bar';
 
 type Vehicle = {
   id: number;
@@ -236,6 +237,8 @@ export default function VehiclesScreen() {
       >
         <IconSymbol name="plus" size={24} color="#ffffff" />
       </TouchableOpacity>
+
+      <BottomNavBar />
     </ThemedView>
   );
 }

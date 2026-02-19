@@ -106,6 +106,24 @@ const MAPPING = {
   'checkmark': 'check',
   'checkmark.circle.fill': 'check-circle',
   'square.grid.2x2': 'grid-view',
+  // Vehículos
+  'speedometer': 'speed',
+  'gauge': 'av-timer',
+  'drop.fill': 'water-drop',
+  'wrench': 'build',
+  'wrench.fill': 'build',
+  // UI controls
+  'chevron.down': 'expand-more',
+  'xmark.circle.fill': 'cancel',
+  'text.alignleft': 'format-align-left',
+  'info.circle.fill': 'info',
+  // Perfil
+  'camera.fill': 'photo-camera',
+  'envelope.fill': 'email',
+  // Acciones
+  'arrow.clockwise': 'refresh',
+  // Variantes con .fill
+  'cart.fill': 'shopping-cart',
 } as IconMapping;
 
 /**

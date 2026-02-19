@@ -1,5 +1,5 @@
 import { ScrollView, View, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -7,6 +7,16 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { API_CONFIG } from '@/config/api';
 import { useCurrency } from '@/contexts/CurrencyContext';
+
+type RecentMovement = {
+  id: number;
+  type: 'income' | 'expense' | 'transfer';
+  amount: number;
+  title: string;
+  category_icon?: string;
+  category_color?: string;
+  date: string;
+};
 
 type Account = {
   id: number;
@@ -83,10 +93,18 @@ export default function DashboardScreen() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [subscriptionsSummary, setSubscriptionsSummary] = useState<SubscriptionsSummary | null>(null);
   const [vehiclesSummary, setVehiclesSummary] = useState<any>(null);
+  const [recentMovements, setRecentMovements] = useState<RecentMovement[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [profileName, setProfileName] = useState('Usuario');
   const [profileInitials, setProfileInitials] = useState('U');
   const { formatCurrency } = useCurrency();
+
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Buenos días,';
+    if (hour < 19) return 'Buenas tardes,';
+    return 'Buenas noches,';
+  }, []);
 
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
@@ -168,6 +186,9 @@ export default function DashboardScreen() {
         
         // Calcular categorías solo del mes actual
         calculateCategoryStats(expenses);
+
+        // Últimos 5 movimientos para la sección reciente
+        setRecentMovements(allMovements.slice(0, 5));
       }
 
       // Obtener cuentas
@@ -283,17 +304,25 @@ export default function DashboardScreen() {
     <ThemedView style={[styles.container, { backgroundColor }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor }]}>
-        <View>
-          <ThemedText style={[styles.greeting, { color: textMuted }]}>Buenos días,</ThemedText>
-          <ThemedText style={[styles.title, { color: textMain }]}>{profileName}</ThemedText>
-        </View>
-        <TouchableOpacity style={styles.profileContainer}>
-          <View style={[styles.profileImage, { borderColor: surfaceColor, backgroundColor: primary }]}>
-            <ThemedText style={{ color: '#ffffff', fontSize: 18, fontWeight: '700' }}>
-              {profileInitials}
-            </ThemedText>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity style={styles.profileContainer} onPress={() => router.push('/settings')}>
+            <View style={[styles.profileImage, { borderColor: surfaceColor, backgroundColor: primary }]}>
+              <ThemedText style={{ color: '#ffffff', fontSize: 18, fontWeight: '700' }}>
+                {profileInitials}
+              </ThemedText>
+            </View>
+            <View style={[styles.statusDot, { backgroundColor: primary, borderColor: backgroundColor }]} />
+          </TouchableOpacity>
+          <View>
+            <ThemedText style={[styles.greeting, { color: textMuted }]}>{greeting}</ThemedText>
+            <ThemedText style={[styles.title, { color: textMain }]}>{profileName}</ThemedText>
           </View>
-          <View style={[styles.statusDot, { backgroundColor: primary, borderColor: backgroundColor }]} />
+        </View>
+        <TouchableOpacity
+          style={[styles.notificationButton, { backgroundColor: surfaceColor }]}
+          onPress={() => router.push('/notifications')}
+        >
+          <IconSymbol size={22} name="bell.fill" color={textMain} />
         </TouchableOpacity>
       </View>
 
@@ -360,6 +389,25 @@ export default function DashboardScreen() {
               </View>
             </View>
           </View>
+        </View>
+
+        {/* Quick Actions */}
+        <View style={styles.quickActions}>
+          {[
+            { icon: 'plus.circle.fill' as const, label: 'Agregar', color: primary, onPress: () => router.push('/movements/add-movement') },
+            { icon: 'arrow.left.arrow.right' as const, label: 'Transferir', color: '#3b82f6', onPress: () => router.push('/movements/add-movement') },
+            { icon: 'chart.pie.fill' as const, label: 'Presupuestos', color: '#9333ea', onPress: () => router.push('/budgets') },
+            { icon: 'target' as const, label: 'Objetivos', color: '#f59e0b', onPress: () => router.push('/savings-goals') },
+          ].map((action, i) => (
+            <TouchableOpacity key={i} style={styles.quickActionItem} onPress={action.onPress}>
+              <View style={[styles.quickActionIcon, { backgroundColor: action.color + '18' }]}>
+                <IconSymbol size={22} name={action.icon} color={action.color} />
+              </View>
+              <ThemedText style={[styles.quickActionLabel, { color: textMuted }]}>
+                {action.label}
+              </ThemedText>
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* Accounts Section */}
@@ -642,7 +690,7 @@ export default function DashboardScreen() {
         {subscriptionsSummary && subscriptionsSummary.total_active > 0 && (
           <TouchableOpacity
             style={[styles.subscriptionsCard, { backgroundColor: surfaceColor, borderColor }]}
-            onPress={() => router.push('/subscriptions/index')}
+            onPress={() => router.push('/subscriptions')}
           >
             <View style={styles.subscriptionsHeader}>
               <View style={styles.subscriptionsHeaderLeft}>
@@ -771,14 +819,60 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         )}
 
+        {/* Recent Movements */}
+        {recentMovements.length > 0 && (
+          <View style={[styles.recentCard, { backgroundColor: surfaceColor, borderColor }]}>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
+                Últimos Movimientos
+              </ThemedText>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/movements')}>
+                <ThemedText style={[styles.linkText, { color: primary }]}>Ver todo</ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            {recentMovements.map((movement, index) => {
+              const isIncome = movement.type === 'income';
+              const isTransfer = movement.type === 'transfer';
+              const iconName = movement.category_icon || (isTransfer ? 'arrow.left.arrow.right' : isIncome ? 'arrow.down' : 'arrow.up');
+              const iconColor = movement.category_color || (isTransfer ? '#3b82f6' : isIncome ? primary : '#ef4444');
+
+              return (
+                <TouchableOpacity
+                  key={movement.id}
+                  style={[styles.recentItem, index < recentMovements.length - 1 && { borderBottomWidth: 1, borderBottomColor: borderColor }]}
+                  onPress={() => router.push(`/movements/movement-detail?id=${movement.id}`)}
+                >
+                  <View style={styles.recentItemLeft}>
+                    <View style={[styles.recentItemIcon, { backgroundColor: iconColor + '18' }]}>
+                      <IconSymbol size={18} name={iconName as any} color={iconColor} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <ThemedText style={[styles.recentItemTitle, { color: textMain }]} numberOfLines={1}>
+                        {movement.title}
+                      </ThemedText>
+                      <ThemedText style={[styles.recentItemDate, { color: textMuted }]}>
+                        {new Date(movement.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <ThemedText style={[styles.recentItemAmount, { color: isIncome ? primary : isTransfer ? '#3b82f6' : textMain }]}>
+                    {isIncome ? '+' : isTransfer ? '' : '-'}{formatCurrency(movement.amount)}
+                  </ThemedText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
         {/* Categories Section */}
         <View style={[styles.categoriesCard, { backgroundColor: surfaceColor, borderColor }]}>
           <View style={styles.sectionHeader}>
             <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
               Gasto por Categoría
             </ThemedText>
-            <TouchableOpacity style={[styles.moreButton, { backgroundColor: useThemeColor({ light: '#f9fafb', dark: 'rgba(255,255,255,0.05)' }, 'surface') }]}>
-              <IconSymbol size={18} name="ellipsis" color={textMuted} />
+            <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}>
+              <ThemedText style={[styles.linkText, { color: primary }]}>Estadísticas</ThemedText>
             </TouchableOpacity>
           </View>
 
@@ -795,7 +889,7 @@ export default function DashboardScreen() {
                 const maxAmount = categoryStats[0].total;
                 const percentage = (category.total / maxAmount) * 100;
                 const bgColor = category.category_color + '20';
-                
+
                 return (
                   <View key={index} style={styles.categoryItem}>
                     <View style={styles.categoryRow}>
@@ -855,22 +949,39 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     zIndex: 10,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   greeting: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     letterSpacing: -0.5,
+  },
+  notificationButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
   profileContainer: {
     position: 'relative',
   },
   profileImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
@@ -883,6 +994,28 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
     borderWidth: 2,
+  },
+  // Quick Actions
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  quickActionItem: {
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  quickActionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickActionLabel: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   // Scroll
   scrollView: {
@@ -1174,6 +1307,49 @@ const styles = StyleSheet.create({
   emptyCategoriesText: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  // Recent Movements
+  recentCard: {
+    marginTop: 24,
+    padding: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 2,
+    borderWidth: 1,
+  },
+  recentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+  },
+  recentItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  recentItemIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recentItemTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  recentItemDate: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  recentItemAmount: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   // FAB
   fab: {
