@@ -23,6 +23,8 @@ const initialData = {
   nextLoanId: 1,
   loan_payments: [],
   nextLoanPaymentId: 1,
+  recurring_payments: [],
+  nextRecurringPaymentId: 1,
 };
 
 // Leer la base de datos
@@ -82,7 +84,10 @@ const db = {
         if (!data.loan_payments) {
           data.loan_payments = [];
         }
-        
+        if (!data.recurring_payments) {
+          data.recurring_payments = [];
+        }
+
         // Para movimientos
         if (sql.includes('FROM movements')) {
           return [...data.movements].sort((a, b) => {
@@ -143,6 +148,13 @@ const db = {
           });
         }
         
+        // Para pagos recurrentes / suscripciones
+        if (sql.includes('FROM recurring_payments')) {
+          return [...data.recurring_payments].sort((a, b) => {
+            return new Date(b.created_at) - new Date(a.created_at);
+          });
+        }
+
         // Para perfil de usuario
         if (sql.includes('FROM user_profile')) {
           return data.user_profile;
@@ -168,7 +180,8 @@ const db = {
         if (!data.goal_contributions) data.goal_contributions = [];
         if (!data.loans) data.loans = [];
         if (!data.loan_payments) data.loan_payments = [];
-        
+        if (!data.recurring_payments) data.recurring_payments = [];
+
         if (sql.includes('stats') || sql.includes('SUM')) {
           // Calcular estadísticas de cuentas
           if (sql.includes('FROM accounts')) {
@@ -244,6 +257,11 @@ const db = {
           return data.loan_payments.find(p => p.id === parseInt(id));
         }
         
+        // Buscar pago recurrente por ID
+        if (sql.includes('FROM recurring_payments')) {
+          return data.recurring_payments.find(r => r.id === parseInt(id));
+        }
+
         // Buscar perfil por ID
         if (sql.includes('FROM user_profile')) {
           return data.user_profile.find(p => p.id === parseInt(id));
@@ -471,11 +489,11 @@ const db = {
         } else if (sql.includes('INSERT INTO loan_payments')) {
           // Crear nuevo pago de préstamo
           const [loan_id, amount, date, notes, created_at] = params;
-          
+
           if (!data.loan_payments) {
             data.loan_payments = [];
           }
-          
+
           const newPayment = {
             id: data.nextLoanPaymentId++,
             loan_id: parseInt(loan_id), // Asegurar que sea número
@@ -484,11 +502,84 @@ const db = {
             notes,
             created_at,
           };
-          
+
           data.loan_payments.push(newPayment);
           writeDB(data);
-          
+
           return { lastInsertRowid: newPayment.id };
+        } else if (sql.includes('INSERT INTO recurring_payments')) {
+          // Crear nuevo pago recurrente / suscripción
+          const [
+            name, type, amount, frequency, day_of_month, day_of_week,
+            specific_dates, category_id, account_id, icon, color,
+            is_active, next_date, auto_register, notify_before_days,
+            created_at, updated_at
+          ] = params;
+
+          if (!data.recurring_payments) {
+            data.recurring_payments = [];
+          }
+
+          const newRecurring = {
+            id: data.nextRecurringPaymentId++,
+            name,
+            type,
+            amount: parseFloat(amount),
+            frequency,
+            day_of_month: day_of_month ? parseInt(day_of_month) : null,
+            day_of_week: day_of_week ? parseInt(day_of_week) : null,
+            specific_dates: specific_dates || null,
+            category_id: category_id || null,
+            account_id: parseInt(account_id),
+            icon,
+            color,
+            is_active: is_active ? 1 : 0,
+            next_date,
+            auto_register: auto_register ? 1 : 0,
+            notify_before_days: notify_before_days || 1,
+            created_at,
+            updated_at,
+          };
+
+          data.recurring_payments.push(newRecurring);
+          writeDB(data);
+
+          return { lastInsertRowid: newRecurring.id };
+        } else if (sql.includes('UPDATE recurring_payments')) {
+          // Actualizar pago recurrente
+          const id = params[params.length - 1];
+          const recurringIndex = data.recurring_payments.findIndex(r => r.id === parseInt(id));
+
+          if (recurringIndex !== -1) {
+            const updateMatch = sql.match(/SET ([\s\S]+?) WHERE/);
+            if (updateMatch) {
+              const setPart = updateMatch[1];
+              const assignments = setPart.split(',').map(s => s.trim());
+
+              let paramIndex = 0;
+              assignments.forEach(assignment => {
+                const parts = assignment.split('=').map(s => s.trim());
+                const field = parts[0];
+                const operation = parts[1];
+
+                if (operation === '?') {
+                  data.recurring_payments[recurringIndex][field] = params[paramIndex];
+                  paramIndex++;
+                }
+              });
+            }
+            writeDB(data);
+          }
+
+          return { changes: recurringIndex !== -1 ? 1 : 0 };
+        } else if (sql.includes('DELETE FROM recurring_payments')) {
+          // Eliminar pago recurrente
+          const id = params[0];
+          const initialLength = data.recurring_payments.length;
+          data.recurring_payments = data.recurring_payments.filter(r => r.id !== parseInt(id));
+          writeDB(data);
+
+          return { changes: initialLength - data.recurring_payments.length };
         } else if (sql.includes('UPDATE accounts')) {
           // Actualizar cuenta
           const id = params[params.length - 1];

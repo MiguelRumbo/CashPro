@@ -45,6 +45,32 @@ type LoansSummary = {
   recovery_percentage: number;
 };
 
+type Budget = {
+  id: number;
+  name: string;
+  amount: number;
+  current_amount: number;
+  period: string;
+  icon: string;
+  color: string;
+};
+
+type SubscriptionsSummary = {
+  total_active: number;
+  monthly_subscriptions: number;
+  monthly_recurring_expenses: number;
+  monthly_recurring_income: number;
+  upcoming_payments: Array<{
+    id: number;
+    name: string;
+    amount: number;
+    type: string;
+    next_date: string;
+    icon: string;
+    color: string;
+  }>;
+};
+
 export default function DashboardScreen() {
   const [totalBalance, setTotalBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
@@ -54,6 +80,8 @@ export default function DashboardScreen() {
   const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([]);
   const [savingsGoalsSummary, setSavingsGoalsSummary] = useState<SavingsGoalSummary | null>(null);
   const [loansSummary, setLoansSummary] = useState<LoansSummary | null>(null);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [subscriptionsSummary, setSubscriptionsSummary] = useState<SubscriptionsSummary | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [profileName, setProfileName] = useState('Usuario');
   const [profileInitials, setProfileInitials] = useState('U');
@@ -161,6 +189,20 @@ export default function DashboardScreen() {
       const loansStatsResult = await loansStatsResponse.json();
       if (loansStatsResult.success) {
         setLoansSummary(loansStatsResult.data);
+      }
+
+      // Obtener presupuestos
+      const budgetsResponse = await fetch(`${API_CONFIG.BASE_URL}/budgets`);
+      const budgetsResult = await budgetsResponse.json();
+      if (budgetsResult.success) {
+        setBudgets(budgetsResult.data);
+      }
+
+      // Obtener resumen de suscripciones
+      const subsResponse = await fetch(`${API_CONFIG.BASE_URL}/recurring-payments/stats/summary`);
+      const subsResult = await subsResponse.json();
+      if (subsResult.success) {
+        setSubscriptionsSummary(subsResult.data);
       }
     } catch (error) {
       console.error('Error al cargar datos:', error);
@@ -520,6 +562,133 @@ export default function DashboardScreen() {
                 {loansSummary.recovery_percentage.toFixed(1)}% recuperado
               </ThemedText>
             </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Budgets Section */}
+        {budgets.length > 0 && (
+          <TouchableOpacity
+            style={[styles.budgetsCard, { backgroundColor: surfaceColor, borderColor }]}
+            onPress={() => router.push('/budgets')}
+          >
+            <View style={styles.budgetsHeader}>
+              <View style={styles.budgetsHeaderLeft}>
+                <View style={[styles.budgetsIcon, { backgroundColor: 'rgba(147, 51, 234, 0.2)' }]}>
+                  <IconSymbol size={24} name="chart.pie.fill" color="#9333ea" />
+                </View>
+                <View>
+                  <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
+                    Presupuestos
+                  </ThemedText>
+                  <ThemedText style={[styles.budgetsSubtitle, { color: textMuted }]}>
+                    {budgets.length} presupuesto{budgets.length !== 1 ? 's' : ''} activo{budgets.length !== 1 ? 's' : ''}
+                  </ThemedText>
+                </View>
+              </View>
+              <IconSymbol size={20} name="chevron.right" color={textMuted} />
+            </View>
+
+            {budgets.slice(0, 3).map((budget, index) => {
+              const percentage = budget.amount > 0 ? (budget.current_amount / budget.amount) * 100 : 0;
+              const barColor = percentage >= 100 ? '#ef4444' : percentage >= 80 ? '#f59e0b' : '#10b981';
+              return (
+                <View key={budget.id} style={[styles.budgetItem, index < Math.min(budgets.length, 3) - 1 && { marginBottom: 12 }]}>
+                  <View style={styles.budgetItemHeader}>
+                    <View style={styles.budgetItemInfo}>
+                      <View style={[styles.budgetItemIcon, { backgroundColor: budget.color + '20' }]}>
+                        <IconSymbol size={16} name={budget.icon as any} color={budget.color} />
+                      </View>
+                      <ThemedText style={[styles.budgetItemName, { color: textMain }]}>
+                        {budget.name}
+                      </ThemedText>
+                    </View>
+                    <ThemedText style={[styles.budgetItemAmount, { color: textMuted }]}>
+                      {formatCurrency(budget.current_amount)} / {formatCurrency(budget.amount)}
+                    </ThemedText>
+                  </View>
+                  <View style={[styles.budgetProgressBar, { backgroundColor: progressBarBg }]}>
+                    <View
+                      style={[
+                        styles.budgetProgressFill,
+                        { width: `${Math.min(percentage, 100)}%`, backgroundColor: barColor }
+                      ]}
+                    />
+                  </View>
+                </View>
+              );
+            })}
+          </TouchableOpacity>
+        )}
+
+        {/* Subscriptions Section */}
+        {subscriptionsSummary && subscriptionsSummary.total_active > 0 && (
+          <TouchableOpacity
+            style={[styles.subscriptionsCard, { backgroundColor: surfaceColor, borderColor }]}
+            onPress={() => router.push('/subscriptions')}
+          >
+            <View style={styles.subscriptionsHeader}>
+              <View style={styles.subscriptionsHeaderLeft}>
+                <View style={[styles.subscriptionsIcon, { backgroundColor: 'rgba(59, 130, 246, 0.2)' }]}>
+                  <IconSymbol size={24} name="repeat" color="#3b82f6" />
+                </View>
+                <View>
+                  <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
+                    Suscripciones
+                  </ThemedText>
+                  <ThemedText style={[styles.subscriptionsSubtitle, { color: textMuted }]}>
+                    {subscriptionsSummary.total_active} activa{subscriptionsSummary.total_active !== 1 ? 's' : ''}
+                  </ThemedText>
+                </View>
+              </View>
+              <IconSymbol size={20} name="chevron.right" color={textMuted} />
+            </View>
+
+            <View style={styles.subscriptionsAmounts}>
+              <View>
+                <ThemedText style={[styles.subscriptionsLabel, { color: textMuted }]}>
+                  Gastos Recurrentes /mes
+                </ThemedText>
+                <ThemedText style={[styles.subscriptionsAmount, { color: '#ef4444' }]}>
+                  -{formatCurrency(subscriptionsSummary.monthly_recurring_expenses)}
+                </ThemedText>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <ThemedText style={[styles.subscriptionsLabel, { color: textMuted }]}>
+                  Ingresos Recurrentes /mes
+                </ThemedText>
+                <ThemedText style={[styles.subscriptionsAmount, { color: '#10b981' }]}>
+                  +{formatCurrency(subscriptionsSummary.monthly_recurring_income)}
+                </ThemedText>
+              </View>
+            </View>
+
+            {subscriptionsSummary.upcoming_payments.length > 0 && (
+              <View style={[styles.upcomingSection, { borderTopColor: borderColor }]}>
+                <ThemedText style={[styles.upcomingTitle, { color: textMuted }]}>
+                  Próximos cobros
+                </ThemedText>
+                {subscriptionsSummary.upcoming_payments.slice(0, 3).map((up) => (
+                  <View key={up.id} style={styles.upcomingItem}>
+                    <View style={styles.upcomingItemLeft}>
+                      <View style={[styles.upcomingItemIcon, { backgroundColor: up.color + '20' }]}>
+                        <IconSymbol size={14} name={up.icon as any} color={up.color} />
+                      </View>
+                      <ThemedText style={[styles.upcomingItemName, { color: textMain }]}>
+                        {up.name}
+                      </ThemedText>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <ThemedText style={[styles.upcomingItemAmount, { color: textMain }]}>
+                        {up.type === 'salary' || up.type === 'recurring_income' ? '+' : '-'}{formatCurrency(up.amount)}
+                      </ThemedText>
+                      <ThemedText style={[styles.upcomingItemDate, { color: textMuted }]}>
+                        {new Date(up.next_date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                      </ThemedText>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
           </TouchableOpacity>
         )}
 

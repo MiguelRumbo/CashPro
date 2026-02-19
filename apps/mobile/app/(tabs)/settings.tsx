@@ -313,7 +313,7 @@ export default function SettingsScreen() {
         <ThemedText style={styles.sectionLabel}>PREFERENCIAS</ThemedText>
         <View style={[styles.sectionCard, { backgroundColor: surfaceColor }]}>
           <TouchableOpacity
-            style={[styles.settingsRow, { borderBottomWidth: 1, borderBottomColor: borderColor }]}
+            style={[styles.settingsRow]}
             onPress={() => setShowCurrencyModal(true)}
           >
             <View style={styles.settingsRowLeft}>
@@ -324,63 +324,6 @@ export default function SettingsScreen() {
                 <ThemedText style={[styles.settingsTitle, { color: textMain }]}>Moneda</ThemedText>
                 <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
                   {getSelectedCurrencyLabel()}
-                </ThemedText>
-              </View>
-            </View>
-            <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.settingsRow]}
-            onPress={() => router.push('/budgets')}
-          >
-            <View style={styles.settingsRowLeft}>
-              <View style={[styles.settingsIcon, { backgroundColor: '#faf5ff' }]}>
-                <IconSymbol size={22} name="chart.pie.fill" color="#9333ea" />
-              </View>
-              <View>
-                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>
-                  Presupuestos
-                </ThemedText>
-                <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
-                  Gestionar metas
-                </ThemedText>
-              </View>
-            </View>
-            <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.settingsRow]}
-            onPress={() => router.push('/savings-goals')}
-          >
-            <View style={styles.settingsRowLeft}>
-              <View style={[styles.settingsIcon, { backgroundColor: '#ecfdf5' }]}>
-                <IconSymbol size={22} name="target" color="#10b981" />
-              </View>
-              <View>
-                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>
-                  Objetivos de Ahorro
-                </ThemedText>
-                <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
-                  Metas de ahorro
-                </ThemedText>
-              </View>
-            </View>
-            <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.settingsRow]}
-            onPress={() => router.push('/loans')}
-          >
-            <View style={styles.settingsRowLeft}>
-              <View style={[styles.settingsIcon, { backgroundColor: '#fffbeb' }]}>
-                <IconSymbol size={22} name="doc.text" color="#f59e0b" />
-              </View>
-              <View>
-                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>
-                  Préstamos
-                </ThemedText>
-                <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
-                  Dinero prestado
                 </ThemedText>
               </View>
             </View>
