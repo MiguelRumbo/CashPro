@@ -28,6 +28,14 @@ type CategoryStat = {
   count: number;
 };
 
+type SavingsGoalSummary = {
+  total_goals: number;
+  active_goals: number;
+  total_target: number;
+  total_saved: number;
+  completion_percentage: number;
+};
+
 export default function DashboardScreen() {
   const [totalBalance, setTotalBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
@@ -35,6 +43,7 @@ export default function DashboardScreen() {
   const [expenseChange, setExpenseChange] = useState(0);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([]);
+  const [savingsGoalsSummary, setSavingsGoalsSummary] = useState<SavingsGoalSummary | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [profileName, setProfileName] = useState('Usuario');
   const [profileInitials, setProfileInitials] = useState('U');
@@ -128,6 +137,13 @@ export default function DashboardScreen() {
       if (accountsResult.success) {
         // Las cuentas ya vienen ordenadas por is_primary DESC desde la API
         setAccounts(accountsResult.data.slice(0, 3)); // Solo las primeras 3
+      }
+
+      // Obtener resumen de objetivos de ahorro
+      const goalsStatsResponse = await fetch(`${API_CONFIG.BASE_URL}/savings-goals/stats/summary`);
+      const goalsStatsResult = await goalsStatsResponse.json();
+      if (goalsStatsResult.success) {
+        setSavingsGoalsSummary(goalsStatsResult.data);
       }
     } catch (error) {
       console.error('Error al cargar datos:', error);
@@ -365,6 +381,68 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           </ScrollView>
         </View>
+
+        {/* Savings Goals Section */}
+        {savingsGoalsSummary && savingsGoalsSummary.active_goals > 0 && (
+          <TouchableOpacity 
+            style={[styles.savingsGoalsCard, { backgroundColor: surfaceColor, borderColor }]}
+            onPress={() => router.push('/savings-goals')}
+          >
+            <View style={styles.savingsGoalsHeader}>
+              <View style={styles.savingsGoalsHeaderLeft}>
+                <View style={[styles.savingsGoalsIcon, { backgroundColor: 'rgba(32, 223, 96, 0.2)' }]}>
+                  <IconSymbol size={24} name="target" color={primary} />
+                </View>
+                <View>
+                  <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
+                    Objetivos de Ahorro
+                  </ThemedText>
+                  <ThemedText style={[styles.savingsGoalsSubtitle, { color: textMuted }]}>
+                    {savingsGoalsSummary.active_goals} objetivo{savingsGoalsSummary.active_goals !== 1 ? 's' : ''} activo{savingsGoalsSummary.active_goals !== 1 ? 's' : ''}
+                  </ThemedText>
+                </View>
+              </View>
+              <IconSymbol size={20} name="chevron.right" color={textMuted} />
+            </View>
+
+            <View style={[styles.savingsGoalsProgress, { backgroundColor: progressBarBg }]}>
+              <View 
+                style={[
+                  styles.savingsGoalsProgressFill, 
+                  { 
+                    width: `${Math.min(savingsGoalsSummary.completion_percentage, 100)}%`, 
+                    backgroundColor: primary 
+                  }
+                ]} 
+              />
+            </View>
+
+            <View style={styles.savingsGoalsAmounts}>
+              <View>
+                <ThemedText style={[styles.savingsGoalsLabel, { color: textMuted }]}>
+                  Ahorrado
+                </ThemedText>
+                <ThemedText style={[styles.savingsGoalsAmount, { color: textMain }]}>
+                  {formatCurrency(savingsGoalsSummary.total_saved)}
+                </ThemedText>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <ThemedText style={[styles.savingsGoalsLabel, { color: textMuted }]}>
+                  Meta Total
+                </ThemedText>
+                <ThemedText style={[styles.savingsGoalsAmount, { color: textMain }]}>
+                  {formatCurrency(savingsGoalsSummary.total_target)}
+                </ThemedText>
+              </View>
+            </View>
+
+            <View style={[styles.savingsGoalsBadge, { backgroundColor: primary + '20' }]}>
+              <ThemedText style={[styles.savingsGoalsBadgeText, { color: primary }]}>
+                {savingsGoalsSummary.completion_percentage.toFixed(1)}% completado
+              </ThemedText>
+            </View>
+          </TouchableOpacity>
+        )}
 
         {/* Categories Section */}
         <View style={[styles.categoriesCard, { backgroundColor: surfaceColor, borderColor }]}>
@@ -787,5 +865,73 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
     zIndex: 40,
+  },
+  // Savings Goals Card
+  savingsGoalsCard: {
+    padding: 20,
+    borderRadius: 16,
+    marginTop: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 2,
+    borderWidth: 1,
+  },
+  savingsGoalsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  savingsGoalsHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  savingsGoalsIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  savingsGoalsSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  savingsGoalsProgress: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  savingsGoalsProgressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  savingsGoalsAmounts: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  savingsGoalsLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  savingsGoalsAmount: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  savingsGoalsBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: 'center',
+  },
+  savingsGoalsBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

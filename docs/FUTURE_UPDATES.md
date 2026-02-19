@@ -329,11 +329,11 @@
 
 ## 4. Nuevos Modulos y Funcionalidades
 
-### 4.1 Modulo de Objetivos de Ahorro
+### 4.1 Modulo de Objetivos de Ahorro ✅ COMPLETADO
 
 **Descripcion:** Metas de ahorro con seguimiento por fecha y monto.
 
-#### REQ-OBJ-01: Modelo de datos
+#### REQ-OBJ-01: Modelo de datos ✅ RESUELTO
 ```
 Objetivo {
   id: number
@@ -351,21 +351,57 @@ Objetivo {
   created_at: datetime
   updated_at: datetime
 }
+
+GoalContribution {
+  id: number
+  goal_id: number
+  amount: number
+  date: datetime
+  notes: string | null
+  created_at: datetime
+}
 ```
+- **Estado:** ✅ Resuelto - Estructura de BD implementada en `apps/api/src/database/db-json.js`
+- **Archivos:** `apps/api/src/database/db-json.js` (agregados `savings_goals` y `goal_contributions`)
 
-#### REQ-OBJ-02: Funcionalidades
-- CRUD completo de objetivos.
-- Pantalla con lista de objetivos activos y progreso visual.
-- Barra de progreso circular o lineal con porcentaje y monto faltante.
-- Calculo de "cuanto debo ahorrar por dia/semana/mes" para llegar a la meta.
-- Agregar monto manualmente al objetivo (abonar).
-- Historial de abonos al objetivo.
-- Notificacion al completar un objetivo.
-- Notificacion si el ritmo de ahorro es insuficiente para llegar a la fecha.
+#### REQ-OBJ-02: Funcionalidades ✅ RESUELTO
+- ✅ CRUD completo de objetivos implementado en API REST
+- ✅ Pantalla con lista de objetivos activos y completados (`apps/mobile/app/savings-goals/index.tsx`)
+- ✅ Barra de progreso lineal con porcentaje y monto faltante
+- ✅ Cálculo de ahorro diario requerido para llegar a la meta
+- ✅ Cálculo de días restantes hasta la fecha límite
+- ✅ Agregar contribución manualmente al objetivo (modal en detalle)
+- ✅ Historial de contribuciones por objetivo
+- ✅ Indicador visual de descuento automático (badge)
+- ✅ Selector de 8 iconos con colores personalizados
+- ⏳ Notificación al completar objetivo (requiere módulo de notificaciones - Fase 3)
+- ⏳ Notificación de ritmo insuficiente (requiere módulo de notificaciones - Fase 3)
 
-#### REQ-OBJ-03: Navegacion
-- Nueva seccion accesible desde el dashboard o un tab reorganizado.
-- Card resumen de objetivos en el dashboard.
+**API Endpoints implementados:**
+- `GET /api/savings-goals` - Listar objetivos
+- `GET /api/savings-goals/:id` - Obtener objetivo específico
+- `POST /api/savings-goals` - Crear objetivo
+- `PUT /api/savings-goals/:id` - Actualizar objetivo
+- `DELETE /api/savings-goals/:id` - Eliminar objetivo
+- `POST /api/savings-goals/:id/contribute` - Agregar contribución
+- `GET /api/savings-goals/:id/contributions` - Listar contribuciones
+- `GET /api/savings-goals/stats/summary` - Estadísticas generales
+
+**Pantallas implementadas:**
+- `apps/mobile/app/savings-goals/index.tsx` - Lista de objetivos con progreso
+- `apps/mobile/app/savings-goals/add-goal.tsx` - Formulario para crear objetivo
+- `apps/mobile/app/savings-goals/goal-detail.tsx` - Detalle con historial y contribuciones
+
+**Archivos:** `apps/api/src/routes/savings-goals.js`, `apps/api/src/index.js`, pantallas en `apps/mobile/app/savings-goals/`
+
+#### REQ-OBJ-03: Navegacion ✅ RESUELTO
+- ✅ Card resumen en dashboard mostrando progreso general de objetivos activos
+- ✅ Navegación desde dashboard a pantalla de objetivos
+- ✅ Muestra total ahorrado vs meta total con barra de progreso
+- ✅ Porcentaje de completitud general
+- ✅ Solo se muestra si hay objetivos activos
+
+**Archivos:** `apps/mobile/app/(tabs)/index.tsx` (agregado card de objetivos con estilos completos)
 
 ---
 
@@ -717,14 +753,14 @@ Mantenimiento {
 ### Fase 3: Nuevos Modulos (Funcionalidad Expandida)
 > Agregar las nuevas secciones de la app.
 
-| # | Tarea | Prioridad |
-|---|---|---|
-| 1 | REQ-SUB-01 a 04: Suscripciones y pagos recurrentes | Alta |
-| 2 | REQ-OBJ-01 a 03: Objetivos de ahorro | Alta |
-| 3 | REQ-PREST-01 a 03: Modulo de prestamos | Media |
-| 4 | REQ-NOTIF-01 a 03: Notificaciones push completas | Media |
-| 5 | REQ-AUTO-01 a 05: Modulo de vehiculo (gasolina + mantenimiento) | Media |
-| 6 | REQ-TEC-10: Reorganizar navegacion para nuevos modulos | Media |
+| # | Tarea | Prioridad | Estado |
+|---|---|---|---|
+| 1 | REQ-SUB-01 a 04: Suscripciones y pagos recurrentes | Alta | ⏳ Pendiente |
+| 2 | REQ-OBJ-01 a 03: Objetivos de ahorro | Alta | ✅ Completado |
+| 3 | REQ-PREST-01 a 03: Modulo de prestamos | Media | ⏳ Pendiente |
+| 4 | REQ-NOTIF-01 a 03: Notificaciones push completas | Media | ⏳ Pendiente |
+| 5 | REQ-AUTO-01 a 05: Modulo de vehiculo (gasolina + mantenimiento) | Media | ⏳ Pendiente |
+| 6 | REQ-TEC-10: Reorganizar navegacion para nuevos modulos | Media | ⏳ Pendiente |
 
 ### Fase 4: Inteligencia Artificial (Diferenciador)
 > El modulo que hace unica a la app.
@@ -755,7 +791,42 @@ Mantenimiento {
 
 ## Historial de Actualizaciones
 
-### Actualización 2026-02-18 - Revisión y Correcciones
+### Actualización 2026-02-18 (Parte 2) - Módulo de Objetivos de Ahorro
+
+**Módulo 4.1 completado:**
+
+1. ✅ **REQ-OBJ-01**: Modelo de datos implementado
+   - Agregadas tablas `savings_goals` y `goal_contributions` a la BD
+   - Estructura completa con soporte para descuento automático
+   - Campos: id, name, target_amount, current_amount, deadline, icon, color, auto_deduct, status
+
+2. ✅ **REQ-OBJ-02**: Funcionalidades implementadas
+   - API REST completa con 8 endpoints
+   - Pantalla de lista con objetivos activos y completados
+   - Pantalla de agregar objetivo con selector de 8 iconos
+   - Pantalla de detalle con historial de contribuciones
+   - Cálculo automático de días restantes y ahorro diario requerido
+   - Modal para agregar contribuciones
+   - Indicador visual de descuento automático
+
+3. ✅ **REQ-OBJ-03**: Navegación implementada
+   - Card resumen en dashboard con progreso general
+   - Navegación fluida entre pantallas
+   - Solo se muestra si hay objetivos activos
+
+**Archivos creados/modificados:**
+- Backend: `apps/api/src/routes/savings-goals.js`, `apps/api/src/database/db-json.js`, `apps/api/src/index.js`
+- Frontend: `apps/mobile/app/savings-goals/index.tsx`, `add-goal.tsx`, `goal-detail.tsx`
+- Dashboard: `apps/mobile/app/(tabs)/index.tsx` (agregado card de objetivos)
+
+**Pendiente para futuras versiones:**
+- Notificaciones al completar objetivo (requiere módulo de notificaciones)
+- Notificaciones de ritmo insuficiente (requiere módulo de notificaciones)
+- Descuento automático periódico (requiere cron job o sistema de tareas programadas)
+
+---
+
+### Actualización 2026-02-18 (Parte 1) - Revisión y Correcciones
 
 **Cambios implementados:**
 

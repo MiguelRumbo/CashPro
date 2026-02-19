@@ -6,6 +6,7 @@ const accountsRouter = require('./routes/accounts');
 const movementsRouter = require('./routes/movements');
 const budgetsRouter = require('./routes/budgets');
 const profileRouter = require('./routes/profile');
+const savingsGoalsRouter = require('./routes/savings-goals');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,6 +31,7 @@ app.use('/api/accounts', accountsRouter);
 app.use('/api/movements', movementsRouter);
 app.use('/api/budgets', budgetsRouter);
 app.use('/api/profile', profileRouter);
+app.use('/api/savings-goals', savingsGoalsRouter);
 
 // Endpoint para resetear todos los datos
 app.post('/api/reset', (req, res) => {
@@ -57,6 +59,10 @@ app.post('/api/reset', (req, res) => {
         updated_at: new Date().toISOString(),
       }],
       nextProfileId: 2,
+      savings_goals: [],
+      nextSavingsGoalId: 1,
+      goal_contributions: [],
+      nextGoalContributionId: 1,
     };
     
     // Escribir datos limpios

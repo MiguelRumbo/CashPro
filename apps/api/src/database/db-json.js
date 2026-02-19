@@ -15,6 +15,10 @@ const initialData = {
   nextBudgetId: 1,
   user_profile: [],
   nextProfileId: 1,
+  savings_goals: [],
+  nextSavingsGoalId: 1,
+  goal_contributions: [],
+  nextGoalContributionId: 1,
 };
 
 // Leer la base de datos
@@ -62,6 +66,12 @@ const db = {
         if (!data.user_profile) {
           data.user_profile = [];
         }
+        if (!data.savings_goals) {
+          data.savings_goals = [];
+        }
+        if (!data.goal_contributions) {
+          data.goal_contributions = [];
+        }
         
         // Para movimientos
         if (sql.includes('FROM movements')) {
@@ -76,6 +86,20 @@ const db = {
         if (sql.includes('FROM budgets')) {
           return [...data.budgets].sort((a, b) => {
             return new Date(b.created_at) - new Date(a.created_at);
+          });
+        }
+        
+        // Para objetivos de ahorro
+        if (sql.includes('FROM savings_goals')) {
+          return [...data.savings_goals].sort((a, b) => {
+            return new Date(b.created_at) - new Date(a.created_at);
+          });
+        }
+        
+        // Para contribuciones de objetivos
+        if (sql.includes('FROM goal_contributions')) {
+          return [...data.goal_contributions].sort((a, b) => {
+            return new Date(b.date) - new Date(a.date);
           });
         }
         
@@ -154,6 +178,16 @@ const db = {
         // Buscar presupuesto por ID
         if (sql.includes('FROM budgets')) {
           return data.budgets.find(b => b.id === parseInt(id));
+        }
+        
+        // Buscar objetivo de ahorro por ID
+        if (sql.includes('FROM savings_goals')) {
+          return data.savings_goals.find(g => g.id === parseInt(id));
+        }
+        
+        // Buscar contribución por ID
+        if (sql.includes('FROM goal_contributions')) {
+          return data.goal_contributions.find(c => c.id === parseInt(id));
         }
         
         // Buscar perfil por ID
