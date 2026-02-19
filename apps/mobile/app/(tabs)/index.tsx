@@ -624,7 +624,7 @@ export default function DashboardScreen() {
         {subscriptionsSummary && subscriptionsSummary.total_active > 0 && (
           <TouchableOpacity
             style={[styles.subscriptionsCard, { backgroundColor: surfaceColor, borderColor }]}
-            onPress={() => router.push('/subscriptions')}
+            onPress={() => router.push('/subscriptions/index')}
           >
             <View style={styles.subscriptionsHeader}>
               <View style={styles.subscriptionsHeaderLeft}>
@@ -1249,5 +1249,167 @@ const styles = StyleSheet.create({
   loansBadgeText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  // Budgets Card
+  budgetsCard: {
+    padding: 20,
+    borderRadius: 16,
+    marginTop: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 2,
+    borderWidth: 1,
+  },
+  budgetsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  budgetsHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  budgetsIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  budgetsSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  budgetItem: {
+    gap: 8,
+  },
+  budgetItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  budgetItemInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  budgetItemIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  budgetItemName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  budgetItemAmount: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  budgetProgressBar: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  budgetProgressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  // Subscriptions Card
+  subscriptionsCard: {
+    padding: 20,
+    borderRadius: 16,
+    marginTop: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 2,
+    borderWidth: 1,
+  },
+  subscriptionsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  subscriptionsHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  subscriptionsIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subscriptionsSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  subscriptionsAmounts: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  subscriptionsLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  subscriptionsAmount: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  upcomingSection: {
+    borderTopWidth: 1,
+    paddingTop: 16,
+    marginTop: 8,
+  },
+  upcomingTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  upcomingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  upcomingItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  upcomingItemIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  upcomingItemName: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  upcomingItemAmount: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  upcomingItemDate: {
+    fontSize: 11,
+    marginTop: 2,
   },
 });

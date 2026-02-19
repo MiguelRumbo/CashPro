@@ -19,6 +19,45 @@ type CategoryStat = {
   percentage: number;
 };
 
+type IncomeCategoryStat = {
+  category_name: string;
+  category_icon: string;
+  category_color: string;
+  total: number;
+  count: number;
+  percentage: number;
+};
+
+type BudgetStat = {
+  id: number;
+  name: string;
+  amount: number;
+  current_amount: number;
+  percentage: number;
+  icon: string;
+  color: string;
+};
+
+type GoalStat = {
+  id: number;
+  name: string;
+  target_amount: number;
+  current_amount: number;
+  percentage: number;
+  icon: string;
+  color: string;
+};
+
+type SubscriptionStat = {
+  id: number;
+  name: string;
+  amount: number;
+  type: string;
+  frequency: string;
+  icon: string;
+  color: string;
+};
+
 type MonthlyTrend = {
   label: string;
   amount: number;
@@ -116,10 +155,16 @@ function DonutChart({
 export default function ReportesScreen() {
   const [activeFilter, setActiveFilter] = useState('Este mes');
   const [totalExpense, setTotalExpense] = useState(0);
+  const [totalIncome, setTotalIncome] = useState(0);
   const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([]);
+  const [incomeCategoryStats, setIncomeCategoryStats] = useState<IncomeCategoryStat[]>([]);
+  const [budgetStats, setBudgetStats] = useState<BudgetStat[]>([]);
+  const [goalStats, setGoalStats] = useState<GoalStat[]>([]);
+  const [subscriptionStats, setSubscriptionStats] = useState<SubscriptionStat[]>([]);
   const [monthlyTrend, setMonthlyTrend] = useState<MonthlyTrend[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [expenseChange, setExpenseChange] = useState(0);
+  const [incomeChange, setIncomeChange] = useState(0);
   const [dateRange, setDateRange] = useState<DateRange | null>(null);
   const [topCategory, setTopCategory] = useState<string>('');
   const [insightText, setInsightText] = useState<string>('');
@@ -192,10 +237,13 @@ export default function ReportesScreen() {
           return movementDate >= range.start && movementDate <= range.end;
         });
         
-        // Calcular total de gastos del periodo
+        // Calcular total de gastos e ingresos del periodo
         const currentExpenses = filteredMovements.filter((m: any) => m.type === 'expense');
-        const total = currentExpenses.reduce((sum: number, m: any) => sum + m.amount, 0);
-        setTotalExpense(total);
+        const currentIncomes = filteredMovements.filter((m: any) => m.type === 'income');
+        const totalExp = currentExpenses.reduce((sum: number, m: any) => sum + m.amount, 0);
+        const totalInc = currentIncomes.reduce((sum: number, m: any) => sum + m.amount, 0);
+        setTotalExpense(totalExp);
+        setTotalIncome(totalInc);
         
         // Calcular cambio porcentual comparando con periodo anterior
         const periodDays = Math.ceil((range.end.getTime() - range.start.getTime()) / (1000 * 60 * 60 * 24));
@@ -210,24 +258,87 @@ export default function ReportesScreen() {
         });
         
         const previousExpenses = previousMovements.filter((m: any) => m.type === 'expense');
-        const previousTotal = previousExpenses.reduce((sum: number, m: any) => sum + m.amount, 0);
+        const previousIncomes = previousMovements.filter((m: any) => m.type === 'income');
+        const previousTotalExp = previousExpenses.reduce((sum: number, m: any) => sum + m.amount, 0);
+        const previousTotalInc = previousIncomes.reduce((sum: number, m: any) => sum + m.amount, 0);
         
-        let change = 0;
-        if (previousTotal > 0) {
-          change = ((total - previousTotal) / previousTotal) * 100;
-        } else if (total > 0) {
-          change = 100;
+        let changeExp = 0;
+        if (previousTotalExp > 0) {
+          changeExp = ((totalExp - previousTotalExp) / previousTotalExp) * 100;
+        } else if (totalExp > 0) {
+          changeExp = 100;
         }
-        setExpenseChange(change);
+        setExpenseChange(changeExp);
+
+        let changeInc = 0;
+        if (previousTotalInc > 0) {
+          changeInc = ((totalInc - previousTotalInc) / previousTotalInc) * 100;
+        } else if (totalInc > 0) {
+          changeInc = 100;
+        }
+        setIncomeChange(changeInc);
         
         // Calcular estadísticas por categoría del periodo
         const categoryData = calculateCategoryStats(currentExpenses);
+        const incomeCategoryData = calculateIncomeCategoryStats(currentIncomes);
         
         // Generar insight dinámico
-        generateInsight(categoryData, change, activeFilter);
+        generateInsight(categoryData, changeExp, activeFilter);
         
         // Calcular tendencia del periodo
         calculateMonthlyTrend(filteredMovements, range);
+      }
+
+      // Obtener presupuestos
+      const budgetsResponse = await fetch(`${API_CONFIG.BASE_URL}/budgets`);
+      const budgetsResult = await budgetsResponse.json();
+      if (budgetsResult.success) {
+        const budgets = budgetsResult.data.map((b: any) => ({
+          id: b.id,
+          name: b.name,
+          amount: b.amount,
+          current_amount: b.current_amount,
+          percentage: b.amount > 0 ? (b.current_amount / b.amount) * 100 : 0,
+          icon: b.icon,
+          color: b.color,
+        }));
+        setBudgetStats(budgets.slice(0, 4));
+      }
+
+      // Obtener objetivos de ahorro
+      const goalsResponse = await fetch(`${API_CONFIG.BASE_URL}/savings-goals`);
+      const goalsResult = await goalsResponse.json();
+      if (goalsResult.success) {
+        const goals = goalsResult.data
+          .filter((g: any) => g.status === 'active')
+          .map((g: any) => ({
+            id: g.id,
+            name: g.name,
+            target_amount: g.target_amount,
+            current_amount: g.current_amount,
+            percentage: g.target_amount > 0 ? (g.current_amount / g.target_amount) * 100 : 0,
+            icon: g.icon,
+            color: g.color,
+          }));
+        setGoalStats(goals.slice(0, 4));
+      }
+
+      // Obtener suscripciones
+      const subsResponse = await fetch(`${API_CONFIG.BASE_URL}/recurring-payments`);
+      const subsResult = await subsResponse.json();
+      if (subsResult.success) {
+        const subs = subsResult.data
+          .filter((s: any) => s.is_active)
+          .map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            amount: s.amount,
+            type: s.type,
+            frequency: s.frequency,
+            icon: s.icon,
+            color: s.color,
+          }));
+        setSubscriptionStats(subs.slice(0, 4));
       }
     } catch (error) {
       console.error('Error al cargar datos:', error);
@@ -273,6 +384,44 @@ export default function ReportesScreen() {
     if (stats.length > 0) {
       setTopCategory(stats[0].category_name);
     }
+    
+    return stats;
+  };
+
+  const calculateIncomeCategoryStats = (incomes: any[]) => {
+    const categoryMap = new Map<string, IncomeCategoryStat>();
+    let totalAmount = 0;
+    
+    incomes
+      .filter(m => m.category_name)
+      .forEach(movement => {
+        totalAmount += movement.amount;
+        const existing = categoryMap.get(movement.category_name);
+        if (existing) {
+          existing.total += movement.amount;
+          existing.count += 1;
+        } else {
+          categoryMap.set(movement.category_name, {
+            category_name: movement.category_name,
+            category_icon: movement.category_icon || 'square.grid.2x2',
+            category_color: movement.category_color || '#64748b',
+            total: movement.amount,
+            count: 1,
+            percentage: 0,
+          });
+        }
+      });
+
+    // Calcular porcentajes
+    const stats = Array.from(categoryMap.values())
+      .map(stat => ({
+        ...stat,
+        percentage: totalAmount > 0 ? (stat.total / totalAmount) * 100 : 0,
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 4);
+    
+    setIncomeCategoryStats(stats);
     
     return stats;
   };
@@ -476,13 +625,13 @@ export default function ReportesScreen() {
               <View style={[styles.summaryIconBg, { backgroundColor: '#ffe4e6' }]}>
                 <IconSymbol size={22} name="arrow.down.right" color="#e11d48" />
               </View>
-              <View style={[styles.percentBadge, { backgroundColor: expenseChange < 0 ? '#fff1f2' : '#dcfce7' }]}>
-                <ThemedText style={[styles.percentBadgeText, { color: expenseChange < 0 ? '#e11d48' : '#16a34a' }]}>
+              <View style={[styles.percentBadge, { backgroundColor: expenseChange < 0 ? '#dcfce7' : '#fff1f2' }]}>
+                <ThemedText style={[styles.percentBadgeText, { color: expenseChange < 0 ? '#16a34a' : '#e11d48' }]}>
                   {expenseChange > 0 ? '+' : ''}{expenseChange.toFixed(1)}%
                 </ThemedText>
               </View>
             </View>
-            <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>Gasto Total</ThemedText>
+            <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>Gastos</ThemedText>
             <View style={styles.summaryAmountRow}>
               <ThemedText style={[styles.summaryAmount, { color: textMain }]}>
                 ${Math.floor(totalExpense).toLocaleString('en-US')}
@@ -493,23 +642,50 @@ export default function ReportesScreen() {
             </View>
           </View>
 
-          {/* Presupuesto */}
-          <TouchableOpacity 
-            style={[styles.summaryCard, { backgroundColor: surfaceColor, borderColor }]}
-            onPress={() => router.push('/budgets')}
-          >
+          {/* Ingreso Total */}
+          <View style={[styles.summaryCard, { backgroundColor: surfaceColor, borderColor }]}>
             <View style={styles.summaryCardTop}>
-              <View style={[styles.summaryIconBg, { backgroundColor: 'rgba(32, 223, 96, 0.2)' }]}>
-                <IconSymbol size={22} name="chart.pie.fill" color={primary} />
+              <View style={[styles.summaryIconBg, { backgroundColor: '#dcfce7' }]}>
+                <IconSymbol size={22} name="arrow.up.right" color="#16a34a" />
+              </View>
+              <View style={[styles.percentBadge, { backgroundColor: incomeChange > 0 ? '#dcfce7' : '#fff1f2' }]}>
+                <ThemedText style={[styles.percentBadgeText, { color: incomeChange > 0 ? '#16a34a' : '#e11d48' }]}>
+                  {incomeChange > 0 ? '+' : ''}{incomeChange.toFixed(1)}%
+                </ThemedText>
               </View>
             </View>
-            <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>Presupuestos</ThemedText>
+            <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>Ingresos</ThemedText>
             <View style={styles.summaryAmountRow}>
               <ThemedText style={[styles.summaryAmount, { color: textMain }]}>
-                Ver
+                ${Math.floor(totalIncome).toLocaleString('en-US')}
+              </ThemedText>
+              <ThemedText style={[styles.summaryAmountCents, { color: textMuted }]}>
+                .{((totalIncome % 1) * 10).toFixed(0)}
               </ThemedText>
             </View>
-          </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Balance Card */}
+        <View style={[styles.balanceCard, { backgroundColor: surfaceColor, borderColor }]}>
+          <View style={styles.balanceCardContent}>
+            <ThemedText style={[styles.balanceLabel, { color: textMuted }]}>
+              Balance del Periodo
+            </ThemedText>
+            <ThemedText style={[styles.balanceAmount, { color: totalIncome - totalExpense >= 0 ? '#16a34a' : '#e11d48' }]}>
+              {totalIncome - totalExpense >= 0 ? '+' : ''}{formatCurrency(totalIncome - totalExpense)}
+            </ThemedText>
+            <View style={styles.balanceBreakdown}>
+              <View style={styles.balanceItem}>
+                <ThemedText style={[styles.balanceItemLabel, { color: textMuted }]}>
+                  Tasa de ahorro
+                </ThemedText>
+                <ThemedText style={[styles.balanceItemValue, { color: textMain }]}>
+                  {totalIncome > 0 ? (((totalIncome - totalExpense) / totalIncome) * 100).toFixed(1) : '0.0'}%
+                </ThemedText>
+              </View>
+            </View>
+          </View>
         </View>
 
         {/* Donut Chart Section */}
@@ -597,6 +773,179 @@ export default function ReportesScreen() {
             ))}
           </View>
         </View>
+
+        {/* Ingresos por Categoría */}
+        {incomeCategoryStats.length > 0 && (
+          <View style={[styles.chartCard, { backgroundColor: surfaceColor, borderColor }]}>
+            <View style={styles.chartCardHeader}>
+              <ThemedText style={[styles.chartTitle, { color: textMain }]}>Ingresos por Categoría</ThemedText>
+            </View>
+
+            <View style={styles.categoryStatsList}>
+              {incomeCategoryStats.map((category, index) => (
+                <View key={index} style={styles.categoryStatItem}>
+                  <View style={styles.categoryStatRow}>
+                    <View style={styles.categoryStatInfo}>
+                      <View style={[styles.categoryStatIcon, { backgroundColor: category.category_color + '20' }]}>
+                        <IconSymbol size={20} name={category.category_icon as any} color={category.category_color} />
+                      </View>
+                      <View>
+                        <ThemedText style={[styles.categoryStatName, { color: textMain }]}>
+                          {category.category_name}
+                        </ThemedText>
+                        <ThemedText style={[styles.categoryStatCount, { color: textMuted }]}>
+                          {category.count} transaccion{category.count !== 1 ? 'es' : ''}
+                        </ThemedText>
+                      </View>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <ThemedText style={[styles.categoryStatAmount, { color: textMain }]}>
+                        {formatCurrency(category.total)}
+                      </ThemedText>
+                      <ThemedText style={[styles.categoryStatPercent, { color: '#16a34a' }]}>
+                        {category.percentage.toFixed(1)}%
+                      </ThemedText>
+                    </View>
+                  </View>
+                  <View style={[styles.categoryStatBar, { backgroundColor: barBg }]}>
+                    <View 
+                      style={[
+                        styles.categoryStatBarFill, 
+                        { width: `${category.percentage}%`, backgroundColor: category.category_color }
+                      ]} 
+                    />
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Presupuestos */}
+        {budgetStats.length > 0 && (
+          <View style={[styles.chartCard, { backgroundColor: surfaceColor, borderColor }]}>
+            <View style={styles.chartCardHeader}>
+              <ThemedText style={[styles.chartTitle, { color: textMain }]}>Estado de Presupuestos</ThemedText>
+              <TouchableOpacity onPress={() => router.push('/budgets')}>
+                <ThemedText style={[styles.linkText, { color: primary }]}>Ver todos</ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.budgetStatsList}>
+              {budgetStats.map((budget) => {
+                const barColor = budget.percentage >= 100 ? '#ef4444' : budget.percentage >= 80 ? '#f59e0b' : '#10b981';
+                return (
+                  <View key={budget.id} style={styles.budgetStatItem}>
+                    <View style={styles.budgetStatRow}>
+                      <View style={styles.budgetStatInfo}>
+                        <View style={[styles.budgetStatIcon, { backgroundColor: budget.color + '20' }]}>
+                          <IconSymbol size={18} name={budget.icon as any} color={budget.color} />
+                        </View>
+                        <ThemedText style={[styles.budgetStatName, { color: textMain }]}>
+                          {budget.name}
+                        </ThemedText>
+                      </View>
+                      <ThemedText style={[styles.budgetStatAmount, { color: textMuted }]}>
+                        {formatCurrency(budget.current_amount)} / {formatCurrency(budget.amount)}
+                      </ThemedText>
+                    </View>
+                    <View style={[styles.budgetStatBar, { backgroundColor: barBg }]}>
+                      <View 
+                        style={[
+                          styles.budgetStatBarFill, 
+                          { width: `${Math.min(budget.percentage, 100)}%`, backgroundColor: barColor }
+                        ]} 
+                      />
+                    </View>
+                    <ThemedText style={[styles.budgetStatPercent, { color: barColor }]}>
+                      {budget.percentage.toFixed(1)}% utilizado
+                    </ThemedText>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* Objetivos de Ahorro */}
+        {goalStats.length > 0 && (
+          <View style={[styles.chartCard, { backgroundColor: surfaceColor, borderColor }]}>
+            <View style={styles.chartCardHeader}>
+              <ThemedText style={[styles.chartTitle, { color: textMain }]}>Objetivos de Ahorro</ThemedText>
+              <TouchableOpacity onPress={() => router.push('/savings-goals')}>
+                <ThemedText style={[styles.linkText, { color: primary }]}>Ver todos</ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.goalStatsList}>
+              {goalStats.map((goal) => (
+                <View key={goal.id} style={styles.goalStatItem}>
+                  <View style={styles.goalStatRow}>
+                    <View style={styles.goalStatInfo}>
+                      <View style={[styles.goalStatIcon, { backgroundColor: goal.color + '20' }]}>
+                        <IconSymbol size={18} name={goal.icon as any} color={goal.color} />
+                      </View>
+                      <ThemedText style={[styles.goalStatName, { color: textMain }]}>
+                        {goal.name}
+                      </ThemedText>
+                    </View>
+                    <ThemedText style={[styles.goalStatAmount, { color: textMuted }]}>
+                      {formatCurrency(goal.current_amount)} / {formatCurrency(goal.target_amount)}
+                    </ThemedText>
+                  </View>
+                  <View style={[styles.goalStatBar, { backgroundColor: barBg }]}>
+                    <View 
+                      style={[
+                        styles.goalStatBarFill, 
+                        { width: `${Math.min(goal.percentage, 100)}%`, backgroundColor: goal.color }
+                      ]} 
+                    />
+                  </View>
+                  <ThemedText style={[styles.goalStatPercent, { color: goal.color }]}>
+                    {goal.percentage.toFixed(1)}% completado
+                  </ThemedText>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Suscripciones */}
+        {subscriptionStats.length > 0 && (
+          <View style={[styles.chartCard, { backgroundColor: surfaceColor, borderColor }]}>
+            <View style={styles.chartCardHeader}>
+              <ThemedText style={[styles.chartTitle, { color: textMain }]}>Pagos Recurrentes</ThemedText>
+              <TouchableOpacity onPress={() => router.push('/subscriptions/index')}>
+                <ThemedText style={[styles.linkText, { color: primary }]}>Ver todos</ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.subscriptionStatsList}>
+              {subscriptionStats.map((sub) => {
+                const isIncome = sub.type === 'salary' || sub.type === 'recurring_income';
+                const frequencyLabel = sub.frequency === 'monthly' ? '/mes' : sub.frequency === 'weekly' ? '/sem' : sub.frequency === 'yearly' ? '/año' : '';
+                return (
+                  <View key={sub.id} style={styles.subscriptionStatItem}>
+                    <View style={[styles.subscriptionStatIcon, { backgroundColor: sub.color + '20' }]}>
+                      <IconSymbol size={20} name={sub.icon as any} color={sub.color} />
+                    </View>
+                    <View style={styles.subscriptionStatInfo}>
+                      <ThemedText style={[styles.subscriptionStatName, { color: textMain }]}>
+                        {sub.name}
+                      </ThemedText>
+                      <ThemedText style={[styles.subscriptionStatType, { color: textMuted }]}>
+                        {sub.type === 'subscription' ? 'Suscripción' : sub.type === 'salary' ? 'Salario' : sub.type === 'recurring_income' ? 'Ingreso' : 'Gasto'} · {frequencyLabel}
+                      </ThemedText>
+                    </View>
+                    <ThemedText style={[styles.subscriptionStatAmount, { color: isIncome ? '#16a34a' : textMain }]}>
+                      {isIncome ? '+' : '-'}{formatCurrency(sub.amount)}
+                    </ThemedText>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {/* Insight Box */}
         <View style={styles.insightBox}>
@@ -871,5 +1220,221 @@ const styles = StyleSheet.create({
   insightText: {
     fontSize: 14,
     lineHeight: 22,
+  },
+  // Balance Card
+  balanceCard: {
+    padding: 24,
+    borderRadius: 24,
+    borderWidth: 1,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  balanceCardContent: {
+    gap: 8,
+  },
+  balanceLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  balanceAmount: {
+    fontSize: 32,
+    fontWeight: '700',
+    letterSpacing: -1,
+  },
+  balanceBreakdown: {
+    marginTop: 8,
+  },
+  balanceItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  balanceItemLabel: {
+    fontSize: 13,
+  },
+  balanceItemValue: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  linkText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  // Category Stats
+  categoryStatsList: {
+    gap: 16,
+  },
+  categoryStatItem: {
+    gap: 8,
+  },
+  categoryStatRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  categoryStatInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  categoryStatIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryStatName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  categoryStatCount: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  categoryStatAmount: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  categoryStatPercent: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  categoryStatBar: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  categoryStatBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  // Budget Stats
+  budgetStatsList: {
+    gap: 16,
+  },
+  budgetStatItem: {
+    gap: 8,
+  },
+  budgetStatRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  budgetStatInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  budgetStatIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  budgetStatName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  budgetStatAmount: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  budgetStatBar: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  budgetStatBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  budgetStatPercent: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  // Goal Stats
+  goalStatsList: {
+    gap: 16,
+  },
+  goalStatItem: {
+    gap: 8,
+  },
+  goalStatRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  goalStatInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  goalStatIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  goalStatName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  goalStatAmount: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  goalStatBar: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  goalStatBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  goalStatPercent: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  // Subscription Stats
+  subscriptionStatsList: {
+    gap: 12,
+  },
+  subscriptionStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  subscriptionStatIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subscriptionStatInfo: {
+    flex: 1,
+  },
+  subscriptionStatName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  subscriptionStatType: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  subscriptionStatAmount: {
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
