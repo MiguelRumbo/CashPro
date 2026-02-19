@@ -199,12 +199,12 @@ router.post('/:id/payment', (req, res) => {
       return res.status(404).json({ success: false, error: 'Préstamo no encontrado' });
     }
 
-    const { amount, date, notes } = req.body;
+    const { amount, date, notes, account_id } = req.body;
 
     if (!amount || !date) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Faltan campos requeridos: amount, date' 
+      return res.status(400).json({
+        success: false,
+        error: 'Faltan campos requeridos: amount, date'
       });
     }
 
@@ -246,6 +246,9 @@ router.post('/:id/payment', (req, res) => {
       WHERE id = ?
     `).run(newRemainingAmount, newStatus, now, loan.id);
 
+    // Usar la cuenta proporcionada o la cuenta original del préstamo
+    const targetAccountId = account_id || loan.account_id;
+
     // Crear movimiento de ingreso para registrar el pago recibido
     db.prepare(`
       INSERT INTO movements (
@@ -260,23 +263,23 @@ router.post('/:id/payment', (req, res) => {
       'Préstamo',
       'banknote',
       '#10b981',
-      loan.account_id,
+      targetAccountId,
       null,
       date,
       notes || `Pago recibido de ${loan.person_name}`
     );
 
-    // Actualizar balance de la cuenta
-    const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(loan.account_id);
+    // Actualizar balance de la cuenta destino
+    const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(targetAccountId);
     if (account) {
       if (account.type === 'credit') {
         // Para crédito, decrementar current_balance (pago de deuda)
         db.prepare('UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?')
-          .run(amount, loan.account_id);
+          .run(amount, targetAccountId);
       } else {
         // Para otras cuentas, incrementar balance
         db.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?')
-          .run(amount, loan.account_id);
+          .run(amount, targetAccountId);
       }
     }
 

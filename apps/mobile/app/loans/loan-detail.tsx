@@ -32,6 +32,15 @@ type Payment = {
   created_at: string;
 };
 
+type Account = {
+  id: number;
+  name: string;
+  type: string;
+  balance: number;
+  icon?: string;
+  color?: string;
+};
+
 export default function LoanDetailScreen() {
   const { id } = useLocalSearchParams();
   const [loan, setLoan] = useState<Loan | null>(null);
@@ -43,6 +52,9 @@ export default function LoanDetailScreen() {
   const [paymentNotes, setPaymentNotes] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
   const { formatCurrency } = useCurrency();
 
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
@@ -57,13 +69,15 @@ export default function LoanDetailScreen() {
 
   const fetchLoanData = async () => {
     try {
-      const [loanRes, paymentsRes] = await Promise.all([
+      const [loanRes, paymentsRes, accountsRes] = await Promise.all([
         fetch(`${API_CONFIG.BASE_URL}/loans/${id}`),
-        fetch(`${API_CONFIG.BASE_URL}/loans/${id}/payments`)
+        fetch(`${API_CONFIG.BASE_URL}/loans/${id}/payments`),
+        fetch(`${API_CONFIG.BASE_URL}/accounts`),
       ]);
 
       const loanResult = await loanRes.json();
       const paymentsResult = await paymentsRes.json();
+      const accountsResult = await accountsRes.json();
 
       if (loanResult.success) {
         setLoan(loanResult.data);
@@ -71,6 +85,15 @@ export default function LoanDetailScreen() {
 
       if (paymentsResult.success) {
         setPayments(paymentsResult.data);
+      }
+
+      if (accountsResult.success) {
+        setAccounts(accountsResult.data);
+        // Seleccionar la cuenta del préstamo por defecto
+        if (accountsResult.data.length > 0 && !selectedAccount) {
+          const loanAccount = accountsResult.data.find((a: Account) => a.id === loanResult.data?.account_id);
+          setSelectedAccount(loanAccount || accountsResult.data[0]);
+        }
       }
     } catch (error) {
       console.error('Error al cargar datos:', error);
@@ -103,6 +126,11 @@ export default function LoanDetailScreen() {
       return;
     }
 
+    if (!selectedAccount) {
+      Alert.alert('Error', 'Selecciona una cuenta');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -113,8 +141,9 @@ export default function LoanDetailScreen() {
         },
         body: JSON.stringify({
           amount: parseFloat(paymentAmount),
-          date: paymentDate.toISOString().split('T')[0],
+          date: paymentDate.toISOString(),
           notes: paymentNotes.trim() || null,
+          account_id: selectedAccount.id,
         }),
       });
 
@@ -447,6 +476,35 @@ export default function LoanDetailScreen() {
                 )}
               </View>
 
+              {/* Selector de cuenta */}
+              <View style={styles.field}>
+                <ThemedText style={[styles.label, { color: textMain }]}>
+                  Cuenta destino *
+                </ThemedText>
+                <TouchableOpacity
+                  style={[styles.accountSelector, { backgroundColor: inputBg, borderColor }]}
+                  onPress={() => setShowAccountPicker(true)}
+                >
+                  {selectedAccount ? (
+                    <>
+                      <View style={styles.accountSelectorInfo}>
+                        <ThemedText style={[styles.accountSelectorName, { color: textMain }]}>
+                          {selectedAccount.name}
+                        </ThemedText>
+                        <ThemedText style={[styles.accountSelectorBalance, { color: textMuted }]}>
+                          {formatCurrency(selectedAccount.type === 'credit' ? 0 : selectedAccount.balance)}
+                        </ThemedText>
+                      </View>
+                      <IconSymbol name="chevron.down" size={20} color={textMuted} />
+                    </>
+                  ) : (
+                    <ThemedText style={[styles.accountSelectorPlaceholder, { color: textMuted }]}>
+                      Selecciona una cuenta
+                    </ThemedText>
+                  )}
+                </TouchableOpacity>
+              </View>
+
               <View style={styles.field}>
                 <ThemedText style={[styles.label, { color: textMain }]}>
                   Notas (opcional)
@@ -475,6 +533,60 @@ export default function LoanDetailScreen() {
                 </ThemedText>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal selector de cuentas */}
+      <Modal
+        visible={showAccountPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAccountPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.pickerModalContent, { backgroundColor: surfaceColor }]}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={[styles.modalTitle, { color: textMain }]}>
+                Seleccionar Cuenta
+              </ThemedText>
+              <TouchableOpacity onPress={() => setShowAccountPicker(false)}>
+                <IconSymbol name="xmark" size={24} color={textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.accountsList}>
+              {accounts.map((account) => (
+                <TouchableOpacity
+                  key={account.id}
+                  style={[
+                    styles.accountItem,
+                    {
+                      backgroundColor: selectedAccount?.id === account.id ? primary + '10' : 'transparent',
+                      borderColor,
+                    }
+                  ]}
+                  onPress={() => {
+                    setSelectedAccount(account);
+                    setShowAccountPicker(false);
+                  }}
+                >
+                  <View style={styles.accountItemInfo}>
+                    <ThemedText style={[styles.accountItemName, { color: textMain }]}>
+                      {account.name}
+                    </ThemedText>
+                    <ThemedText style={[styles.accountItemBalance, { color: textMuted }]}>
+                      {account.type === 'credit'
+                        ? `Crédito disponible: ${formatCurrency((account as any).credit_limit - (account as any).current_balance)}`
+                        : formatCurrency(account.balance)}
+                    </ThemedText>
+                  </View>
+                  {selectedAccount?.id === account.id && (
+                    <IconSymbol name="checkmark" size={20} color={primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -733,5 +845,60 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Account Selector
+  accountSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 48,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+  },
+  accountSelectorInfo: {
+    flex: 1,
+  },
+  accountSelectorName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  accountSelectorBalance: {
+    fontSize: 12,
+    marginTop: 1,
+  },
+  accountSelectorPlaceholder: {
+    fontSize: 16,
+  },
+  // Account Picker Modal
+  pickerModalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+    maxHeight: '70%',
+  },
+  accountsList: {
+    maxHeight: 400,
+  },
+  accountItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+  },
+  accountItemInfo: {
+    flex: 1,
+  },
+  accountItemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  accountItemBalance: {
+    fontSize: 13,
   },
 });

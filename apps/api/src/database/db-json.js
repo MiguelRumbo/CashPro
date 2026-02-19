@@ -113,40 +113,33 @@ const db = {
           });
         }
         
-        // Para pagos de préstamos
-        if (sql.includes('FROM loan_payments')) {
-          return [...data.loan_payments].sort((a, b) => {
-            return new Date(b.created_at) - new Date(a.created_at);
-          });
-        }
-        
         // Para contribuciones de objetivos
         if (sql.includes('FROM goal_contributions')) {
           let contributions = [...data.goal_contributions];
-          
+
           // Filtrar por goal_id si se proporciona en WHERE
           if (sql.includes('WHERE goal_id = ?') && params.length > 0) {
             const goalId = parseInt(params[0]);
             contributions = contributions.filter(c => parseInt(c.goal_id) === goalId);
           }
-          
+
           return contributions.sort((a, b) => {
             return new Date(b.date) - new Date(a.date);
           });
         }
-        
+
         // Para pagos de préstamos
         if (sql.includes('FROM loan_payments')) {
           let payments = [...data.loan_payments];
-          
+
           // Filtrar por loan_id si se proporciona en WHERE
           if (sql.includes('WHERE loan_id = ?') && params.length > 0) {
             const loanId = parseInt(params[0]);
             payments = payments.filter(p => parseInt(p.loan_id) === loanId);
           }
-          
+
           return payments.sort((a, b) => {
-            return new Date(b.created_at) - new Date(a.created_at);
+            return new Date(b.date || b.created_at) - new Date(a.date || a.created_at);
           });
         }
         
@@ -500,10 +493,10 @@ const db = {
           // Actualizar cuenta
           const id = params[params.length - 1];
           const accountIndex = data.accounts.findIndex(a => a.id === parseInt(id));
-          
+
           if (accountIndex !== -1) {
             // Parsear los campos del UPDATE
-            const updateMatch = sql.match(/SET (.+) WHERE/);
+            const updateMatch = sql.match(/SET ([\s\S]+?) WHERE/);
             if (updateMatch) {
               const setPart = updateMatch[1];
               const assignments = setPart.split(',').map(s => s.trim());
@@ -550,9 +543,9 @@ const db = {
           // Actualizar movimiento
           const id = params[params.length - 1];
           const movementIndex = data.movements.findIndex(m => m.id === parseInt(id));
-          
+
           if (movementIndex !== -1) {
-            const updateMatch = sql.match(/SET (.+) WHERE/);
+            const updateMatch = sql.match(/SET ([\s\S]+?) WHERE/);
             if (updateMatch) {
               const fields = updateMatch[1].split(',').map(f => f.trim().split('=')[0].trim());
               fields.forEach((field, index) => {
@@ -570,9 +563,9 @@ const db = {
           // Actualizar presupuesto
           const id = params[params.length - 1];
           const budgetIndex = data.budgets.findIndex(b => b.id === parseInt(id));
-          
+
           if (budgetIndex !== -1) {
-            const updateMatch = sql.match(/SET (.+) WHERE/);
+            const updateMatch = sql.match(/SET ([\s\S]+?) WHERE/);
             if (updateMatch) {
               const fields = updateMatch[1].split(',').map(f => f.trim().split('=')[0].trim());
               fields.forEach((field, index) => {
@@ -590,9 +583,9 @@ const db = {
           // Actualizar perfil de usuario
           const id = params[params.length - 1];
           const profileIndex = data.user_profile.findIndex(p => p.id === parseInt(id));
-          
+
           if (profileIndex !== -1) {
-            const updateMatch = sql.match(/SET (.+) WHERE/);
+            const updateMatch = sql.match(/SET ([\s\S]+?) WHERE/);
             if (updateMatch) {
               const setPart = updateMatch[1];
               const assignments = setPart.split(',').map(s => s.trim());
@@ -622,9 +615,9 @@ const db = {
           // Actualizar objetivo de ahorro
           const id = params[params.length - 1];
           const goalIndex = data.savings_goals.findIndex(g => g.id === parseInt(id));
-          
+
           if (goalIndex !== -1) {
-            const updateMatch = sql.match(/SET (.+) WHERE/);
+            const updateMatch = sql.match(/SET ([\s\S]+?) WHERE/);
             if (updateMatch) {
               const setPart = updateMatch[1];
               const assignments = setPart.split(',').map(s => s.trim());
@@ -649,9 +642,9 @@ const db = {
           // Actualizar préstamo
           const id = params[params.length - 1];
           const loanIndex = data.loans.findIndex(l => l.id === parseInt(id));
-          
+
           if (loanIndex !== -1) {
-            const updateMatch = sql.match(/SET (.+) WHERE/);
+            const updateMatch = sql.match(/SET ([\s\S]+?) WHERE/);
             if (updateMatch) {
               const setPart = updateMatch[1];
               const assignments = setPart.split(',').map(s => s.trim());
