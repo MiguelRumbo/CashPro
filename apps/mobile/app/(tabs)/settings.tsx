@@ -140,7 +140,7 @@ export default function SettingsScreen() {
   const handleDeleteAllData = () => {
     Alert.alert(
       'Eliminar Todos los Datos',
-      '¿Estás seguro de que deseas eliminar TODOS los datos? Esta acción no se puede deshacer.\n\nSe eliminarán:\n• Todas las cuentas\n• Todos los movimientos\n• Todas las categorías',
+      '¿Estás seguro de que deseas eliminar TODOS los datos? Esta acción no se puede deshacer.\n\nSe eliminarán:\n• Todas las cuentas\n• Todos los movimientos\n• Todos los presupuestos\n• Todos los objetivos de ahorro\n• Todos los préstamos\n• Todas las categorías',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -343,6 +343,44 @@ export default function SettingsScreen() {
                 </ThemedText>
                 <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
                   Gestionar metas
+                </ThemedText>
+              </View>
+            </View>
+            <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.settingsRow]}
+            onPress={() => router.push('/savings-goals')}
+          >
+            <View style={styles.settingsRowLeft}>
+              <View style={[styles.settingsIcon, { backgroundColor: '#ecfdf5' }]}>
+                <IconSymbol size={22} name="target" color="#10b981" />
+              </View>
+              <View>
+                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>
+                  Objetivos de Ahorro
+                </ThemedText>
+                <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
+                  Metas de ahorro
+                </ThemedText>
+              </View>
+            </View>
+            <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.settingsRow]}
+            onPress={() => router.push('/loans')}
+          >
+            <View style={styles.settingsRowLeft}>
+              <View style={[styles.settingsIcon, { backgroundColor: '#fffbeb' }]}>
+                <IconSymbol size={22} name="doc.text" color="#f59e0b" />
+              </View>
+              <View>
+                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>
+                  Préstamos
+                </ThemedText>
+                <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
+                  Dinero prestado
                 </ThemedText>
               </View>
             </View>

@@ -36,6 +36,15 @@ type SavingsGoalSummary = {
   completion_percentage: number;
 };
 
+type LoansSummary = {
+  total_loans: number;
+  active_loans: number;
+  total_lent: number;
+  total_pending: number;
+  total_recovered: number;
+  recovery_percentage: number;
+};
+
 export default function DashboardScreen() {
   const [totalBalance, setTotalBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
@@ -44,6 +53,7 @@ export default function DashboardScreen() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([]);
   const [savingsGoalsSummary, setSavingsGoalsSummary] = useState<SavingsGoalSummary | null>(null);
+  const [loansSummary, setLoansSummary] = useState<LoansSummary | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [profileName, setProfileName] = useState('Usuario');
   const [profileInitials, setProfileInitials] = useState('U');
@@ -144,6 +154,13 @@ export default function DashboardScreen() {
       const goalsStatsResult = await goalsStatsResponse.json();
       if (goalsStatsResult.success) {
         setSavingsGoalsSummary(goalsStatsResult.data);
+      }
+
+      // Obtener resumen de préstamos
+      const loansStatsResponse = await fetch(`${API_CONFIG.BASE_URL}/loans/stats/summary`);
+      const loansStatsResult = await loansStatsResponse.json();
+      if (loansStatsResult.success) {
+        setLoansSummary(loansStatsResult.data);
       }
     } catch (error) {
       console.error('Error al cargar datos:', error);
@@ -439,6 +456,68 @@ export default function DashboardScreen() {
             <View style={[styles.savingsGoalsBadge, { backgroundColor: primary + '20' }]}>
               <ThemedText style={[styles.savingsGoalsBadgeText, { color: primary }]}>
                 {savingsGoalsSummary.completion_percentage.toFixed(1)}% completado
+              </ThemedText>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Loans Section */}
+        {loansSummary && loansSummary.active_loans > 0 && (
+          <TouchableOpacity 
+            style={[styles.loansCard, { backgroundColor: surfaceColor, borderColor }]}
+            onPress={() => router.push('/loans')}
+          >
+            <View style={styles.loansHeader}>
+              <View style={styles.loansHeaderLeft}>
+                <View style={[styles.loansIcon, { backgroundColor: 'rgba(245, 158, 11, 0.2)' }]}>
+                  <IconSymbol size={24} name="doc.text" color="#f59e0b" />
+                </View>
+                <View>
+                  <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
+                    Préstamos
+                  </ThemedText>
+                  <ThemedText style={[styles.loansSubtitle, { color: textMuted }]}>
+                    {loansSummary.active_loans} préstamo{loansSummary.active_loans !== 1 ? 's' : ''} activo{loansSummary.active_loans !== 1 ? 's' : ''}
+                  </ThemedText>
+                </View>
+              </View>
+              <IconSymbol size={20} name="chevron.right" color={textMuted} />
+            </View>
+
+            <View style={styles.loansAmounts}>
+              <View>
+                <ThemedText style={[styles.loansLabel, { color: textMuted }]}>
+                  Pendiente por Cobrar
+                </ThemedText>
+                <ThemedText style={[styles.loansAmount, { color: '#f59e0b' }]}>
+                  {formatCurrency(loansSummary.total_pending)}
+                </ThemedText>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <ThemedText style={[styles.loansLabel, { color: textMuted }]}>
+                  Total Prestado
+                </ThemedText>
+                <ThemedText style={[styles.loansAmount, { color: textMain }]}>
+                  {formatCurrency(loansSummary.total_lent)}
+                </ThemedText>
+              </View>
+            </View>
+
+            <View style={[styles.loansProgress, { backgroundColor: progressBarBg }]}>
+              <View 
+                style={[
+                  styles.loansProgressFill, 
+                  { 
+                    width: `${Math.min(loansSummary.recovery_percentage, 100)}%`, 
+                    backgroundColor: '#10b981' 
+                  }
+                ]} 
+              />
+            </View>
+
+            <View style={[styles.loansBadge, { backgroundColor: '#10b981' + '20' }]}>
+              <ThemedText style={[styles.loansBadgeText, { color: '#10b981' }]}>
+                {loansSummary.recovery_percentage.toFixed(1)}% recuperado
               </ThemedText>
             </View>
           </TouchableOpacity>
@@ -931,6 +1010,74 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   savingsGoalsBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  // Loans Card
+  loansCard: {
+    padding: 20,
+    borderRadius: 16,
+    marginTop: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 2,
+    borderWidth: 1,
+  },
+  loansHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  loansHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  loansIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loansSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  loansAmounts: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  loansLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  loansAmount: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  loansProgress: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  loansProgressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  loansBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: 'center',
+  },
+  loansBadgeText: {
     fontSize: 12,
     fontWeight: '600',
   },

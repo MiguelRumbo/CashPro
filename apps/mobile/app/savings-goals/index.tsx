@@ -17,8 +17,8 @@ type SavingsGoal = {
   icon: string;
   color: string;
   account_id: number | null;
-  auto_deduct: boolean;
-  auto_deduct_amount: number;
+  auto_deduct: boolean | number;
+  auto_deduct_amount: number | null;
   auto_deduct_period: string | null;
   status: 'active' | 'completed' | 'cancelled';
   created_at: string;
@@ -168,7 +168,6 @@ export default function SavingsGoalsScreen() {
                 const progress = getProgress(goal);
                 const daysRemaining = getDaysRemaining(goal.deadline);
                 const dailyRequired = getDailyRequired(goal);
-                const remaining = goal.target_amount - goal.current_amount;
                 
                 return (
                   <TouchableOpacity
@@ -246,7 +245,7 @@ export default function SavingsGoalsScreen() {
                     )}
 
                     {/* Auto Deduct Info */}
-                    {goal.auto_deduct && (
+                    {Boolean(goal.auto_deduct) && goal.auto_deduct_amount && goal.auto_deduct_amount > 0 && goal.auto_deduct_period && (
                       <View style={[styles.autoDeductInfo, { backgroundColor: borderColor }]}>
                         <IconSymbol size={14} name="arrow.clockwise" color={textMuted} />
                         <ThemedText style={[styles.autoDeductText, { color: textMuted }]}>

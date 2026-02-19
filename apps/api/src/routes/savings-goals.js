@@ -93,21 +93,37 @@ router.post('/', (req, res) => {
       auto_deduct_amount: auto_deduct_amount || 0,
       auto_deduct_period: auto_deduct_period || null,
       status: status || 'active',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     };
 
-    // Guardar en la base de datos
-    const dbData = require('../database/db-json').readDB();
-    if (!dbData.savings_goals) {
-      dbData.savings_goals = [];
-    }
-    dbData.savings_goals.push(newGoal);
-    require('../database/db-json').writeDB(dbData);
+    const now = new Date().toISOString();
+
+    const result = db.prepare(`
+      INSERT INTO savings_goals (
+        name, target_amount, current_amount, deadline, icon, color,
+        account_id, auto_deduct, auto_deduct_amount, auto_deduct_period,
+        status, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      newGoal.name,
+      newGoal.target_amount,
+      newGoal.current_amount,
+      newGoal.deadline,
+      newGoal.icon,
+      newGoal.color,
+      newGoal.account_id,
+      newGoal.auto_deduct ? 1 : 0,
+      newGoal.auto_deduct_amount,
+      newGoal.auto_deduct_period,
+      newGoal.status,
+      now,
+      now
+    );
+
+    const createdGoal = db.prepare('SELECT * FROM savings_goals WHERE id = ?').get(result.lastInsertRowid);
 
     res.status(201).json({ 
       success: true, 
-      data: newGoal,
+      data: createdGoal,
       message: 'Objetivo creado exitosamente' 
     });
   } catch (error) {
@@ -120,39 +136,61 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
-
-    const dbData = require('../database/db-json').readDB();
-    const goalIndex = dbData.savings_goals.findIndex(g => g.id === parseInt(id));
+    const goal = db.prepare('SELECT * FROM savings_goals WHERE id = ?').get(id);
     
-    if (goalIndex === -1) {
+    if (!goal) {
       return res.status(404).json({ success: false, error: 'Objetivo no encontrado' });
     }
 
-    const allowedFields = [
-      'name', 'target_amount', 'current_amount', 'deadline', 'icon', 'color',
-      'account_id', 'auto_deduct', 'auto_deduct_amount', 'auto_deduct_period', 'status'
-    ];
+    const {
+      name,
+      target_amount,
+      current_amount,
+      deadline,
+      icon,
+      color,
+      account_id,
+      auto_deduct,
+      auto_deduct_amount,
+      auto_deduct_period,
+      status
+    } = req.body;
 
-    // Aplicar actualizaciones
-    Object.keys(updates).forEach(key => {
-      if (allowedFields.includes(key)) {
-        dbData.savings_goals[goalIndex][key] = updates[key];
-      }
-    });
+    const now = new Date().toISOString();
 
-    dbData.savings_goals[goalIndex].updated_at = new Date().toISOString();
+    db.prepare(`
+      UPDATE savings_goals 
+      SET name = ?, target_amount = ?, current_amount = ?, deadline = ?, 
+          icon = ?, color = ?, account_id = ?, auto_deduct = ?, 
+          auto_deduct_amount = ?, auto_deduct_period = ?, status = ?, updated_at = ?
+      WHERE id = ?
+    `).run(
+      name !== undefined ? name : goal.name,
+      target_amount !== undefined ? target_amount : goal.target_amount,
+      current_amount !== undefined ? current_amount : goal.current_amount,
+      deadline !== undefined ? deadline : goal.deadline,
+      icon !== undefined ? icon : goal.icon,
+      color !== undefined ? color : goal.color,
+      account_id !== undefined ? account_id : goal.account_id,
+      auto_deduct !== undefined ? (auto_deduct ? 1 : 0) : goal.auto_deduct,
+      auto_deduct_amount !== undefined ? auto_deduct_amount : goal.auto_deduct_amount,
+      auto_deduct_period !== undefined ? auto_deduct_period : goal.auto_deduct_period,
+      status !== undefined ? status : goal.status,
+      now,
+      id
+    );
+
+    const updatedGoal = db.prepare('SELECT * FROM savings_goals WHERE id = ?').get(id);
 
     // Verificar si se completó el objetivo
-    if (dbData.savings_goals[goalIndex].current_amount >= dbData.savings_goals[goalIndex].target_amount) {
-      dbData.savings_goals[goalIndex].status = 'completed';
+    if (updatedGoal.current_amount >= updatedGoal.target_amount && updatedGoal.status !== 'completed') {
+      db.prepare('UPDATE savings_goals SET status = ? WHERE id = ?').run('completed', id);
+      updatedGoal.status = 'completed';
     }
-
-    require('../database/db-json').writeDB(dbData);
 
     res.json({ 
       success: true, 
-      data: dbData.savings_goals[goalIndex],
+      data: updatedGoal,
       message: 'Objetivo actualizado exitosamente' 
     });
   } catch (error) {
@@ -165,21 +203,17 @@ router.put('/:id', (req, res) => {
 router.delete('/:id', (req, res) => {
   try {
     const { id } = req.params;
-
-    const dbData = require('../database/db-json').readDB();
-    const goalIndex = dbData.savings_goals.findIndex(g => g.id === parseInt(id));
+    const goal = db.prepare('SELECT * FROM savings_goals WHERE id = ?').get(id);
     
-    if (goalIndex === -1) {
+    if (!goal) {
       return res.status(404).json({ success: false, error: 'Objetivo no encontrado' });
     }
 
-    // Eliminar también las contribuciones asociadas
-    dbData.goal_contributions = dbData.goal_contributions.filter(c => c.goal_id !== parseInt(id));
+    // Eliminar contribuciones asociadas
+    db.prepare('DELETE FROM goal_contributions WHERE goal_id = ?').run(id);
     
     // Eliminar el objetivo
-    dbData.savings_goals.splice(goalIndex, 1);
-    
-    require('../database/db-json').writeDB(dbData);
+    db.prepare('DELETE FROM savings_goals WHERE id = ?').run(id);
 
     res.json({ 
       success: true, 
@@ -195,7 +229,7 @@ router.delete('/:id', (req, res) => {
 router.post('/:id/contribute', (req, res) => {
   try {
     const { id } = req.params;
-    const { amount, notes } = req.body;
+    const { amount, account_id, notes } = req.body;
 
     if (!amount || amount <= 0) {
       return res.status(400).json({ 
@@ -204,47 +238,95 @@ router.post('/:id/contribute', (req, res) => {
       });
     }
 
-    const dbData = require('../database/db-json').readDB();
-    const goalIndex = dbData.savings_goals.findIndex(g => g.id === parseInt(id));
+    if (!account_id) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'La cuenta es requerida' 
+      });
+    }
+
+    const goal = db.prepare('SELECT * FROM savings_goals WHERE id = ?').get(id);
     
-    if (goalIndex === -1) {
+    if (!goal) {
       return res.status(404).json({ success: false, error: 'Objetivo no encontrado' });
     }
 
-    // Crear contribución
-    const contributions = dbData.goal_contributions || [];
-    const newContributionId = contributions.length > 0 ? Math.max(...contributions.map(c => c.id)) + 1 : 1;
-
-    const newContribution = {
-      id: newContributionId,
-      goal_id: parseInt(id),
-      amount,
-      date: new Date().toISOString(),
-      notes: notes || null,
-      created_at: new Date().toISOString(),
-    };
-
-    if (!dbData.goal_contributions) {
-      dbData.goal_contributions = [];
+    // Verificar que la cuenta existe
+    const account = db.prepare('SELECT * FROM accounts WHERE id = ?').get(account_id);
+    if (!account) {
+      return res.status(404).json({ success: false, error: 'Cuenta no encontrada' });
     }
-    dbData.goal_contributions.push(newContribution);
+
+    // Verificar que la cuenta tenga saldo suficiente
+    if (account.type !== 'credit' && account.balance < amount) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Saldo insuficiente en la cuenta' 
+      });
+    }
+
+    const now = new Date().toISOString();
+
+    // Crear contribución
+    const result = db.prepare(`
+      INSERT INTO goal_contributions (goal_id, amount, date, notes, created_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(id, amount, now, notes || null, now);
 
     // Actualizar current_amount del objetivo
-    dbData.savings_goals[goalIndex].current_amount += amount;
-    dbData.savings_goals[goalIndex].updated_at = new Date().toISOString();
+    const newCurrentAmount = goal.current_amount + amount;
+    let newStatus = goal.status;
 
     // Verificar si se completó el objetivo
-    if (dbData.savings_goals[goalIndex].current_amount >= dbData.savings_goals[goalIndex].target_amount) {
-      dbData.savings_goals[goalIndex].status = 'completed';
+    if (newCurrentAmount >= goal.target_amount && goal.status !== 'completed') {
+      newStatus = 'completed';
     }
 
-    require('../database/db-json').writeDB(dbData);
+    db.prepare(`
+      UPDATE savings_goals 
+      SET current_amount = ?, status = ?, updated_at = ?
+      WHERE id = ?
+    `).run(newCurrentAmount, newStatus, now, id);
+
+    // Crear movimiento de gasto para registrar la contribución
+    db.prepare(`
+      INSERT INTO movements (
+        type, amount, title, category_id, category_name, category_icon, category_color,
+        account_id, to_account_id, date, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      'expense',
+      amount,
+      `Contribución a ${goal.name}`,
+      null,
+      'Ahorro',
+      'target',
+      '#10b981',
+      account_id,
+      null,
+      now,
+      notes || `Contribución al objetivo: ${goal.name}`
+    );
+
+    // Actualizar balance de la cuenta
+    if (account.type === 'credit') {
+      // Para crédito, incrementar current_balance (deuda)
+      db.prepare('UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?')
+        .run(amount, account_id);
+    } else {
+      // Para otras cuentas, decrementar balance
+      db.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?')
+        .run(amount, account_id);
+    }
+
+    const contribution = db.prepare('SELECT * FROM goal_contributions WHERE id = ?').get(result.lastInsertRowid);
+    const updatedGoal = db.prepare('SELECT * FROM savings_goals WHERE id = ?').get(id);
 
     res.status(201).json({ 
       success: true, 
       data: {
-        contribution: newContribution,
-        goal: dbData.savings_goals[goalIndex]
+        contribution,
+        goal: updatedGoal
       },
       message: 'Contribución agregada exitosamente' 
     });
@@ -258,17 +340,15 @@ router.post('/:id/contribute', (req, res) => {
 router.get('/:id/contributions', (req, res) => {
   try {
     const { id } = req.params;
-
-    const dbData = require('../database/db-json').readDB();
-    const goal = dbData.savings_goals.find(g => g.id === parseInt(id));
+    const goal = db.prepare('SELECT * FROM savings_goals WHERE id = ?').get(id);
     
     if (!goal) {
       return res.status(404).json({ success: false, error: 'Objetivo no encontrado' });
     }
 
-    const contributions = (dbData.goal_contributions || [])
-      .filter(c => c.goal_id === parseInt(id))
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    const contributions = db.prepare(
+      'SELECT * FROM goal_contributions WHERE goal_id = ? ORDER BY date DESC, created_at DESC'
+    ).all(id);
 
     res.json({ 
       success: true, 

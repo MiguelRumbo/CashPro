@@ -6,114 +6,52 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { formatCurrencyInput, getNumericValue } from '@/utils/format';
 import { API_CONFIG } from '@/config/api';
 
-type BudgetType = 'saving' | 'expense';
-type BudgetPeriod = 'weekly' | 'monthly';
-
-type Category = {
-  id: string;
-  name: string;
-  icon: string;
-  color: string;
-};
-
-const CATEGORIES: Category[] = [
-  { id: '1', name: 'Comida', icon: 'fork.knife', color: '#ea580c' },
-  { id: '2', name: 'Comestibles', icon: 'cart.fill', color: '#16a34a' },
-  { id: '3', name: 'Compras', icon: 'bag.fill', color: '#dc2626' },
-  { id: '4', name: 'Transporte', icon: 'car.fill', color: '#2563eb' },
-  { id: '5', name: 'Entretenimiento', icon: 'film', color: '#db2777' },
-  { id: '6', name: 'Facturas', icon: 'doc.text.fill', color: '#059669' },
-  { id: '7', name: 'Regalos', icon: 'gift.fill', color: '#dc2626' },
-  { id: '8', name: 'Belleza', icon: 'sparkles', color: '#d946ef' },
-  { id: '9', name: 'Trabajo', icon: 'briefcase.fill', color: '#92400e' },
-  { id: '10', name: 'Viajes', icon: 'airplane', color: '#0891b2' },
-];
+type BudgetPeriod = 'daily' | 'weekly' | 'monthly';
 
 const BUDGET_ICONS = [
-  { icon: 'airplane', color: '#3b82f6', label: 'Viajes' },
-  { icon: 'gift.fill', color: '#ec4899', label: 'Regalos' },
   { icon: 'cart.fill', color: '#8b5cf6', label: 'Compras' },
-  { icon: 'house.fill', color: '#f59e0b', label: 'Hogar' },
-  { icon: 'car.fill', color: '#10b981', label: 'Auto' },
   { icon: 'fork.knife', color: '#ef4444', label: 'Comida' },
+  { icon: 'car.fill', color: '#10b981', label: 'Transporte' },
+  { icon: 'house.fill', color: '#f59e0b', label: 'Hogar' },
+  { icon: 'film', color: '#ec4899', label: 'Entretenimiento' },
   { icon: 'heart.fill', color: '#f43f5e', label: 'Salud' },
-  { icon: 'graduationcap.fill', color: '#6366f1', label: 'Educación' },
+  { icon: 'briefcase.fill', color: '#6366f1', label: 'Trabajo' },
+  { icon: 'sparkles', color: '#d946ef', label: 'Otros' },
 ];
 
 export default function AddBudgetScreen() {
-  const [budgetType, setBudgetType] = useState<BudgetType>('expense');
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [period, setPeriod] = useState<BudgetPeriod>('monthly');
   const [startDate, setStartDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [selectedIcon, setSelectedIcon] = useState(BUDGET_ICONS[0]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#0a0f0d' }, 'background');
+  const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
-  const textSub = '#64876f';
-  const primary = '#20df60';
+  const textMuted = '#64748b';
   const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#374151' }, 'border');
+  const primary = '#20df60';
+  const inputBg = useThemeColor({ light: '#f9fafb', dark: '#1f2937' }, 'inputBackground');
 
-  const handleAmountChange = (text: string) => {
-    setAmount(formatCurrencyInput(text));
-  };
-
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      setStartDate(selectedDate);
-    }
-  };
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
-  };
-
-  const handleSave = async () => {
-    // Validaciones
+  const handleSubmit = async () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'El nombre es requerido');
+      Alert.alert('Error', 'Ingresa un nombre para el presupuesto');
       return;
     }
 
-    if (!amount || getNumericValue(amount) === 0) {
-      Alert.alert('Error', 'El monto es requerido');
+    if (!amount || parseFloat(amount) <= 0) {
+      Alert.alert('Error', 'Ingresa un monto válido');
       return;
     }
 
-    // Para presupuestos de gasto, las categorías son opcionales pero recomendadas
-    if (budgetType === 'expense' && selectedCategories.length === 0) {
-      Alert.alert(
-        'Sin categorías',
-        'No has seleccionado categorías. El presupuesto rastreará todos los gastos. ¿Deseas continuar?',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Continuar', onPress: () => saveBudget() }
-        ]
-      );
-      return;
-    }
-
-    saveBudget();
-  };
-
-  const saveBudget = async () => {
-    const budgetData = {
-      name: name.trim(),
-      type: budgetType,
-      amount: getNumericValue(amount),
-      period,
-      start_date: startDate.toISOString(),
-      icon: selectedIcon.icon,
-      color: selectedIcon.color,
-      category_ids: budgetType === 'expense' && selectedCategories.length > 0 ? selectedCategories : null,
-    };
+    setLoading(true);
 
     try {
       const response = await fetch(`${API_CONFIG.BASE_URL}/budgets`, {
@@ -121,13 +59,23 @@ export default function AddBudgetScreen() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(budgetData),
+        body: JSON.stringify({
+          name: name.trim(),
+          type: 'expense',
+          amount: parseFloat(amount),
+          period,
+          start_date: startDate.toISOString().split('T')[0],
+          end_date: endDate ? endDate.toISOString().split('T')[0] : null,
+          icon: selectedIcon.icon,
+          color: selectedIcon.color,
+          category_ids: null,
+        }),
       });
 
       const result = await response.json();
 
       if (result.success) {
-        Alert.alert('Éxito', 'Presupuesto creado exitosamente', [
+        Alert.alert('Éxito', 'Presupuesto creado correctamente', [
           { text: 'OK', onPress: () => router.back() }
         ]);
       } else {
@@ -135,255 +83,277 @@ export default function AddBudgetScreen() {
       }
     } catch (error) {
       console.error('Error al crear presupuesto:', error);
-      Alert.alert('Error', 'No se pudo conectar con el servidor');
+      Alert.alert('Error', 'No se pudo crear el presupuesto');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const toggleCategory = (categoryId: string) => {
-    setSelectedCategories(prev => {
-      if (prev.includes(categoryId)) {
-        return prev.filter(id => id !== categoryId);
-      } else {
-        return [...prev, categoryId];
+  const onStartDateChange = (event: any, selectedDate?: Date) => {
+    setShowStartDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setStartDate(selectedDate);
+      // Si la fecha de fin es anterior a la nueva fecha de inicio, resetearla
+      if (endDate && endDate < selectedDate) {
+        setEndDate(null);
       }
-    });
+    }
+  };
+
+  const onEndDateChange = (event: any, selectedDate?: Date) => {
+    setShowEndDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setEndDate(selectedDate);
+    }
   };
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
-      <Stack.Screen
+      <Stack.Screen 
         options={{
-          title: budgetType === 'saving' ? 'Nuevo Objetivo' : 'Nuevo Presupuesto',
-          headerStyle: { backgroundColor: surfaceColor },
-          headerTintColor: textMain,
+          title: 'Nuevo Presupuesto',
+          headerShown: true,
         }}
       />
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Type Selector */}
-        <View style={styles.typeSelector}>
-          <TouchableOpacity
-            style={[
-              styles.typeButton,
-              budgetType === 'saving' && styles.typeButtonActive,
-              { 
-                backgroundColor: budgetType === 'saving' ? 'rgba(32, 223, 96, 0.1)' : surfaceColor, 
-                borderColor 
-              }
-            ]}
-            onPress={() => setBudgetType('saving')}
-          >
-            <IconSymbol size={20} name="arrow.up.circle.fill" color={budgetType === 'saving' ? primary : textSub} />
-            <ThemedText style={[styles.typeButtonText, { color: budgetType === 'saving' ? primary : textSub }]}>
-              Objetivo
+      <ScrollView style={styles.scrollView}>
+        <View style={[styles.card, { backgroundColor: surfaceColor }]}>
+          {/* Descripción */}
+          <View style={[styles.infoBox, { backgroundColor: primary + '10', borderColor: primary + '30' }]}>
+            <IconSymbol name="info.circle.fill" size={20} color={primary} />
+            <ThemedText style={[styles.infoText, { color: textMain }]}>
+              Establece un límite de gasto para controlar tus finanzas
             </ThemedText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.typeButton,
-              budgetType === 'expense' && styles.typeButtonActive,
-              { 
-                backgroundColor: budgetType === 'expense' ? 'rgba(239, 68, 68, 0.1)' : surfaceColor, 
-                borderColor 
-              }
-            ]}
-            onPress={() => setBudgetType('expense')}
-          >
-            <IconSymbol size={20} name="arrow.down.circle.fill" color={budgetType === 'expense' ? '#ef4444' : textSub} />
-            <ThemedText style={[styles.typeButtonText, { color: budgetType === 'expense' ? '#ef4444' : textSub }]}>
-              Presupuesto
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
-
-        {/* Name */}
-        <View style={[styles.section, { backgroundColor: surfaceColor, borderColor }]}>
-          <View style={styles.sectionLeft}>
-            <View style={[styles.iconContainer, { backgroundColor: borderColor }]}>
-              <IconSymbol size={20} name="text.alignleft" color={textSub} />
-            </View>
-            <View style={styles.sectionInfo}>
-              <ThemedText style={[styles.sectionLabel, { color: textSub }]}>Nombre</ThemedText>
-              <TextInput
-                style={[styles.sectionInput, { color: textMain }]}
-                placeholder={budgetType === 'saving' ? 'Ej: Vacaciones' : 'Ej: Comida del mes'}
-                placeholderTextColor={textSub}
-                value={name}
-                onChangeText={setName}
-              />
-            </View>
           </View>
-        </View>
 
-        {/* Amount */}
-        <View style={[styles.amountSection, { backgroundColor: surfaceColor }]}>
-          <ThemedText style={[styles.amountLabel, { color: textSub }]}>
-            {budgetType === 'saving' ? 'Meta de Ahorro' : 'Límite de Presupuesto'}
-          </ThemedText>
-          <View style={styles.amountInputContainer}>
-            <ThemedText style={[styles.currencySymbol, { color: textMain }]}>$</ThemedText>
+          {/* Nombre */}
+          <View style={styles.field}>
+            <ThemedText style={[styles.label, { color: textMain }]}>
+              Nombre del presupuesto *
+            </ThemedText>
             <TextInput
-              style={[styles.amountInput, { color: textMain }]}
-              placeholder="0"
-              placeholderTextColor={textSub}
-              keyboardType="decimal-pad"
-              value={amount}
-              onChangeText={handleAmountChange}
+              style={[styles.input, { backgroundColor: inputBg, color: textMain, borderColor }]}
+              value={name}
+              onChangeText={setName}
+              placeholder="Ej: Gastos del mes"
+              placeholderTextColor={textMuted}
             />
           </View>
-        </View>
 
-        {/* Period */}
-        <View style={styles.periodSelector}>
-          <TouchableOpacity
-            style={[
-              styles.periodButton,
-              period === 'weekly' && styles.periodButtonActive,
-              { backgroundColor: period === 'weekly' ? primary : surfaceColor, borderColor }
-            ]}
-            onPress={() => setPeriod('weekly')}
-          >
-            <ThemedText style={[styles.periodButtonText, { color: period === 'weekly' ? '#ffffff' : textMain }]}>
-              Semanal
+          {/* Monto límite */}
+          <View style={styles.field}>
+            <ThemedText style={[styles.label, { color: textMain }]}>
+              Límite de gasto *
             </ThemedText>
-          </TouchableOpacity>
+            <TextInput
+              style={[styles.input, { backgroundColor: inputBg, color: textMain, borderColor }]}
+              value={amount}
+              onChangeText={setAmount}
+              placeholder="0.00"
+              placeholderTextColor={textMuted}
+              keyboardType="decimal-pad"
+            />
+          </View>
 
-          <TouchableOpacity
-            style={[
-              styles.periodButton,
-              period === 'monthly' && styles.periodButtonActive,
-              { backgroundColor: period === 'monthly' ? primary : surfaceColor, borderColor }
-            ]}
-            onPress={() => setPeriod('monthly')}
-          >
-            <ThemedText style={[styles.periodButtonText, { color: period === 'monthly' ? '#ffffff' : textMain }]}>
-              Mensual
+          {/* Periodo */}
+          <View style={styles.field}>
+            <ThemedText style={[styles.label, { color: textMain }]}>
+              Periodo *
             </ThemedText>
-          </TouchableOpacity>
-        </View>
-
-        {/* Start Date */}
-        <TouchableOpacity
-          style={[styles.section, { backgroundColor: surfaceColor, borderColor }]}
-          onPress={() => setShowDatePicker(true)}
-        >
-          <View style={styles.sectionLeft}>
-            <View style={[styles.iconContainer, { backgroundColor: borderColor }]}>
-              <IconSymbol size={20} name="calendar" color={textSub} />
-            </View>
-            <View style={styles.sectionInfo}>
-              <ThemedText style={[styles.sectionLabel, { color: textSub }]}>Fecha de Inicio</ThemedText>
-              <ThemedText style={[styles.sectionValue, { color: textMain }]}>
-                {formatDate(startDate)}
-              </ThemedText>
-            </View>
-          </View>
-          <IconSymbol size={20} name="chevron.right" color={textSub} />
-        </TouchableOpacity>
-
-        {/* Category Selector - Solo para presupuestos de gasto */}
-        {budgetType === 'expense' && (
-          <View style={[styles.categorySection, { backgroundColor: surfaceColor }]}>
-            <View style={styles.categorySectionHeader}>
-              <ThemedText style={[styles.categorySectionTitle, { color: textMain }]}>
-                Categorías a Rastrear
-              </ThemedText>
-              <ThemedText style={[styles.categorySectionSubtitle, { color: textSub }]}>
-                {selectedCategories.length === 0 
-                  ? 'Opcional - Rastrea todas las categorías' 
-                  : `${selectedCategories.length} seleccionada${selectedCategories.length > 1 ? 's' : ''}`}
-              </ThemedText>
-            </View>
-            <View style={styles.categoryGrid}>
-              {CATEGORIES.map((category) => {
-                const isSelected = selectedCategories.includes(category.id);
-                return (
-                  <TouchableOpacity
-                    key={category.id}
-                    style={[
-                      styles.categoryOption,
-                      isSelected && styles.categoryOptionActive,
-                      { 
-                        backgroundColor: isSelected ? category.color + '20' : borderColor,
-                        borderColor: isSelected ? category.color : 'transparent'
-                      }
-                    ]}
-                    onPress={() => toggleCategory(category.id)}
-                  >
-                    <IconSymbol size={20} name={category.icon as any} color={category.color} />
-                    <ThemedText 
-                      style={[
-                        styles.categoryOptionText, 
-                        { color: isSelected ? category.color : textSub }
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {category.name}
-                    </ThemedText>
-                    {isSelected && (
-                      <View style={[styles.categoryCheck, { backgroundColor: category.color }]}>
-                        <IconSymbol size={12} name="checkmark" color="#ffffff" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* Icon Selector */}
-        <View style={[styles.iconSection, { backgroundColor: surfaceColor }]}>
-          <ThemedText style={[styles.iconSectionTitle, { color: textMain }]}>
-            Selecciona un Ícono
-          </ThemedText>
-          <View style={styles.iconGrid}>
-            {BUDGET_ICONS.map((item) => (
+            <View style={styles.periodGrid}>
               <TouchableOpacity
-                key={item.icon}
                 style={[
-                  styles.iconOption,
-                  selectedIcon.icon === item.icon && styles.iconOptionActive,
+                  styles.periodChip,
                   { 
-                    backgroundColor: selectedIcon.icon === item.icon ? item.color + '20' : borderColor,
-                    borderColor: selectedIcon.icon === item.icon ? item.color : 'transparent'
+                    backgroundColor: period === 'daily' ? primary + '20' : inputBg,
+                    borderColor: period === 'daily' ? primary : borderColor,
                   }
                 ]}
-                onPress={() => setSelectedIcon(item)}
+                onPress={() => setPeriod('daily')}
               >
-                <IconSymbol size={28} name={item.icon as any} color={item.color} />
+                <IconSymbol 
+                  name="sun.max.fill" 
+                  size={20} 
+                  color={period === 'daily' ? primary : textMuted} 
+                />
+                <ThemedText 
+                  style={[
+                    styles.periodChipText, 
+                    { color: period === 'daily' ? primary : textMain }
+                  ]}
+                >
+                  Diario
+                </ThemedText>
               </TouchableOpacity>
-            ))}
+
+              <TouchableOpacity
+                style={[
+                  styles.periodChip,
+                  { 
+                    backgroundColor: period === 'weekly' ? primary + '20' : inputBg,
+                    borderColor: period === 'weekly' ? primary : borderColor,
+                  }
+                ]}
+                onPress={() => setPeriod('weekly')}
+              >
+                <IconSymbol 
+                  name="calendar" 
+                  size={20} 
+                  color={period === 'weekly' ? primary : textMuted} 
+                />
+                <ThemedText 
+                  style={[
+                    styles.periodChipText, 
+                    { color: period === 'weekly' ? primary : textMain }
+                  ]}
+                >
+                  Semanal
+                </ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.periodChip,
+                  { 
+                    backgroundColor: period === 'monthly' ? primary + '20' : inputBg,
+                    borderColor: period === 'monthly' ? primary : borderColor,
+                  }
+                ]}
+                onPress={() => setPeriod('monthly')}
+              >
+                <IconSymbol 
+                  name="calendar.badge.clock" 
+                  size={20} 
+                  color={period === 'monthly' ? primary : textMuted} 
+                />
+                <ThemedText 
+                  style={[
+                    styles.periodChipText, 
+                    { color: period === 'monthly' ? primary : textMain }
+                  ]}
+                >
+                  Mensual
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Fecha de inicio */}
+          <View style={styles.field}>
+            <ThemedText style={[styles.label, { color: textMain }]}>
+              Fecha de inicio *
+            </ThemedText>
+            <TouchableOpacity
+              style={[styles.dateButton, { backgroundColor: inputBg, borderColor }]}
+              onPress={() => setShowStartDatePicker(true)}
+            >
+              <IconSymbol name="calendar" size={20} color={textMuted} />
+              <ThemedText style={[styles.dateButtonText, { color: textMain }]}>
+                {startDate.toLocaleDateString('es-MX', { 
+                  day: 'numeric', 
+                  month: 'long', 
+                  year: 'numeric' 
+                })}
+              </ThemedText>
+            </TouchableOpacity>
+            {showStartDatePicker && (
+              <DateTimePicker
+                value={startDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onStartDateChange}
+              />
+            )}
+          </View>
+
+          {/* Fecha de fin (opcional) */}
+          <View style={styles.field}>
+            <ThemedText style={[styles.label, { color: textMain }]}>
+              Fecha de fin (opcional)
+            </ThemedText>
+            <TouchableOpacity
+              style={[styles.dateButton, { backgroundColor: inputBg, borderColor }]}
+              onPress={() => setShowEndDatePicker(true)}
+            >
+              <IconSymbol name="calendar" size={20} color={textMuted} />
+              <ThemedText style={[styles.dateButtonText, { color: endDate ? textMain : textMuted }]}>
+                {endDate 
+                  ? endDate.toLocaleDateString('es-MX', { 
+                      day: 'numeric', 
+                      month: 'long', 
+                      year: 'numeric' 
+                    })
+                  : 'Sin fecha de fin'
+                }
+              </ThemedText>
+              {endDate && (
+                <TouchableOpacity onPress={() => setEndDate(null)}>
+                  <IconSymbol name="xmark.circle.fill" size={20} color={textMuted} />
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+            {showEndDatePicker && (
+              <DateTimePicker
+                value={endDate || new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onEndDateChange}
+                minimumDate={startDate}
+              />
+            )}
+            <ThemedText style={[styles.hint, { color: textMuted }]}>
+              Si no estableces fecha de fin, el presupuesto se renovará automáticamente según el periodo
+            </ThemedText>
+          </View>
+
+          {/* Icono */}
+          <View style={styles.field}>
+            <ThemedText style={[styles.label, { color: textMain }]}>
+              Icono
+            </ThemedText>
+            <View style={styles.iconsGrid}>
+              {BUDGET_ICONS.map((item) => (
+                <TouchableOpacity
+                  key={item.icon}
+                  style={[
+                    styles.iconOption,
+                    { 
+                      backgroundColor: selectedIcon.icon === item.icon ? item.color + '20' : inputBg,
+                      borderColor: selectedIcon.icon === item.icon ? item.color : borderColor,
+                    }
+                  ]}
+                  onPress={() => setSelectedIcon(item)}
+                >
+                  <IconSymbol name={item.icon as any} size={24} color={item.color} />
+                  <ThemedText 
+                    style={[
+                      styles.iconLabel, 
+                      { color: selectedIcon.icon === item.icon ? item.color : textMuted }
+                    ]}
+                  >
+                    {item.label}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </View>
 
-        {/* Save Button */}
-        <TouchableOpacity 
-          style={[styles.saveButton, { backgroundColor: primary }]}
-          onPress={handleSave}
-        >
-          <ThemedText style={styles.saveButtonText}>
-            Crear {budgetType === 'saving' ? 'Objetivo' : 'Presupuesto'}
-          </ThemedText>
-        </TouchableOpacity>
-
-        <View style={{ height: 40 }} />
+        <View style={{ height: 20 }} />
       </ScrollView>
 
-      {/* Date Picker */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={startDate}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleDateChange}
-        />
-      )}
+      {/* Botón guardar */}
+      <View style={[styles.footer, { backgroundColor: surfaceColor, borderTopColor: borderColor }]}>
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: primary, opacity: loading ? 0.6 : 1 }]}
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          <ThemedText style={styles.buttonText}>
+            {loading ? 'Guardando...' : 'Crear Presupuesto'}
+          </ThemedText>
+        </TouchableOpacity>
+      </View>
     </ThemedView>
   );
 }
@@ -395,208 +365,110 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  content: {
+  card: {
+    margin: 16,
     padding: 16,
-  },
-  // Type Selector
-  typeSelector: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  typeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  typeButtonActive: {
-    borderWidth: 2,
-  },
-  typeButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  // Section
-  section: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-  },
-  sectionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sectionInfo: {
-    flex: 1,
-  },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  sectionValue: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  sectionInput: {
-    fontSize: 15,
-    fontWeight: '600',
-    padding: 0,
-    marginTop: 2,
-  },
-  // Amount
-  amountSection: {
-    padding: 24,
     borderRadius: 16,
-    marginBottom: 16,
-    alignItems: 'center',
   },
-  amountLabel: {
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+  infoText: {
+    fontSize: 13,
+    flex: 1,
+    lineHeight: 18,
+  },
+  field: {
+    marginBottom: 20,
+  },
+  label: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     marginBottom: 8,
   },
-  amountInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  hint: {
+    fontSize: 12,
+    marginTop: 6,
+    lineHeight: 16,
   },
-  currencySymbol: {
-    fontSize: 40,
-    fontWeight: '700',
-    marginRight: 4,
-  },
-  amountInput: {
-    fontSize: 48,
-    fontWeight: '700',
-    minWidth: 100,
-    textAlign: 'center',
-  },
-  // Period
-  periodSelector: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  periodButton: {
-    flex: 1,
-    paddingVertical: 16,
+  input: {
+    height: 48,
     borderRadius: 12,
-    alignItems: 'center',
+    paddingHorizontal: 16,
+    fontSize: 16,
     borderWidth: 1,
   },
-  periodButtonActive: {
-    borderWidth: 0,
-  },
-  periodButtonText: {
+  dateButton: {
+    height: 48,
+    borderRadius: 12,
+    paddingHorizontal: 16,
     fontSize: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  dateButtonText: {
+    fontSize: 16,
+    flex: 1,
+  },
+  periodGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  periodChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+  },
+  periodChipText: {
+    fontSize: 14,
     fontWeight: '600',
   },
-  // Icon Section
-  iconSection: {
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 24,
-  },
-  iconSectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  iconGrid: {
+  iconsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
   },
   iconOption: {
-    width: 64,
-    height: 64,
+    width: '22%',
+    aspectRatio: 1,
     borderRadius: 12,
-    alignItems: 'center',
+    borderWidth: 2,
     justifyContent: 'center',
-    borderWidth: 2,
-  },
-  iconOptionActive: {
-    borderWidth: 2,
-  },
-  // Category Section
-  categorySection: {
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 16,
-  },
-  categorySectionHeader: {
-    marginBottom: 16,
-  },
-  categorySectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  categorySectionSubtitle: {
-    fontSize: 13,
-  },
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  categoryOption: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 2,
-    position: 'relative',
+    gap: 4,
   },
-  categoryOptionActive: {
-    borderWidth: 2,
+  iconLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    textAlign: 'center',
   },
-  categoryOptionText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  categoryCheck: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 2,
-  },
-  // Save Button
-  saveButton: {
+  footer: {
     padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#20df60',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    borderTopWidth: 1,
   },
-  saveButtonText: {
+  button: {
+    height: 50,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonText: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
   },
 });

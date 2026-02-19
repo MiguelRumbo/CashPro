@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
 // Obtener la IP desde variables de entorno o usar valor por defecto
-const LOCAL_IP = Constants.expoConfig?.extra?.apiHost || '192.168.1.6';
+const LOCAL_IP = Constants.expoConfig?.extra?.apiHost || '192.168.1.21';
 
 // Configuración de la API
 export const API_CONFIG = {

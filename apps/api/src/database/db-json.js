@@ -19,6 +19,10 @@ const initialData = {
   nextSavingsGoalId: 1,
   goal_contributions: [],
   nextGoalContributionId: 1,
+  loans: [],
+  nextLoanId: 1,
+  loan_payments: [],
+  nextLoanPaymentId: 1,
 };
 
 // Leer la base de datos
@@ -50,7 +54,7 @@ const writeDB = (data) => {
 const db = {
   prepare: (sql) => {
     return {
-      all: () => {
+      all: (...params) => {
         const data = readDB();
         
         // Asegurar que existen las estructuras
@@ -71,6 +75,12 @@ const db = {
         }
         if (!data.goal_contributions) {
           data.goal_contributions = [];
+        }
+        if (!data.loans) {
+          data.loans = [];
+        }
+        if (!data.loan_payments) {
+          data.loan_payments = [];
         }
         
         // Para movimientos
@@ -96,10 +106,47 @@ const db = {
           });
         }
         
+        // Para préstamos
+        if (sql.includes('FROM loans')) {
+          return [...data.loans].sort((a, b) => {
+            return new Date(b.created_at) - new Date(a.created_at);
+          });
+        }
+        
+        // Para pagos de préstamos
+        if (sql.includes('FROM loan_payments')) {
+          return [...data.loan_payments].sort((a, b) => {
+            return new Date(b.created_at) - new Date(a.created_at);
+          });
+        }
+        
         // Para contribuciones de objetivos
         if (sql.includes('FROM goal_contributions')) {
-          return [...data.goal_contributions].sort((a, b) => {
+          let contributions = [...data.goal_contributions];
+          
+          // Filtrar por goal_id si se proporciona en WHERE
+          if (sql.includes('WHERE goal_id = ?') && params.length > 0) {
+            const goalId = parseInt(params[0]);
+            contributions = contributions.filter(c => parseInt(c.goal_id) === goalId);
+          }
+          
+          return contributions.sort((a, b) => {
             return new Date(b.date) - new Date(a.date);
+          });
+        }
+        
+        // Para pagos de préstamos
+        if (sql.includes('FROM loan_payments')) {
+          let payments = [...data.loan_payments];
+          
+          // Filtrar por loan_id si se proporciona en WHERE
+          if (sql.includes('WHERE loan_id = ?') && params.length > 0) {
+            const loanId = parseInt(params[0]);
+            payments = payments.filter(p => parseInt(p.loan_id) === loanId);
+          }
+          
+          return payments.sort((a, b) => {
+            return new Date(b.created_at) - new Date(a.created_at);
           });
         }
         
@@ -124,6 +171,10 @@ const db = {
         if (!data.movements) data.movements = [];
         if (!data.budgets) data.budgets = [];
         if (!data.user_profile) data.user_profile = [];
+        if (!data.savings_goals) data.savings_goals = [];
+        if (!data.goal_contributions) data.goal_contributions = [];
+        if (!data.loans) data.loans = [];
+        if (!data.loan_payments) data.loan_payments = [];
         
         if (sql.includes('stats') || sql.includes('SUM')) {
           // Calcular estadísticas de cuentas
@@ -190,6 +241,16 @@ const db = {
           return data.goal_contributions.find(c => c.id === parseInt(id));
         }
         
+        // Buscar préstamo por ID
+        if (sql.includes('FROM loans')) {
+          return data.loans.find(l => l.id === parseInt(id));
+        }
+        
+        // Buscar pago de préstamo por ID
+        if (sql.includes('FROM loan_payments')) {
+          return data.loan_payments.find(p => p.id === parseInt(id));
+        }
+        
         // Buscar perfil por ID
         if (sql.includes('FROM user_profile')) {
           return data.user_profile.find(p => p.id === parseInt(id));
@@ -203,6 +264,8 @@ const db = {
         
         if (sql.includes('INSERT INTO movements')) {
           // Crear nuevo movimiento
+          // El orden de los parámetros debe coincidir con el INSERT
+          // INSERT INTO movements (type, amount, title, category_id, category_name, category_icon, category_color, account_id, to_account_id, date, notes)
           const [
             type, amount, title, category_id, category_name, category_icon, category_color,
             account_id, to_account_id, date, notes
@@ -216,14 +279,14 @@ const db = {
           const newMovement = {
             id: data.nextMovementId++,
             type,
-            amount: amount || 0,
+            amount: parseFloat(amount) || 0,
             title,
             category_id,
             category_name,
             category_icon,
             category_color,
-            account_id,
-            to_account_id,
+            account_id: parseInt(account_id),
+            to_account_id: to_account_id ? parseInt(to_account_id) : null,
             date: date || new Date().toISOString(),
             notes,
             created_at: new Date().toISOString(),
@@ -329,16 +392,114 @@ const db = {
           writeDB(data);
           
           return { lastInsertRowid: newAccount.id };
+        } else if (sql.includes('INSERT INTO savings_goals')) {
+          // Crear nuevo objetivo de ahorro
+          const [
+            name, target_amount, current_amount, deadline, icon, color,
+            account_id, auto_deduct, auto_deduct_amount, auto_deduct_period,
+            status, created_at, updated_at
+          ] = params;
+          
+          if (!data.savings_goals) {
+            data.savings_goals = [];
+          }
+          
+          const newGoal = {
+            id: data.nextSavingsGoalId++,
+            name,
+            target_amount,
+            current_amount,
+            deadline,
+            icon,
+            color,
+            account_id,
+            auto_deduct,
+            auto_deduct_amount,
+            auto_deduct_period,
+            status,
+            created_at,
+            updated_at,
+          };
+          
+          data.savings_goals.push(newGoal);
+          writeDB(data);
+          
+          return { lastInsertRowid: newGoal.id };
+        } else if (sql.includes('INSERT INTO goal_contributions')) {
+          // Crear nueva contribución
+          const [goal_id, amount, date, notes, created_at] = params;
+          
+          if (!data.goal_contributions) {
+            data.goal_contributions = [];
+          }
+          
+          const newContribution = {
+            id: data.nextGoalContributionId++,
+            goal_id: parseInt(goal_id), // Asegurar que sea número
+            amount: parseFloat(amount),
+            date,
+            notes,
+            created_at,
+          };
+          
+          data.goal_contributions.push(newContribution);
+          writeDB(data);
+          
+          return { lastInsertRowid: newContribution.id };
+        } else if (sql.includes('INSERT INTO loans')) {
+          // Crear nuevo préstamo
+          const [
+            person_name, amount, remaining_amount, date, due_date,
+            notes, account_id, status, created_at, updated_at
+          ] = params;
+          
+          if (!data.loans) {
+            data.loans = [];
+          }
+          
+          const newLoan = {
+            id: data.nextLoanId++,
+            person_name,
+            amount,
+            remaining_amount,
+            date,
+            due_date,
+            notes,
+            account_id,
+            status,
+            created_at,
+            updated_at,
+          };
+          
+          data.loans.push(newLoan);
+          writeDB(data);
+          
+          return { lastInsertRowid: newLoan.id };
+        } else if (sql.includes('INSERT INTO loan_payments')) {
+          // Crear nuevo pago de préstamo
+          const [loan_id, amount, date, notes, created_at] = params;
+          
+          if (!data.loan_payments) {
+            data.loan_payments = [];
+          }
+          
+          const newPayment = {
+            id: data.nextLoanPaymentId++,
+            loan_id: parseInt(loan_id), // Asegurar que sea número
+            amount: parseFloat(amount),
+            date,
+            notes,
+            created_at,
+          };
+          
+          data.loan_payments.push(newPayment);
+          writeDB(data);
+          
+          return { lastInsertRowid: newPayment.id };
         } else if (sql.includes('UPDATE accounts')) {
           // Actualizar cuenta
           const id = params[params.length - 1];
           const accountIndex = data.accounts.findIndex(a => a.id === parseInt(id));
-          
-          console.log('=== UPDATE ACCOUNTS DEBUG ===');
-          console.log('SQL:', sql);
-          console.log('Params:', params);
-          console.log('ID:', id);
-          console.log('Account Index:', accountIndex);
           
           if (accountIndex !== -1) {
             // Parsear los campos del UPDATE
@@ -347,23 +508,17 @@ const db = {
               const setPart = updateMatch[1];
               const assignments = setPart.split(',').map(s => s.trim());
               
-              console.log('Assignments:', assignments);
-              
               let paramIndex = 0;
               assignments.forEach(assignment => {
                 const parts = assignment.split('=').map(s => s.trim());
                 const field = parts[0];
                 const operation = parts[1];
                 
-                console.log(`Processing: ${field} = ${operation}, param: ${params[paramIndex]}`);
-                
                 if (field === 'updated_at' && operation === 'CURRENT_TIMESTAMP') {
                   data.accounts[accountIndex].updated_at = new Date().toISOString();
-                  console.log('Set updated_at to current timestamp');
                 } else if (field === 'updated_at' && operation === '?') {
                   data.accounts[accountIndex].updated_at = params[paramIndex];
                   paramIndex++;
-                  console.log('Set updated_at from param');
                 } else if (operation && operation.includes('balance -')) {
                   // Restar del balance
                   data.accounts[accountIndex].balance -= params[paramIndex];
@@ -383,17 +538,13 @@ const db = {
                 } else if (operation === '?') {
                   // Asignación directa con placeholder
                   data.accounts[accountIndex][field] = params[paramIndex];
-                  console.log(`Set ${field} = ${params[paramIndex]}`);
                   paramIndex++;
                 }
               });
-              
-              console.log('Account after update:', data.accounts[accountIndex]);
             }
             writeDB(data);
           }
           
-          console.log('=== FIN UPDATE ACCOUNTS DEBUG ===');
           return { changes: accountIndex !== -1 ? 1 : 0 };
         } else if (sql.includes('UPDATE movements')) {
           // Actualizar movimiento
@@ -440,19 +591,11 @@ const db = {
           const id = params[params.length - 1];
           const profileIndex = data.user_profile.findIndex(p => p.id === parseInt(id));
           
-          console.log('=== UPDATE USER_PROFILE DEBUG ===');
-          console.log('SQL:', sql);
-          console.log('Params:', params);
-          console.log('ID:', id);
-          console.log('Profile Index:', profileIndex);
-          
           if (profileIndex !== -1) {
             const updateMatch = sql.match(/SET (.+) WHERE/);
             if (updateMatch) {
               const setPart = updateMatch[1];
               const assignments = setPart.split(',').map(s => s.trim());
-              
-              console.log('Assignments:', assignments);
               
               let paramIndex = 0;
               assignments.forEach(assignment => {
@@ -460,29 +603,75 @@ const db = {
                 const field = parts[0];
                 const operation = parts[1];
                 
-                console.log(`Processing: ${field} = ${operation}, param: ${params[paramIndex]}`);
-                
                 if (field === 'updated_at' && operation === 'CURRENT_TIMESTAMP') {
                   data.user_profile[profileIndex].updated_at = new Date().toISOString();
-                  console.log('Set updated_at to current timestamp');
                 } else if (field === 'updated_at' && operation === '?') {
                   data.user_profile[profileIndex].updated_at = params[paramIndex];
                   paramIndex++;
-                  console.log('Set updated_at from param');
                 } else if (operation === '?') {
                   data.user_profile[profileIndex][field] = params[paramIndex];
-                  console.log(`Set ${field} = ${params[paramIndex]}`);
                   paramIndex++;
                 }
               });
-              
-              console.log('Profile after update:', data.user_profile[profileIndex]);
             }
             writeDB(data);
           }
           
-          console.log('=== FIN UPDATE USER_PROFILE DEBUG ===');
           return { changes: profileIndex !== -1 ? 1 : 0 };
+        } else if (sql.includes('UPDATE savings_goals')) {
+          // Actualizar objetivo de ahorro
+          const id = params[params.length - 1];
+          const goalIndex = data.savings_goals.findIndex(g => g.id === parseInt(id));
+          
+          if (goalIndex !== -1) {
+            const updateMatch = sql.match(/SET (.+) WHERE/);
+            if (updateMatch) {
+              const setPart = updateMatch[1];
+              const assignments = setPart.split(',').map(s => s.trim());
+              
+              let paramIndex = 0;
+              assignments.forEach(assignment => {
+                const parts = assignment.split('=').map(s => s.trim());
+                const field = parts[0];
+                const operation = parts[1];
+                
+                if (operation === '?') {
+                  data.savings_goals[goalIndex][field] = params[paramIndex];
+                  paramIndex++;
+                }
+              });
+            }
+            writeDB(data);
+          }
+          
+          return { changes: goalIndex !== -1 ? 1 : 0 };
+        } else if (sql.includes('UPDATE loans')) {
+          // Actualizar préstamo
+          const id = params[params.length - 1];
+          const loanIndex = data.loans.findIndex(l => l.id === parseInt(id));
+          
+          if (loanIndex !== -1) {
+            const updateMatch = sql.match(/SET (.+) WHERE/);
+            if (updateMatch) {
+              const setPart = updateMatch[1];
+              const assignments = setPart.split(',').map(s => s.trim());
+              
+              let paramIndex = 0;
+              assignments.forEach(assignment => {
+                const parts = assignment.split('=').map(s => s.trim());
+                const field = parts[0];
+                const operation = parts[1];
+                
+                if (operation === '?') {
+                  data.loans[loanIndex][field] = params[paramIndex];
+                  paramIndex++;
+                }
+              });
+            }
+            writeDB(data);
+          }
+          
+          return { changes: loanIndex !== -1 ? 1 : 0 };
         } else if (sql.includes('DELETE FROM movements')) {
           // Eliminar movimiento
           const id = params[0];
@@ -507,6 +696,38 @@ const db = {
           writeDB(data);
           
           return { changes: initialLength - data.accounts.length };
+        } else if (sql.includes('DELETE FROM savings_goals')) {
+          // Eliminar objetivo de ahorro
+          const id = params[0];
+          const initialLength = data.savings_goals.length;
+          data.savings_goals = data.savings_goals.filter(g => g.id !== parseInt(id));
+          writeDB(data);
+          
+          return { changes: initialLength - data.savings_goals.length };
+        } else if (sql.includes('DELETE FROM goal_contributions')) {
+          // Eliminar contribución
+          const id = params[0];
+          const initialLength = data.goal_contributions.length;
+          data.goal_contributions = data.goal_contributions.filter(c => c.id !== parseInt(id) && c.goal_id !== parseInt(id));
+          writeDB(data);
+          
+          return { changes: initialLength - data.goal_contributions.length };
+        } else if (sql.includes('DELETE FROM loans')) {
+          // Eliminar préstamo
+          const id = params[0];
+          const initialLength = data.loans.length;
+          data.loans = data.loans.filter(l => l.id !== parseInt(id));
+          writeDB(data);
+          
+          return { changes: initialLength - data.loans.length };
+        } else if (sql.includes('DELETE FROM loan_payments')) {
+          // Eliminar pago de préstamo
+          const id = params[0];
+          const initialLength = data.loan_payments.length;
+          data.loan_payments = data.loan_payments.filter(p => p.id !== parseInt(id) && p.loan_id !== parseInt(id));
+          writeDB(data);
+          
+          return { changes: initialLength - data.loan_payments.length };
         }
         
         return {};

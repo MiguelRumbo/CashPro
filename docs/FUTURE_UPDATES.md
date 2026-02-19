@@ -394,6 +394,41 @@ GoalContribution {
 
 **Archivos:** `apps/api/src/routes/savings-goals.js`, `apps/api/src/index.js`, pantallas en `apps/mobile/app/savings-goals/`
 
+#### REQ-OBJ-04: Correcciones Técnicas (19 Feb 2026) ✅ RESUELTO
+**Problemas identificados y corregidos:**
+
+1. **Error al crear objetivo:**
+   - ❌ Problema: `TypeError: require(...).readDB is not a function`
+   - ❌ Causa: Uso incorrecto de `readDB()` en lugar de `db.prepare()`
+   - ✅ Solución: Todas las funciones ahora usan `db.prepare()` correctamente
+   - ✅ Eliminados todos los usos de `readDB()`/`writeDB()` directos
+
+2. **Código duplicado causando SyntaxError:**
+   - ❌ Problema: Líneas 275-280 tenían código duplicado
+   - ❌ Error: `SyntaxError: Unexpected token '.'` y `Unexpected identifier 'data'`
+   - ✅ Solución: Eliminado código duplicado en función de contribuciones
+
+3. **Estructura de BD faltante:**
+   - ❌ Problema: `savings_goals` y `goal_contributions` no existían en data.json
+   - ✅ Solución: Agregadas estructuras con sus respectivos nextId counters
+   - ✅ Agregados handlers INSERT, UPDATE, DELETE en `db-json.js`
+
+**Archivos modificados:**
+- `apps/api/src/routes/savings-goals.js` - Corregidos todos los métodos para usar db.prepare()
+- `apps/api/src/database/db-json.js` - Agregados handlers completos
+- `apps/api/data.json` - Estructuras agregadas
+
+#### REQ-OBJ-05: Corrección Frontend - Renderizado de Texto (19 Feb 2026) ✅ RESUELTO
+**Problema identificado y corregido:**
+
+- ❌ Problema: Error "Text strings must be rendered within a <Text> component"
+- ❌ Causa: Valores `null` o `undefined` en `auto_deduct_amount` y `auto_deduct_period`
+- ✅ Solución: Agregada validación adicional antes de renderizar el texto de descuento automático
+- ✅ Ahora verifica que `auto_deduct`, `auto_deduct_amount` y `auto_deduct_period` existan
+
+**Archivos modificados:**
+- `apps/mobile/app/savings-goals/index.tsx` - Agregada validación de campos
+
 #### REQ-OBJ-03: Navegacion ✅ RESUELTO
 - ✅ Card resumen en dashboard mostrando progreso general de objetivos activos
 - ✅ Navegación desde dashboard a pantalla de objetivos
@@ -405,11 +440,11 @@ GoalContribution {
 
 ---
 
-### 4.2 Modulo de Prestamos
+### 4.2 Modulo de Prestamos ✅ COMPLETADO
 
 **Descripcion:** Registro y seguimiento de dinero prestado a otras personas.
 
-#### REQ-PREST-01: Modelo de datos
+#### REQ-PREST-01: Modelo de datos ✅ RESUELTO
 ```
 Prestamo {
   id: number
@@ -434,24 +469,140 @@ PagosPrestamo {
   created_at: datetime
 }
 ```
+- **Estado:** ✅ Resuelto - Estructura de BD implementada en `apps/api/src/database/db-json.js`
+- **Archivos:** `apps/api/src/database/db-json.js` (agregados `loans` y `loan_payments`)
 
-#### REQ-PREST-02: Funcionalidades
-- CRUD completo de prestamos.
-- Registrar pagos parciales o totales.
-- Historial de pagos recibidos por prestamo.
-- Vista de prestamos activos con monto pendiente.
-- Resumen: total prestado, total pendiente, total recuperado.
-- Notificacion cuando se acerque la fecha limite de devolucion.
-- Notificacion periodica recordando prestamos activos.
-- Al crear un prestamo, opcionalmente descontar de la cuenta origen (registrar como movimiento de tipo "prestamo").
+#### REQ-PREST-02: Funcionalidades ✅ RESUELTO
+- ✅ CRUD completo de préstamos implementado en API REST
+- ✅ Registrar pagos parciales o totales con actualización automática de estado
+- ✅ Historial de pagos recibidos por préstamo
+- ✅ Vista de préstamos activos con monto pendiente y barra de progreso
+- ✅ Resumen: total prestado, total pendiente, total recuperado, porcentaje de recuperación
+- ✅ Cálculo de días restantes hasta fecha límite con indicadores visuales
+- ✅ Opción de condonar préstamo
+- ✅ Al crear préstamo, opción de descontar automáticamente de la cuenta origen (registra movimiento)
+- ⏳ Notificación cuando se acerque fecha límite (requiere módulo de notificaciones - Fase 3)
+- ⏳ Notificación periódica recordando préstamos activos (requiere módulo de notificaciones - Fase 3)
 
-#### REQ-PREST-03: Navegacion
-- Seccion accesible desde el dashboard o menu.
-- Badge con total pendiente por cobrar.
+**API Endpoints implementados:**
+- `GET /api/loans` - Listar préstamos
+- `GET /api/loans/:id` - Obtener préstamo específico
+- `POST /api/loans` - Crear préstamo (con opción de crear movimiento)
+- `PUT /api/loans/:id` - Actualizar préstamo
+- `DELETE /api/loans/:id` - Eliminar préstamo
+- `POST /api/loans/:id/payment` - Registrar pago (actualiza remaining_amount y status)
+- `GET /api/loans/:id/payments` - Listar pagos de un préstamo
+- `GET /api/loans/stats/summary` - Estadísticas generales
+
+**Pantallas implementadas:**
+- `apps/mobile/app/loans/index.tsx` - Lista de préstamos con resumen y filtros (activos/completados)
+- `apps/mobile/app/loans/add-loan.tsx` - Formulario para crear préstamo con opción de descontar
+- `apps/mobile/app/loans/loan-detail.tsx` - Detalle con historial de pagos y modal para registrar pagos
+
+**Archivos:** `apps/api/src/routes/loans.js`, `apps/api/src/index.js`, pantallas en `apps/mobile/app/loans/`
+
+#### REQ-PREST-03: Navegacion ✅ RESUELTO
+- ✅ Card resumen en dashboard mostrando préstamos activos y monto pendiente
+- ✅ Navegación desde dashboard a pantalla de préstamos
+- ✅ Opción en settings para acceder a préstamos (debajo de objetivos de ahorro)
+- ✅ Badge con total pendiente por cobrar en card del dashboard
+- ✅ Indicadores visuales de estado (activo, parcial, pagado, condonado)
+
+**Archivos:** `apps/mobile/app/(tabs)/index.tsx` (agregado card de préstamos), `apps/mobile/app/(tabs)/settings.tsx` (agregada opción)
+
+#### REQ-PREST-04: Correcciones Técnicas (19 Feb 2026) ✅ RESUELTO
+**Problemas identificados y corregidos:**
+
+1. **Movimientos de préstamos malformados:**
+   - ❌ Problema: Los parámetros del INSERT estaban en orden incorrecto
+   - ❌ Resultado: Movimientos con datos en campos equivocados (amount en title, etc.)
+   - ✅ Solución: Corregido orden de parámetros en `loans.js` para coincidir con estructura de movements
+   - ✅ Agregados campos faltantes: `category_icon: 'banknote'`, `category_color: '#f59e0b'`
+   - ✅ Corregido parsing de `amount` a float y `account_id` a int en `db-json.js`
+
+2. **Préstamos no aparecían en la lista:**
+   - ❌ Problema: Estructura `loans` no existía en data.json
+   - ✅ Solución: Agregadas estructuras faltantes: `loans`, `loan_payments`, `nextLoanId`, `nextLoanPaymentId`
+   - ✅ Agregados handlers GET para loans y loan_payments en `db-json.js`
+
+3. **Balance de cuentas no se actualizaba:**
+   - ❌ Problema: UPDATE de accounts no manejaba operaciones aritméticas correctamente
+   - ✅ Solución: Ya estaba implementado correctamente en versión anterior
+
+4. **Datos corruptos limpiados:**
+   - ✅ Eliminados movimientos malformados del data.json
+   - ✅ Restaurados balances correctos de cuentas
+   - ✅ Reiniciado nextMovementId a valor correcto
+
+**Archivos modificados:**
+- `apps/api/src/routes/loans.js` - Corregido INSERT de movimientos
+- `apps/api/src/database/db-json.js` - Agregados handlers y corregido parsing
+- `apps/api/data.json` - Limpieza de datos y estructuras agregadas
+
+#### REQ-PREST-05: Correcciones Adicionales - Pagos y Condonación (19 Feb 2026) ✅ RESUELTO
+**Problemas identificados y corregidos:**
+
+1. **Pagos no creaban movimientos:**
+   - ❌ Problema: Al registrar un pago, no se creaba movimiento de ingreso
+   - ❌ Resultado: Los pagos no aparecían en la lista de movimientos
+   - ✅ Solución: Agregado INSERT de movimiento tipo "income" al registrar pago
+   - ✅ Actualización automática del balance de la cuenta
+
+2. **Condonar préstamo no funcionaba:**
+   - ❌ Problema: El endpoint PUT no aceptaba `remaining_amount` como parámetro
+   - ✅ Solución: Agregado campo `remaining_amount` al UPDATE de préstamos
+   - ✅ Ahora se puede condonar correctamente estableciendo status='forgiven' y remaining_amount=0
+
+3. **Card de préstamos no se actualizaba:**
+   - ✅ Los totales ahora se calculan correctamente desde la BD
+   - ✅ El porcentaje de recuperación se actualiza en tiempo real
+   - ✅ El monto pendiente refleja los pagos registrados
+
+**Archivos modificados:**
+- `apps/api/src/routes/loans.js` - Agregado movimiento en pagos y campo remaining_amount en PUT
 
 ---
 
-### 4.3 Modulo de Inteligencia Artificial
+### 4.3 Módulo de Contribuciones a Objetivos con Cuentas ✅ COMPLETADO (19 Feb 2026)
+
+**Descripción:** Al agregar una contribución a un objetivo de ahorro, ahora se selecciona la cuenta desde la cual se realiza la contribución, creando un movimiento y actualizando el balance.
+
+#### REQ-OBJ-06: Selector de Cuenta en Contribuciones ✅ RESUELTO
+**Funcionalidades implementadas:**
+
+1. **Selector de cuenta en modal de contribución:**
+   - ✅ Modal con lista de cuentas disponibles (excluye cuentas de crédito)
+   - ✅ Muestra nombre y balance de cada cuenta
+   - ✅ Indicador visual de cuenta seleccionada
+   - ✅ Validación de saldo suficiente antes de contribuir
+
+2. **Creación automática de movimiento:**
+   - ✅ Al agregar contribución, se crea movimiento tipo "expense"
+   - ✅ Categoría: "Ahorro" con icono "target" y color verde (#10b981)
+   - ✅ Título: "Contribución a [nombre del objetivo]"
+   - ✅ El movimiento aparece en la lista de movimientos
+
+3. **Actualización de balance:**
+   - ✅ El balance de la cuenta seleccionada se descuenta automáticamente
+   - ✅ Manejo correcto de cuentas de crédito (incrementa current_balance)
+   - ✅ Manejo correcto de otras cuentas (decrementa balance)
+
+4. **Validaciones:**
+   - ✅ Verifica que la cuenta exista
+   - ✅ Verifica saldo suficiente (excepto crédito)
+   - ✅ Valida que el monto sea mayor a 0
+   - ✅ Requiere selección de cuenta
+
+**API Endpoint actualizado:**
+- `POST /api/savings-goals/:id/contribute` - Ahora acepta `account_id` y crea movimiento
+
+**Archivos modificados:**
+- `apps/mobile/app/savings-goals/goal-detail.tsx` - Agregado selector de cuenta con modal
+- `apps/api/src/routes/savings-goals.js` - Agregada lógica de movimiento y actualización de balance
+
+---
+
+### 4.4 Módulo de Inteligencia Artificial
 
 **Descripcion:** Analisis financiero personalizado usando IA como asesor financiero.
 
@@ -757,7 +908,7 @@ Mantenimiento {
 |---|---|---|---|
 | 1 | REQ-SUB-01 a 04: Suscripciones y pagos recurrentes | Alta | ⏳ Pendiente |
 | 2 | REQ-OBJ-01 a 03: Objetivos de ahorro | Alta | ✅ Completado |
-| 3 | REQ-PREST-01 a 03: Modulo de prestamos | Media | ⏳ Pendiente |
+| 3 | REQ-PREST-01 a 03: Modulo de prestamos | Media | ✅ Completado |
 | 4 | REQ-NOTIF-01 a 03: Notificaciones push completas | Media | ⏳ Pendiente |
 | 5 | REQ-AUTO-01 a 05: Modulo de vehiculo (gasolina + mantenimiento) | Media | ⏳ Pendiente |
 | 6 | REQ-TEC-10: Reorganizar navegacion para nuevos modulos | Media | ⏳ Pendiente |
@@ -790,6 +941,84 @@ Mantenimiento {
 ---
 
 ## Historial de Actualizaciones
+
+### Actualización 2026-02-19 (Parte 2) - Mejoras en Préstamos y Rediseño de Presupuestos
+
+**Mejoras implementadas:**
+
+1. ✅ **Date Pickers en Préstamos**:
+   - Reemplazados campos de texto por date pickers nativos en agregar préstamo
+   - Date picker para fecha del préstamo con límite máximo (hoy)
+   - Date picker para fecha límite opcional con límite mínimo (fecha del préstamo)
+   - Date picker en modal de registro de pagos
+   - Mejor UX con formato de fecha legible
+
+2. ✅ **Rediseño Completo de Presupuestos**:
+   - Eliminado tipo "saving" (objetivos) - ahora solo para control de gastos
+   - Agregado periodo "diario" además de semanal y mensual
+   - Date picker para fecha de inicio
+   - Date picker para fecha de fin opcional
+   - Interfaz simplificada y más clara
+   - Indicadores visuales mejorados (colores según progreso)
+   - Alertas cuando se excede el presupuesto
+   - Cálculo de días restantes
+   - Información más clara sobre disponible vs gastado
+
+3. ✅ **Mejoras en Pantallas de Presupuestos**:
+   - Lista rediseñada con mejor visualización de progreso
+   - Card informativo explicando el propósito
+   - Barras de progreso con colores dinámicos (verde < 80%, amarillo 80-100%, rojo > 100%)
+   - Banner de alerta cuando se excede el límite
+   - Formularios de agregar/editar completamente rediseñados
+
+**Archivos modificados:**
+- `apps/mobile/app/loans/add-loan.tsx` (agregados date pickers)
+- `apps/mobile/app/loans/loan-detail.tsx` (agregado date picker en modal)
+- `apps/mobile/app/budgets/index.tsx` (rediseño completo)
+- `apps/mobile/app/budgets/add-budget.tsx` (rediseño completo con date pickers)
+- `apps/mobile/app/budgets/edit-budget.tsx` (rediseño completo con date pickers)
+
+**Nota:** Los presupuestos ahora están enfocados exclusivamente en control de gastos, mientras que los objetivos de ahorro tienen su propio módulo dedicado, eliminando la duplicidad de funcionalidad.
+
+---
+
+### Actualización 2026-02-19 (Parte 1) - Módulo de Préstamos
+
+**Módulo 4.2 completado:**
+
+1. ✅ **REQ-PREST-01**: Modelo de datos implementado
+   - Agregadas tablas `loans` y `loan_payments` a la BD
+   - Estructura completa con soporte para estados (active, partial, paid, forgiven)
+   - Campos: id, person_name, amount, remaining_amount, date, due_date, notes, account_id, status
+
+2. ✅ **REQ-PREST-02**: Funcionalidades implementadas
+   - API REST completa con 8 endpoints
+   - Pantalla de lista con préstamos activos y completados
+   - Resumen con total prestado, pendiente y recuperado
+   - Pantalla de agregar préstamo con opción de descontar de cuenta
+   - Pantalla de detalle con historial de pagos
+   - Modal para registrar pagos parciales o totales
+   - Actualización automática de estado según pagos
+   - Cálculo de días restantes con indicadores visuales
+   - Opción de condonar préstamo
+
+3. ✅ **REQ-PREST-03**: Navegación implementada
+   - Card resumen en dashboard con préstamos activos
+   - Navegación fluida entre pantallas
+   - Opción en settings debajo de objetivos de ahorro
+   - Solo se muestra card si hay préstamos activos
+
+**Archivos creados/modificados:**
+- Backend: `apps/api/src/routes/loans.js`, `apps/api/src/database/db-json.js`, `apps/api/src/index.js`
+- Frontend: `apps/mobile/app/loans/index.tsx`, `add-loan.tsx`, `loan-detail.tsx`
+- Dashboard: `apps/mobile/app/(tabs)/index.tsx` (agregado card de préstamos)
+- Settings: `apps/mobile/app/(tabs)/settings.tsx` (agregada opción de préstamos)
+
+**Pendiente para futuras versiones:**
+- Notificaciones cuando se acerque fecha límite (requiere módulo de notificaciones)
+- Notificaciones periódicas recordando préstamos activos (requiere módulo de notificaciones)
+
+---
 
 ### Actualización 2026-02-18 (Parte 2) - Módulo de Objetivos de Ahorro
 

@@ -4,7 +4,8 @@
   "type": "commonjs",
   "scripts": {
     "dev": "nodemon src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "seed": "node seed-demo-data.js"
   },
   "keywords": [],
   "author": "",

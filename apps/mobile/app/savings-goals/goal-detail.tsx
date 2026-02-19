@@ -29,11 +29,23 @@ type Contribution = {
   notes: string | null;
 };
 
+type Account = {
+  id: number;
+  name: string;
+  type: string;
+  balance: number;
+  icon?: string;
+  color?: string;
+};
+
 export default function GoalDetailScreen() {
   const { id } = useLocalSearchParams();
   const [goal, setGoal] = useState<SavingsGoal | null>(null);
   const [contributions, setContributions] = useState<Contribution[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [showContributeModal, setShowContributeModal] = useState(false);
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [contributeAmount, setContributeAmount] = useState('');
   const [contributeNotes, setContributeNotes] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -48,13 +60,15 @@ export default function GoalDetailScreen() {
 
   const fetchGoalData = async () => {
     try {
-      const [goalResponse, contributionsResponse] = await Promise.all([
+      const [goalResponse, contributionsResponse, accountsResponse] = await Promise.all([
         fetch(`${API_CONFIG.BASE_URL}/savings-goals/${id}`),
         fetch(`${API_CONFIG.BASE_URL}/savings-goals/${id}/contributions`),
+        fetch(`${API_CONFIG.BASE_URL}/accounts`),
       ]);
 
       const goalResult = await goalResponse.json();
       const contributionsResult = await contributionsResponse.json();
+      const accountsResult = await accountsResponse.json();
 
       if (goalResult.success) {
         setGoal(goalResult.data);
@@ -62,6 +76,16 @@ export default function GoalDetailScreen() {
 
       if (contributionsResult.success) {
         setContributions(contributionsResult.data);
+      }
+
+      if (accountsResult.success) {
+        // Filtrar solo cuentas que no sean de crédito
+        const nonCreditAccounts = accountsResult.data.filter((acc: Account) => acc.type !== 'credit');
+        setAccounts(nonCreditAccounts);
+        // Seleccionar la primera cuenta por defecto
+        if (nonCreditAccounts.length > 0 && !selectedAccount) {
+          setSelectedAccount(nonCreditAccounts[0]);
+        }
       }
     } catch (error) {
       console.error('Error al cargar datos:', error);
@@ -87,6 +111,11 @@ export default function GoalDetailScreen() {
       return;
     }
 
+    if (!selectedAccount) {
+      Alert.alert('Error', 'Selecciona una cuenta');
+      return;
+    }
+
     try {
       const response = await fetch(`${API_CONFIG.BASE_URL}/savings-goals/${id}/contribute`, {
         method: 'POST',
@@ -95,6 +124,7 @@ export default function GoalDetailScreen() {
         },
         body: JSON.stringify({
           amount: getNumericValue(contributeAmount),
+          account_id: selectedAccount.id,
           notes: contributeNotes.trim() || null,
         }),
       });
@@ -343,6 +373,35 @@ export default function GoalDetailScreen() {
               </View>
             </View>
 
+            {/* Account Selector */}
+            <View style={[styles.modalAccountSection, { borderColor }]}>
+              <ThemedText style={[styles.modalAccountLabel, { color: textMuted }]}>
+                Cuenta *
+              </ThemedText>
+              <TouchableOpacity
+                style={[styles.accountSelector, { backgroundColor: goal.color + '10', borderColor }]}
+                onPress={() => setShowAccountPicker(true)}
+              >
+                {selectedAccount ? (
+                  <>
+                    <View style={styles.accountSelectorInfo}>
+                      <ThemedText style={[styles.accountSelectorName, { color: textMain }]}>
+                        {selectedAccount.name}
+                      </ThemedText>
+                      <ThemedText style={[styles.accountSelectorBalance, { color: textMuted }]}>
+                        {formatCurrency(selectedAccount.balance)}
+                      </ThemedText>
+                    </View>
+                    <IconSymbol name="chevron.down" size={20} color={textMuted} />
+                  </>
+                ) : (
+                  <ThemedText style={[styles.accountSelectorPlaceholder, { color: textMuted }]}>
+                    Selecciona una cuenta
+                  </ThemedText>
+                )}
+              </TouchableOpacity>
+            </View>
+
             <View style={[styles.modalNotesSection, { borderColor }]}>
               <ThemedText style={[styles.modalNotesLabel, { color: textMuted }]}>
                 Notas (Opcional)
@@ -364,6 +423,58 @@ export default function GoalDetailScreen() {
             >
               <ThemedText style={styles.modalSaveButtonText}>Agregar</ThemedText>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Account Picker Modal */}
+      <Modal
+        visible={showAccountPicker}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAccountPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.pickerModalContent, { backgroundColor: surfaceColor }]}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={[styles.modalTitle, { color: textMain }]}>
+                Seleccionar Cuenta
+              </ThemedText>
+              <TouchableOpacity onPress={() => setShowAccountPicker(false)}>
+                <IconSymbol size={24} name="xmark" color={textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.accountsList}>
+              {accounts.map((account) => (
+                <TouchableOpacity
+                  key={account.id}
+                  style={[
+                    styles.accountItem,
+                    { 
+                      backgroundColor: selectedAccount?.id === account.id ? goal.color + '10' : 'transparent',
+                      borderColor 
+                    }
+                  ]}
+                  onPress={() => {
+                    setSelectedAccount(account);
+                    setShowAccountPicker(false);
+                  }}
+                >
+                  <View style={styles.accountItemInfo}>
+                    <ThemedText style={[styles.accountItemName, { color: textMain }]}>
+                      {account.name}
+                    </ThemedText>
+                    <ThemedText style={[styles.accountItemBalance, { color: textMuted }]}>
+                      {formatCurrency(account.balance)}
+                    </ThemedText>
+                  </View>
+                  {selectedAccount?.id === account.id && (
+                    <IconSymbol name="checkmark" size={20} color={goal.color} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -673,5 +784,67 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '700',
+  },
+  // Account Selector
+  modalAccountSection: {
+    marginBottom: 16,
+  },
+  modalAccountLabel: {
+    fontSize: 12,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  accountSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  accountSelectorInfo: {
+    flex: 1,
+  },
+  accountSelectorName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  accountSelectorBalance: {
+    fontSize: 13,
+  },
+  accountSelectorPlaceholder: {
+    fontSize: 16,
+  },
+  // Account Picker Modal
+  pickerModalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+    maxHeight: '70%',
+  },
+  accountsList: {
+    maxHeight: 400,
+  },
+  accountItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+  },
+  accountItemInfo: {
+    flex: 1,
+  },
+  accountItemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  accountItemBalance: {
+    fontSize: 13,
   },
 });

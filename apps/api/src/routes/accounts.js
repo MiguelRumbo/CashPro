@@ -225,38 +225,26 @@ router.put('/:id/set-primary', (req, res) => {
   try {
     const { id } = req.params;
 
-    console.log('=== SET PRIMARY DEBUG ===');
-    console.log('ID recibido:', id);
-
     // Verificar que la cuenta existe
     const existingAccount = db.prepare('SELECT * FROM accounts WHERE id = ?').get(id);
-    console.log('Cuenta encontrada:', existingAccount);
     
     if (!existingAccount) {
       return res.status(404).json({ success: false, error: 'Cuenta no encontrada' });
     }
 
     // Primero, desmarcar todas las cuentas como principal
-    console.log('Desmarcando todas las cuentas...');
     const allAccounts = db.prepare('SELECT * FROM accounts').all();
-    console.log('Total de cuentas:', allAccounts.length);
     
     allAccounts.forEach(account => {
-      console.log(`Actualizando cuenta ${account.id} a is_primary = 0`);
-      const result = db.prepare('UPDATE accounts SET is_primary = ?, updated_at = ? WHERE id = ?')
+      db.prepare('UPDATE accounts SET is_primary = ?, updated_at = ? WHERE id = ?')
         .run(0, new Date().toISOString(), account.id);
-      console.log('Resultado:', result);
     });
 
     // Luego, marcar la cuenta seleccionada como principal
-    console.log(`Marcando cuenta ${id} como principal...`);
-    const setPrimaryResult = db.prepare('UPDATE accounts SET is_primary = ?, updated_at = ? WHERE id = ?')
+    db.prepare('UPDATE accounts SET is_primary = ?, updated_at = ? WHERE id = ?')
       .run(1, new Date().toISOString(), id);
-    console.log('Resultado set primary:', setPrimaryResult);
 
     const updatedAccount = db.prepare('SELECT * FROM accounts WHERE id = ?').get(id);
-    console.log('Cuenta actualizada:', updatedAccount);
-    console.log('=== FIN DEBUG ===');
 
     res.json({ 
       success: true, 
