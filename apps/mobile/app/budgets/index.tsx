@@ -199,7 +199,7 @@ export default function BudgetsScreen() {
                     <ThemedText style={[styles.amountLabel, { color: textMuted }]}>
                       Gastado
                     </ThemedText>
-                    <ThemedText style={[styles.amountValue, { color: progressColor }]}>
+                    <ThemedText style={[styles.amountValue, { color: progressColor }]} numberOfLines={1} adjustsFontSizeToFit>
                       {formatCurrency(budget.current_amount)}
                     </ThemedText>
                   </View>
@@ -208,7 +208,7 @@ export default function BudgetsScreen() {
                     <ThemedText style={[styles.amountLabel, { color: textMuted }]}>
                       Límite
                     </ThemedText>
-                    <ThemedText style={[styles.amountValue, { color: textMain }]}>
+                    <ThemedText style={[styles.amountValue, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
                       {formatCurrency(budget.amount)}
                     </ThemedText>
                   </View>

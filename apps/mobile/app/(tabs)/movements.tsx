@@ -311,6 +311,7 @@ export default function MovementsScreen() {
                           styles.transactionAmount,
                           { color: isIncome ? primary : isTransfer ? '#3b82f6' : textMain },
                         ]}
+                        numberOfLines={1}
                       >
                         {isIncome ? '+' : isTransfer ? '' : '-'}{formatCurrency(item.amount)}
                       </ThemedText>

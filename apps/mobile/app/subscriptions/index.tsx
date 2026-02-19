@@ -214,7 +214,7 @@ export default function SubscriptionsScreen() {
             </View>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <ThemedText style={[styles.paymentAmount, { color: isIncomeType ? '#10b981' : textMain }]}>
+            <ThemedText style={[styles.paymentAmount, { color: isIncomeType ? '#10b981' : textMain }]} numberOfLines={1}>
               {isIncomeType ? '+' : '-'}{formatCurrency(payment.amount)}
             </ThemedText>
             <View style={[
@@ -280,7 +280,7 @@ export default function SubscriptionsScreen() {
               <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>
                 Suscripciones /mes
               </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: '#ef4444' }]}>
+              <ThemedText style={[styles.summaryValue, { color: '#ef4444' }]} numberOfLines={1} adjustsFontSizeToFit>
                 -{formatCurrency(monthlySubTotal)}
               </ThemedText>
             </View>
@@ -288,7 +288,7 @@ export default function SubscriptionsScreen() {
               <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>
                 Gastos Recurrentes /mes
               </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: textMain }]}>
+              <ThemedText style={[styles.summaryValue, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
                 -{formatCurrency(monthlyExpenseTotal)}
               </ThemedText>
             </View>
@@ -298,7 +298,7 @@ export default function SubscriptionsScreen() {
               <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>
                 Ingresos Recurrentes /mes
               </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: '#10b981' }]}>
+              <ThemedText style={[styles.summaryValue, { color: '#10b981' }]} numberOfLines={1} adjustsFontSizeToFit>
                 +{formatCurrency(monthlyIncomeTotal)}
               </ThemedText>
             </View>
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   summaryValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
   alertBanner: {

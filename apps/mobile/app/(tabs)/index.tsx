@@ -345,7 +345,7 @@ export default function DashboardScreen() {
               <ThemedText style={[styles.cardLabel, { color: textMuted }]}>
                 Balance Total
               </ThemedText>
-              <ThemedText style={[styles.balanceAmount, { color: textMain }]}>
+              <ThemedText style={[styles.balanceAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
                 {formatCurrency(totalBalance)}
               </ThemedText>
               <View style={[styles.badge, { backgroundColor: expenseChange <= 0 ? 'rgba(32, 223, 96, 0.1)' : 'rgba(239, 68, 68, 0.1)' }]}>
@@ -364,11 +364,11 @@ export default function DashboardScreen() {
               <View style={[styles.iconCircle, { backgroundColor: '#dcfce7' }]}>
                 <IconSymbol size={18} name="arrow.down" color={primary} />
               </View>
-              <View>
+              <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.smallCardLabel, { color: textMuted }]}>
                   Ingresos
                 </ThemedText>
-                <ThemedText style={[styles.smallCardAmount, { color: textMain }]}>
+                <ThemedText style={[styles.smallCardAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
                   +{formatCurrency(totalIncome)}
                 </ThemedText>
               </View>
@@ -379,11 +379,11 @@ export default function DashboardScreen() {
               <View style={[styles.iconCircle, { backgroundColor: '#fef2f2' }]}>
                 <IconSymbol size={18} name="arrow.up" color="#ef4444" />
               </View>
-              <View>
+              <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.smallCardLabel, { color: textMuted }]}>
                   Gastos
                 </ThemedText>
-                <ThemedText style={[styles.smallCardAmount, { color: textMain }]}>
+                <ThemedText style={[styles.smallCardAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
                   -{formatCurrency(totalExpense)}
                 </ThemedText>
               </View>
@@ -464,7 +464,7 @@ export default function DashboardScreen() {
                         <ThemedText style={styles.accountNumber}>
                           {account.card_last_four ? `**** ${account.card_last_four}` : account.bank_name || 'Efectivo'}
                         </ThemedText>
-                        <ThemedText style={styles.accountBalance}>{formatCurrency(displayBalance)}</ThemedText>
+                        <ThemedText style={styles.accountBalance} numberOfLines={1} adjustsFontSizeToFit>{formatCurrency(displayBalance)}</ThemedText>
                       </View>
                     </TouchableOpacity>
                   );
@@ -486,7 +486,7 @@ export default function DashboardScreen() {
                       <ThemedText style={[styles.accountNumberDark, { color: textMain }]}>
                         {account.card_last_four ? `**** ${account.card_last_four}` : account.bank_name || 'Efectivo'}
                       </ThemedText>
-                      <ThemedText style={[styles.accountBalanceDark, { color: textMain }]}>
+                      <ThemedText style={[styles.accountBalanceDark, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
                         {formatCurrency(displayBalance)}
                       </ThemedText>
                     </View>
@@ -543,19 +543,19 @@ export default function DashboardScreen() {
             </View>
 
             <View style={styles.savingsGoalsAmounts}>
-              <View>
+              <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.savingsGoalsLabel, { color: textMuted }]}>
                   Ahorrado
                 </ThemedText>
-                <ThemedText style={[styles.savingsGoalsAmount, { color: textMain }]}>
+                <ThemedText style={[styles.savingsGoalsAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
                   {formatCurrency(savingsGoalsSummary.total_saved)}
                 </ThemedText>
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
+              <View style={{ flex: 1, alignItems: 'flex-end' }}>
                 <ThemedText style={[styles.savingsGoalsLabel, { color: textMuted }]}>
                   Meta Total
                 </ThemedText>
-                <ThemedText style={[styles.savingsGoalsAmount, { color: textMain }]}>
+                <ThemedText style={[styles.savingsGoalsAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
                   {formatCurrency(savingsGoalsSummary.total_target)}
                 </ThemedText>
               </View>
@@ -593,19 +593,19 @@ export default function DashboardScreen() {
             </View>
 
             <View style={styles.loansAmounts}>
-              <View>
+              <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.loansLabel, { color: textMuted }]}>
                   Pendiente por Cobrar
                 </ThemedText>
-                <ThemedText style={[styles.loansAmount, { color: '#f59e0b' }]}>
+                <ThemedText style={[styles.loansAmount, { color: '#f59e0b' }]} numberOfLines={1} adjustsFontSizeToFit>
                   {formatCurrency(loansSummary.total_pending)}
                 </ThemedText>
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
+              <View style={{ flex: 1, alignItems: 'flex-end' }}>
                 <ThemedText style={[styles.loansLabel, { color: textMuted }]}>
                   Total Prestado
                 </ThemedText>
-                <ThemedText style={[styles.loansAmount, { color: textMain }]}>
+                <ThemedText style={[styles.loansAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
                   {formatCurrency(loansSummary.total_lent)}
                 </ThemedText>
               </View>
@@ -668,7 +668,7 @@ export default function DashboardScreen() {
                         {budget.name}
                       </ThemedText>
                     </View>
-                    <ThemedText style={[styles.budgetItemAmount, { color: textMuted }]}>
+                    <ThemedText style={[styles.budgetItemAmount, { color: textMuted }]} numberOfLines={1}>
                       {formatCurrency(budget.current_amount)} / {formatCurrency(budget.amount)}
                     </ThemedText>
                   </View>
@@ -710,19 +710,19 @@ export default function DashboardScreen() {
             </View>
 
             <View style={styles.subscriptionsAmounts}>
-              <View>
+              <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.subscriptionsLabel, { color: textMuted }]}>
                   Gastos Recurrentes /mes
                 </ThemedText>
-                <ThemedText style={[styles.subscriptionsAmount, { color: '#ef4444' }]}>
+                <ThemedText style={[styles.subscriptionsAmount, { color: '#ef4444' }]} numberOfLines={1} adjustsFontSizeToFit>
                   -{formatCurrency(subscriptionsSummary.monthly_recurring_expenses)}
                 </ThemedText>
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
+              <View style={{ flex: 1, alignItems: 'flex-end' }}>
                 <ThemedText style={[styles.subscriptionsLabel, { color: textMuted }]}>
                   Ingresos Recurrentes /mes
                 </ThemedText>
-                <ThemedText style={[styles.subscriptionsAmount, { color: '#10b981' }]}>
+                <ThemedText style={[styles.subscriptionsAmount, { color: '#10b981' }]} numberOfLines={1} adjustsFontSizeToFit>
                   +{formatCurrency(subscriptionsSummary.monthly_recurring_income)}
                 </ThemedText>
               </View>
@@ -799,19 +799,19 @@ export default function DashboardScreen() {
             </View>
 
             <View style={styles.vehiclesAmounts}>
-              <View>
+              <View style={{ flex: 1 }}>
                 <ThemedText style={[styles.vehiclesLabel, { color: textMuted }]}>
                   Gasto este mes
                 </ThemedText>
-                <ThemedText style={[styles.vehiclesAmount, { color: '#ef4444' }]}>
+                <ThemedText style={[styles.vehiclesAmount, { color: '#ef4444' }]} numberOfLines={1} adjustsFontSizeToFit>
                   {formatCurrency(vehiclesSummary.stats.month_total_cost)}
                 </ThemedText>
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
+              <View style={{ flex: 1, alignItems: 'flex-end' }}>
                 <ThemedText style={[styles.vehiclesLabel, { color: textMuted }]}>
                   Gasto total
                 </ThemedText>
-                <ThemedText style={[styles.vehiclesAmount, { color: textMain }]}>
+                <ThemedText style={[styles.vehiclesAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
                   {formatCurrency(vehiclesSummary.stats.total_cost)}
                 </ThemedText>
               </View>
@@ -856,7 +856,7 @@ export default function DashboardScreen() {
                       </ThemedText>
                     </View>
                   </View>
-                  <ThemedText style={[styles.recentItemAmount, { color: isIncome ? primary : isTransfer ? '#3b82f6' : textMain }]}>
+                  <ThemedText style={[styles.recentItemAmount, { color: isIncome ? primary : isTransfer ? '#3b82f6' : textMain }]} numberOfLines={1}>
                     {isIncome ? '+' : isTransfer ? '' : '-'}{formatCurrency(movement.amount)}
                   </ThemedText>
                 </TouchableOpacity>
@@ -906,7 +906,7 @@ export default function DashboardScreen() {
                           </ThemedText>
                         </View>
                       </View>
-                      <ThemedText style={[styles.categoryAmount, { color: textMain }]}>
+                      <ThemedText style={[styles.categoryAmount, { color: textMain }]} numberOfLines={1}>
                         {formatCurrency(category.total)}
                       </ThemedText>
                     </View>
@@ -1103,7 +1103,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   smallCardAmount: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     marginTop: 4,
   },

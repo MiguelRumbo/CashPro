@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "concurrently -n API,MOBILE -c auto \"pnpm --filter api dev\" \"pnpm --filter mobile start\"",
     "dev:api": "pnpm --filter api dev",
-    "dev:mobile": "pnpm --filter mobile start"
+    "dev:mobile": "pnpm --filter mobile start -- --tunnel"
   },
   "keywords": [],
   "author": "",

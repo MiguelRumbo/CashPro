@@ -188,7 +188,7 @@ export default function VehiclesScreen() {
             <ThemedText style={[styles.monthCostLabel, { color: textMuted }]}>
               Gasto este mes
             </ThemedText>
-            <ThemedText style={[styles.monthCostValue, { color: '#ef4444' }]}>
+            <ThemedText style={[styles.monthCostValue, { color: '#ef4444' }]} numberOfLines={1} adjustsFontSizeToFit>
               {formatCurrency(vehicleStats.month_total_cost)}
             </ThemedText>
           </View>

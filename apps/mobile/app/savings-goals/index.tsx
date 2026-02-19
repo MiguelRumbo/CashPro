@@ -184,7 +184,7 @@ export default function SavingsGoalsScreen() {
                           <IconSymbol size={24} name={goal.icon as any} color={goal.color} />
                         </View>
                         <View style={styles.goalInfo}>
-                          <ThemedText style={[styles.goalName, { color: textMain }]}>
+                          <ThemedText style={[styles.goalName, { color: textMain }]} numberOfLines={1}>
                             {goal.name}
                           </ThemedText>
                           {daysRemaining !== null && (
@@ -217,19 +217,19 @@ export default function SavingsGoalsScreen() {
 
                     {/* Amounts */}
                     <View style={styles.goalAmounts}>
-                      <View>
+                      <View style={{ flex: 1 }}>
                         <ThemedText style={[styles.amountLabel, { color: textMuted }]}>
                           Ahorrado
                         </ThemedText>
-                        <ThemedText style={[styles.amountValue, { color: textMain }]}>
+                        <ThemedText style={[styles.amountValue, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
                           {formatCurrency(goal.current_amount)}
                         </ThemedText>
                       </View>
-                      <View style={{ alignItems: 'flex-end' }}>
+                      <View style={{ flex: 1, alignItems: 'flex-end' }}>
                         <ThemedText style={[styles.amountLabel, { color: textMuted }]}>
                           Meta
                         </ThemedText>
-                        <ThemedText style={[styles.amountValue, { color: textMain }]}>
+                        <ThemedText style={[styles.amountValue, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
                           {formatCurrency(goal.target_amount)}
                         </ThemedText>
                       </View>
@@ -297,7 +297,7 @@ export default function SavingsGoalsScreen() {
                       </View>
                     </View>
                   </View>
-                  <ThemedText style={[styles.completedAmount, { color: textMain }]}>
+                  <ThemedText style={[styles.completedAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
                     {formatCurrency(goal.target_amount)}
                   </ThemedText>
                 </TouchableOpacity>

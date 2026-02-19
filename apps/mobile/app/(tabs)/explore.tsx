@@ -633,11 +633,11 @@ export default function ReportesScreen() {
             </View>
             <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>Gastos</ThemedText>
             <View style={styles.summaryAmountRow}>
-              <ThemedText style={[styles.summaryAmount, { color: textMain }]}>
+              <ThemedText style={[styles.summaryAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
                 ${Math.floor(totalExpense).toLocaleString('en-US')}
               </ThemedText>
               <ThemedText style={[styles.summaryAmountCents, { color: textMuted }]}>
-                .{((totalExpense % 1) * 10).toFixed(0)}
+                .{(Math.round(totalExpense * 100) % 100).toString().padStart(2, '0').slice(0, 1)}
               </ThemedText>
             </View>
           </View>
@@ -656,11 +656,11 @@ export default function ReportesScreen() {
             </View>
             <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>Ingresos</ThemedText>
             <View style={styles.summaryAmountRow}>
-              <ThemedText style={[styles.summaryAmount, { color: textMain }]}>
+              <ThemedText style={[styles.summaryAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
                 ${Math.floor(totalIncome).toLocaleString('en-US')}
               </ThemedText>
               <ThemedText style={[styles.summaryAmountCents, { color: textMuted }]}>
-                .{((totalIncome % 1) * 10).toFixed(0)}
+                .{(Math.round(totalIncome * 100) % 100).toString().padStart(2, '0').slice(0, 1)}
               </ThemedText>
             </View>
           </View>
@@ -672,7 +672,7 @@ export default function ReportesScreen() {
             <ThemedText style={[styles.balanceLabel, { color: textMuted }]}>
               Balance del Periodo
             </ThemedText>
-            <ThemedText style={[styles.balanceAmount, { color: totalIncome - totalExpense >= 0 ? '#16a34a' : '#e11d48' }]}>
+            <ThemedText style={[styles.balanceAmount, { color: totalIncome - totalExpense >= 0 ? '#16a34a' : '#e11d48' }]} numberOfLines={1} adjustsFontSizeToFit>
               {totalIncome - totalExpense >= 0 ? '+' : ''}{formatCurrency(totalIncome - totalExpense)}
             </ThemedText>
             <View style={styles.balanceBreakdown}>
@@ -723,7 +723,7 @@ export default function ReportesScreen() {
                         {segment.category_name}
                       </ThemedText>
                     </View>
-                    <ThemedText style={[styles.legendAmount, { color: textMain }]}>
+                    <ThemedText style={[styles.legendAmount, { color: textMain }]} numberOfLines={1}>
                       {formatCurrency(segment.total)}
                     </ThemedText>
                   </View>
@@ -841,11 +841,11 @@ export default function ReportesScreen() {
                         <View style={[styles.budgetStatIcon, { backgroundColor: budget.color + '20' }]}>
                           <IconSymbol size={18} name={budget.icon as any} color={budget.color} />
                         </View>
-                        <ThemedText style={[styles.budgetStatName, { color: textMain }]}>
+                        <ThemedText style={[styles.budgetStatName, { color: textMain }]} numberOfLines={1}>
                           {budget.name}
                         </ThemedText>
                       </View>
-                      <ThemedText style={[styles.budgetStatAmount, { color: textMuted }]}>
+                      <ThemedText style={[styles.budgetStatAmount, { color: textMuted }]} numberOfLines={1}>
                         {formatCurrency(budget.current_amount)} / {formatCurrency(budget.amount)}
                       </ThemedText>
                     </View>
@@ -885,11 +885,11 @@ export default function ReportesScreen() {
                       <View style={[styles.goalStatIcon, { backgroundColor: goal.color + '20' }]}>
                         <IconSymbol size={18} name={goal.icon as any} color={goal.color} />
                       </View>
-                      <ThemedText style={[styles.goalStatName, { color: textMain }]}>
+                      <ThemedText style={[styles.goalStatName, { color: textMain }]} numberOfLines={1}>
                         {goal.name}
                       </ThemedText>
                     </View>
-                    <ThemedText style={[styles.goalStatAmount, { color: textMuted }]}>
+                    <ThemedText style={[styles.goalStatAmount, { color: textMuted }]} numberOfLines={1}>
                       {formatCurrency(goal.current_amount)} / {formatCurrency(goal.target_amount)}
                     </ThemedText>
                   </View>
@@ -937,7 +937,7 @@ export default function ReportesScreen() {
                         {sub.type === 'subscription' ? 'Suscripción' : sub.type === 'salary' ? 'Salario' : sub.type === 'recurring_income' ? 'Ingreso' : 'Gasto'} · {frequencyLabel}
                       </ThemedText>
                     </View>
-                    <ThemedText style={[styles.subscriptionStatAmount, { color: isIncome ? '#16a34a' : textMain }]}>
+                    <ThemedText style={[styles.subscriptionStatAmount, { color: isIncome ? '#16a34a' : textMain }]} numberOfLines={1}>
                       {isIncome ? '+' : '-'}{formatCurrency(sub.amount)}
                     </ThemedText>
                   </View>
@@ -1077,8 +1077,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   summaryAmount: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
+    flexShrink: 1,
   },
   summaryAmountCents: {
     fontSize: 18,
@@ -1342,10 +1343,13 @@ const styles = StyleSheet.create({
   budgetStatName: {
     fontSize: 14,
     fontWeight: '600',
+    flexShrink: 1,
   },
   budgetStatAmount: {
     fontSize: 12,
     fontWeight: '500',
+    flexShrink: 0,
+    marginLeft: 8,
   },
   budgetStatBar: {
     height: 6,
@@ -1388,10 +1392,13 @@ const styles = StyleSheet.create({
   goalStatName: {
     fontSize: 14,
     fontWeight: '600',
+    flexShrink: 1,
   },
   goalStatAmount: {
     fontSize: 12,
     fontWeight: '500',
+    flexShrink: 0,
+    marginLeft: 8,
   },
   goalStatBar: {
     height: 6,

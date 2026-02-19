@@ -149,7 +149,7 @@ export default function LoansScreen() {
               <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>
                 Total Prestado
               </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: textMain }]}>
+              <ThemedText style={[styles.summaryValue, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
                 {formatCurrency(totalLent)}
               </ThemedText>
             </View>
@@ -157,7 +157,7 @@ export default function LoansScreen() {
               <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>
                 Pendiente
               </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: warning }]}>
+              <ThemedText style={[styles.summaryValue, { color: warning }]} numberOfLines={1} adjustsFontSizeToFit>
                 {formatCurrency(totalPending)}
               </ThemedText>
             </View>
@@ -167,7 +167,7 @@ export default function LoansScreen() {
               <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>
                 Recuperado
               </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: success }]}>
+              <ThemedText style={[styles.summaryValue, { color: success }]} numberOfLines={1} adjustsFontSizeToFit>
                 {formatCurrency(totalRecovered)}
               </ThemedText>
             </View>
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   summaryValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
   section: {
