@@ -140,7 +140,7 @@ export default function SettingsScreen() {
   const handleDeleteAllData = () => {
     Alert.alert(
       'Eliminar Todos los Datos',
-      '¿Estás seguro de que deseas eliminar TODOS los datos? Esta acción no se puede deshacer.\n\nSe eliminarán:\n• Todas las cuentas\n• Todos los movimientos\n• Todos los presupuestos\n• Todos los objetivos de ahorro\n• Todos los préstamos\n• Todas las categorías',
+      '¿Estás seguro de que deseas eliminar TODOS los datos? Esta acción no se puede deshacer.\n\nSe eliminarán:\n• Todas las cuentas\n• Todos los movimientos\n• Todos los presupuestos\n• Todos los objetivos de ahorro\n• Todos los préstamos\n• Todas las suscripciones\n• Todos los vehículos\n• Todas las categorías',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -334,19 +334,23 @@ export default function SettingsScreen() {
         {/* APARIENCIA */}
         <ThemedText style={styles.sectionLabel}>APARIENCIA</ThemedText>
         <View style={[styles.sectionCard, { backgroundColor: surfaceColor }]}>
-          <SettingsRow
-            icon="bell.fill"
-            iconColor="#ea580c"
-            iconBg="#fff7ed"
-            title="Notificaciones"
-            hasSwitch
-            switchValue={notifications}
-            onSwitchChange={setNotifications}
-            isLast
-            textMain={textMain}
-            textMuted={textMuted}
-            borderColor={borderColor}
-          />
+          <TouchableOpacity
+            style={[styles.settingsRow]}
+            onPress={() => router.push('/settings/notifications')}
+          >
+            <View style={styles.settingsRowLeft}>
+              <View style={[styles.settingsIcon, { backgroundColor: '#fff7ed' }]}>
+                <IconSymbol size={22} name="bell.fill" color="#ea580c" />
+              </View>
+              <View>
+                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>Notificaciones</ThemedText>
+                <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
+                  Configura tus alertas
+                </ThemedText>
+              </View>
+            </View>
+            <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />
+          </TouchableOpacity>
         </View>
 
         {/* SEGURIDAD */}

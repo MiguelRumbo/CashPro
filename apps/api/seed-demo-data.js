@@ -1472,6 +1472,25 @@ const demoData = {
     },
   ],
   nextMaintenanceId: 7,
+
+  notification_settings: [
+    {
+      id: 1,
+      daily_reminder: 1,
+      daily_reminder_time: '20:00',
+      credit_card_alerts: 1,
+      budget_alerts: 1,
+      loan_alerts: 1,
+      subscription_alerts: 1,
+      salary_alerts: 1,
+      savings_goal_alerts: 1,
+      vacation_mode: 0,
+      vacation_mode_until: null,
+      push_token: null,
+      created_at: '2025-10-01T00:00:00.000Z',
+      updated_at: new Date().toISOString(),
+    },
+  ],
 };
 
 // Función para cargar datos de demostración

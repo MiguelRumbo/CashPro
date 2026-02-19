@@ -31,6 +31,7 @@ const initialData = {
   nextFuelLoadId: 1,
   maintenance: [],
   nextMaintenanceId: 1,
+  notification_settings: [],
 };
 
 // Leer la base de datos
@@ -208,6 +209,11 @@ const db = {
           return maintenance.sort((a, b) => new Date(b.date) - new Date(a.date));
         }
 
+        // Para configuración de notificaciones
+        if (sql.includes('FROM notification_settings')) {
+          return data.notification_settings || [];
+        }
+
         // Para perfil de usuario
         if (sql.includes('FROM user_profile')) {
           return data.user_profile;
@@ -330,6 +336,12 @@ const db = {
           return data.maintenance.find(m => m.id === parseInt(id));
         }
 
+        // Buscar configuración de notificaciones por ID
+        if (sql.includes('FROM notification_settings')) {
+          if (!data.notification_settings) data.notification_settings = [];
+          return data.notification_settings.find(n => n.id === parseInt(id));
+        }
+
         // Buscar perfil por ID
         if (sql.includes('FROM user_profile')) {
           return data.user_profile.find(p => p.id === parseInt(id));
@@ -432,6 +444,43 @@ const db = {
           writeDB(data);
           
           return { lastInsertRowid: newProfile.id };
+        }
+        
+        if (sql.includes('INSERT INTO notification_settings')) {
+          // Crear configuración de notificaciones
+          const [
+            id, daily_reminder, daily_reminder_time, credit_card_alerts,
+            budget_alerts, loan_alerts, subscription_alerts, salary_alerts,
+            savings_goal_alerts, vacation_mode, vacation_mode_until, push_token,
+            created_at, updated_at
+          ] = params;
+          
+          // Asegurar que notification_settings existe
+          if (!data.notification_settings) {
+            data.notification_settings = [];
+          }
+          
+          const newSettings = {
+            id: parseInt(id),
+            daily_reminder: parseInt(daily_reminder),
+            daily_reminder_time,
+            credit_card_alerts: parseInt(credit_card_alerts),
+            budget_alerts: parseInt(budget_alerts),
+            loan_alerts: parseInt(loan_alerts),
+            subscription_alerts: parseInt(subscription_alerts),
+            salary_alerts: parseInt(salary_alerts),
+            savings_goal_alerts: parseInt(savings_goal_alerts),
+            vacation_mode: parseInt(vacation_mode),
+            vacation_mode_until,
+            push_token,
+            created_at,
+            updated_at,
+          };
+          
+          data.notification_settings.push(newSettings);
+          writeDB(data);
+          
+          return { lastInsertRowid: newSettings.id };
         }
         
         if (sql.includes('INSERT INTO accounts')) {
@@ -770,6 +819,51 @@ const db = {
           }
           
           return { changes: profileIndex !== -1 ? 1 : 0 };
+        } else if (sql.includes('UPDATE notification_settings')) {
+          // Actualizar configuración de notificaciones
+          const id = params[params.length - 1];
+          
+          // Asegurar que notification_settings existe
+          if (!data.notification_settings) {
+            data.notification_settings = [];
+          }
+          
+          const settingsIndex = data.notification_settings.findIndex(n => n.id === parseInt(id));
+
+          if (settingsIndex !== -1) {
+            const updateMatch = sql.match(/SET ([\s\S]+?) WHERE/);
+            if (updateMatch) {
+              const setPart = updateMatch[1];
+              const assignments = setPart.split(',').map(s => s.trim());
+              
+              let paramIndex = 0;
+              assignments.forEach(assignment => {
+                const parts = assignment.split('=').map(s => s.trim());
+                const field = parts[0];
+                const operation = parts[1];
+                
+                if (field === 'updated_at' && operation === 'CURRENT_TIMESTAMP') {
+                  data.notification_settings[settingsIndex].updated_at = new Date().toISOString();
+                } else if (field === 'updated_at' && operation === '?') {
+                  data.notification_settings[settingsIndex].updated_at = params[paramIndex];
+                  paramIndex++;
+                } else if (operation === '?') {
+                  const value = params[paramIndex];
+                  // Convertir a número si es un campo booleano
+                  if (['daily_reminder', 'credit_card_alerts', 'budget_alerts', 'loan_alerts', 
+                       'subscription_alerts', 'salary_alerts', 'savings_goal_alerts', 'vacation_mode'].includes(field)) {
+                    data.notification_settings[settingsIndex][field] = parseInt(value);
+                  } else {
+                    data.notification_settings[settingsIndex][field] = value;
+                  }
+                  paramIndex++;
+                }
+              });
+            }
+            writeDB(data);
+          }
+          
+          return { changes: settingsIndex !== -1 ? 1 : 0 };
         } else if (sql.includes('UPDATE savings_goals')) {
           // Actualizar objetivo de ahorro
           const id = params[params.length - 1];
