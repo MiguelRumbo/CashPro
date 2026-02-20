@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { formatCardNumber, formatCurrencyInput, getNumericValue } from '@/utils/format';
 
 interface Account {
@@ -53,11 +53,10 @@ export default function EditAccountScreen() {
     fetchAccount();
   }, [accountId]);
 
-  const fetchAccount = async () => {
+  const fetchAccount = () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/accounts/${accountId}`);
-      const result = await response.json();
-      
+      const result = database.getAccountById(Number(accountId));
+
       if (result.success) {
         const account: Account = result.data;
         setAccountType(account.type);
@@ -142,15 +141,7 @@ export default function EditAccountScreen() {
     }
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/accounts/${accountId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updateData),
-      });
-
-      const result = await response.json();
+      const result = database.updateAccount(Number(accountId), updateData);
 
       if (result.success) {
         Alert.alert('Éxito', 'Cuenta actualizada exitosamente', [
@@ -161,7 +152,7 @@ export default function EditAccountScreen() {
       }
     } catch (error) {
       console.error('Error al actualizar cuenta:', error);
-      Alert.alert('Error', 'No se pudo conectar con el servidor');
+      Alert.alert('Error', 'No se pudo actualizar la cuenta');
     }
   };
 

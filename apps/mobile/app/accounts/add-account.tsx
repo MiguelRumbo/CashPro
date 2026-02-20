@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { formatCardNumber, formatCurrencyInput, getNumericValue } from '@/utils/format';
 
 type AccountType = 'cash' | 'bank' | 'debit' | 'credit';
@@ -118,15 +118,7 @@ export default function AddAccountScreen() {
     }
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/accounts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(accountData),
-      });
-
-      const result = await response.json();
+      const result = database.createAccount(accountData);
 
       if (result.success) {
         Alert.alert('Éxito', 'Cuenta creada exitosamente', [
@@ -137,7 +129,7 @@ export default function AddAccountScreen() {
       }
     } catch (error) {
       console.error('Error al crear cuenta:', error);
-      Alert.alert('Error', 'No se pudo conectar con el servidor');
+      Alert.alert('Error', 'No se pudo crear la cuenta');
     }
   };
 

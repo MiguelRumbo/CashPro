@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
 type RecurringPayment = {
@@ -43,8 +43,7 @@ export default function SubscriptionsScreen() {
 
   const fetchPayments = async () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/recurring-payments`);
-      const result = await response.json();
+      const result = database.getRecurringPayments();
 
       if (result.success) {
         setPayments(result.data);
@@ -77,10 +76,7 @@ export default function SubscriptionsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const response = await fetch(`${API_CONFIG.BASE_URL}/recurring-payments/${id}`, {
-                method: 'DELETE',
-              });
-              const result = await response.json();
+              const result = database.deleteRecurringPayment(id);
               if (result.success) fetchPayments();
               else Alert.alert('Error', result.error);
             } catch {
@@ -102,12 +98,7 @@ export default function SubscriptionsScreen() {
           text: 'Registrar',
           onPress: async () => {
             try {
-              const response = await fetch(`${API_CONFIG.BASE_URL}/recurring-payments/${payment.id}/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ date: new Date().toISOString() }),
-              });
-              const result = await response.json();
+              const result = database.registerRecurringPayment(payment.id, new Date().toISOString());
               if (result.success) {
                 Alert.alert('Registrado', 'Movimiento creado exitosamente');
                 fetchPayments();

@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 
 export default function EditProfileScreen() {
   const [name, setName] = useState('');
@@ -23,11 +23,10 @@ export default function EditProfileScreen() {
     fetchProfile();
   }, []);
 
-  const fetchProfile = async () => {
+  const fetchProfile = () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/profile`);
-      const result = await response.json();
-      
+      const result = database.getProfile();
+
       if (result.success && result.data) {
         setName(result.data.name || '');
         setEmail(result.data.email || '');
@@ -46,18 +45,10 @@ export default function EditProfileScreen() {
     }
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim(),
-        }),
+      const result = database.updateProfile({
+        name: name.trim(),
+        email: email.trim(),
       });
-
-      const result = await response.json();
 
       if (result.success) {
         Alert.alert('Éxito', 'Perfil actualizado exitosamente', [
@@ -68,7 +59,7 @@ export default function EditProfileScreen() {
       }
     } catch (error) {
       console.error('Error al actualizar perfil:', error);
-      Alert.alert('Error', 'No se pudo conectar con el servidor');
+      Alert.alert('Error', 'No se pudo actualizar el perfil');
     }
   };
 

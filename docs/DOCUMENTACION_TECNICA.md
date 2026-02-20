@@ -3,9 +3,9 @@
 ## Información General
 
 - **Nombre:** CashPro
-- **Versión:** 1.0.0
-- **Descripción:** Aplicación móvil de gestión financiera personal con backend REST API
-- **Arquitectura:** Monorepo con aplicación móvil (React Native/Expo) y API REST (Node.js/Express)
+- **Versión:** 1.1.0
+- **Descripción:** Aplicación móvil standalone de gestión financiera personal
+- **Arquitectura:** Aplicación móvil autónoma con base de datos SQLite local
 
 ---
 
@@ -14,9 +14,9 @@
 1. [Arquitectura del Sistema](#arquitectura-del-sistema)
 2. [Tecnologías Utilizadas](#tecnologías-utilizadas)
 3. [Estructura del Proyecto](#estructura-del-proyecto)
-4. [Backend API](#backend-api)
+4. [Base de Datos Local](#base-de-datos-local)
 5. [Aplicación Móvil](#aplicación-móvil)
-6. [Base de Datos](#base-de-datos)
+6. [Servicio de Base de Datos](#servicio-de-base-de-datos)
 7. [Configuración y Despliegue](#configuración-y-despliegue)
 8. [Funcionalidades Principales](#funcionalidades-principales)
 
@@ -24,50 +24,36 @@
 
 ## Arquitectura del Sistema
 
-CashPro utiliza una arquitectura cliente-servidor con las siguientes características:
+CashPro es una aplicación **standalone** que funciona completamente offline. Todos los datos se almacenan localmente en el dispositivo usando SQLite.
 
 ```
 ┌─────────────────────────────────────┐
-│     Aplicación Móvil (Cliente)      │
+│     Aplicación Móvil (Standalone)   │
 │   React Native + Expo Router        │
-│   iOS / Android / Web                │
+│   iOS / Android                     │
 └──────────────┬──────────────────────┘
-               │ HTTP/REST
-               │
+               │ Lectura/Escritura directa
 ┌──────────────▼──────────────────────┐
-│         API REST (Servidor)         │
-│      Node.js + Express.js           │
-└──────────────┬──────────────────────┘
-               │
-┌──────────────▼──────────────────────┐
-│      Base de Datos JSON             │
-│    (Temporal - SQLite planeado)     │
+│      Base de Datos SQLite Local     │
+│      cashpro.db (en dispositivo)    │
+│      expo-sqlite (síncrono)         │
 └─────────────────────────────────────┘
 ```
 
 ### Características Arquitectónicas
 
-- **Monorepo:** Gestión unificada de múltiples aplicaciones
-- **API RESTful:** Comunicación mediante endpoints HTTP estándar
-- **Separación de Responsabilidades:** Frontend y backend completamente desacoplados
-- **Gestión de Estado:** Context API de React para estado global
+- **Standalone:** No requiere servidor externo ni conexión a internet
+- **SQLite Local:** Base de datos integrada en el dispositivo mediante `expo-sqlite`
+- **Operaciones Síncronas:** Usa `openDatabaseSync` para acceso inmediato a datos
+- **Gestión de Estado:** Context API de React para estado global (moneda)
 - **Navegación:** Expo Router con navegación basada en archivos
+- **Exportación/Importación:** Soporte para JSON, CSV y archivos SQLite (.db)
 
 ---
 
 ## Tecnologías Utilizadas
 
-### Backend (API)
-
-| Tecnología | Versión | Propósito |
-|------------|---------|-----------|
-| Node.js | - | Runtime de JavaScript |
-| Express.js | 5.2.1 | Framework web |
-| better-sqlite3 | 12.6.2 | Base de datos SQLite (planeado) |
-| CORS | 2.8.6 | Manejo de políticas CORS |
-| Nodemon | 3.1.11 | Hot reload en desarrollo |
-
-### Frontend (Móvil)
+### Aplicación Móvil
 
 | Tecnología | Versión | Propósito |
 |------------|---------|-----------|
@@ -75,8 +61,20 @@ CashPro utiliza una arquitectura cliente-servidor con las siguientes caracterís
 | React Native | 0.81.5 | Framework móvil |
 | Expo | ~54.0.33 | Plataforma de desarrollo |
 | Expo Router | ~6.0.23 | Sistema de navegación |
+| expo-sqlite | ~16.0.10 | Base de datos SQLite local |
+| expo-file-system | ~19.0.21 | Acceso al sistema de archivos |
+| expo-sharing | ~14.0.8 | Compartir archivos exportados |
+| expo-document-picker | ~14.0.8 | Seleccionar archivos para importar |
 | TypeScript | ~5.9.2 | Tipado estático |
 | React Navigation | 7.x | Navegación nativa |
+| React Native Reanimated | ~4.1.1 | Animaciones |
+
+### Build y Distribución
+
+| Tecnología | Propósito |
+|------------|-----------|
+| EAS Build | Compilación en la nube para generar APK/AAB |
+| EAS CLI | ≥ 15.0.0 |
 
 ### Gestión de Paquetes
 
@@ -89,217 +87,294 @@ CashPro utiliza una arquitectura cliente-servidor con las siguientes caracterís
 ```
 cash_pro/
 ├── apps/
-│   ├── api/                    # Backend REST API
-│   │   ├── src/
-│   │   │   ├── database/       # Capa de acceso a datos
-│   │   │   │   ├── db.js       # SQLite (planeado)
-│   │   │   │   └── db-json.js  # Implementación JSON temporal
-│   │   │   ├── routes/         # Endpoints de la API
-│   │   │   │   ├── accounts.js
-│   │   │   │   ├── movements.js
-│   │   │   │   ├── budgets.js
-│   │   │   │   ├── profile.js
-│   │   │   │   ├── savings-goals.js
-│   │   │   │   ├── loans.js
-│   │   │   │   ├── recurring-payments.js
-│   │   │   │   ├── vehicles.js
-│   │   │   │   └── notifications.js
-│   │   │   └── index.js        # Punto de entrada
-│   │   ├── data.json           # Base de datos JSON
-│   │   ├── seed-demo-data.js   # Script de datos de prueba
-│   │   └── package.json
-│   │
-│   └── mobile/                 # Aplicación móvil
+│   └── mobile/                 # Aplicación móvil (standalone)
 │       ├── app/                # Rutas de la aplicación (Expo Router)
-│       │   ├── (tabs)/         # Navegación principal
+│       │   ├── (tabs)/         # Navegación principal con tabs
+│       │   │   ├── index.tsx   # Dashboard
+│       │   │   ├── accounts.tsx # Lista de cuentas
+│       │   │   ├── movements.tsx # Historial de movimientos
+│       │   │   ├── explore.tsx  # Estadísticas y análisis
+│       │   │   ├── more.tsx     # Más opciones
+│       │   │   ├── settings.tsx # Configuración
+│       │   │   └── _layout.tsx  # Layout de tabs
 │       │   ├── accounts/       # Gestión de cuentas
 │       │   ├── budgets/        # Presupuestos
 │       │   ├── loans/          # Préstamos
 │       │   ├── movements/      # Transacciones
 │       │   ├── savings-goals/  # Metas de ahorro
-│       │   ├── settings/       # Configuración
+│       │   ├── settings/       # Pantallas de configuración
 │       │   ├── subscriptions/  # Suscripciones
 │       │   ├── vehicles/       # Vehículos
 │       │   └── _layout.tsx     # Layout raíz
 │       ├── components/         # Componentes reutilizables
-│       ├── config/             # Configuración
-│       │   └── api.ts          # Configuración de API
 │       ├── constants/          # Constantes y temas
 │       ├── contexts/           # Context API
 │       │   └── CurrencyContext.tsx
 │       ├── hooks/              # Custom hooks
+│       ├── services/           # Servicios
+│       │   └── database.ts     # Servicio de base de datos SQLite
 │       ├── utils/              # Utilidades
-│       └── assets/             # Recursos estáticos
+│       ├── assets/             # Recursos estáticos
+│       ├── app.json            # Configuración de Expo
+│       ├── eas.json            # Configuración de EAS Build
+│       └── package.json
 │
 ├── docs/                       # Documentación
+│   ├── DOCUMENTACION_TECNICA.md
+│   └── IMPLEMENTACION_APK.md
 ├── package.json                # Configuración raíz
 └── .npmrc                      # Configuración de npm
 ```
 
 ---
 
-## Backend API
+## Base de Datos Local
 
-### Servidor Express
+### SQLite con expo-sqlite
 
-El servidor se ejecuta en el puerto 3000 (configurable) y proporciona una API RESTful completa.
+CashPro utiliza `expo-sqlite` con la API síncrona (`openDatabaseSync`) para almacenar todos los datos directamente en el dispositivo.
 
-**Archivo:** `apps/api/src/index.js`
+**Archivo de base de datos:** `cashpro.db` (se crea automáticamente en el directorio de datos de la app)
 
-```javascript
-const PORT = process.env.PORT || 3000;
+### Esquema de Tablas (13 tablas)
+
+#### 1. accounts
+```sql
+CREATE TABLE accounts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'cash',
+  balance REAL DEFAULT 0,
+  currency TEXT DEFAULT 'MXN',
+  icon TEXT DEFAULT 'wallet',
+  color TEXT DEFAULT '#4CAF50',
+  clabe TEXT DEFAULT '',
+  bank_name TEXT DEFAULT '',
+  card_last_four TEXT DEFAULT '',
+  generates_interest INTEGER DEFAULT 0,
+  interest_rate REAL DEFAULT 0,
+  credit_limit REAL DEFAULT 0,
+  current_balance REAL DEFAULT 0,
+  cut_off_day INTEGER DEFAULT 1,
+  payment_due_day INTEGER DEFAULT 15,
+  is_primary INTEGER DEFAULT 0,
+  include_in_balance INTEGER DEFAULT 1,
+  created_at TEXT DEFAULT (datetime('now','localtime')),
+  updated_at TEXT DEFAULT (datetime('now','localtime'))
+)
 ```
 
-### Endpoints Principales
-
-#### 1. Cuentas (`/api/accounts`)
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/api/accounts` | Obtener todas las cuentas |
-| GET | `/api/accounts/:id` | Obtener cuenta por ID |
-| POST | `/api/accounts` | Crear nueva cuenta |
-| PUT | `/api/accounts/:id` | Actualizar cuenta |
-| DELETE | `/api/accounts/:id` | Eliminar cuenta |
-| GET | `/api/accounts/stats/total-balance` | Balance total |
-| PUT | `/api/accounts/:id/set-primary` | Establecer cuenta principal |
-
-**Tipos de Cuenta:**
-- `cash`: Efectivo
-- `bank`: Cuenta bancaria
-- `debit`: Tarjeta de débito
-- `credit`: Tarjeta de crédito
-
-**Campos Principales:**
-```javascript
-{
-  name: string,
-  type: 'cash' | 'bank' | 'debit' | 'credit',
-  balance: number,
-  currency: string,
-  icon: string,
-  color: string,
-  clabe: string,
-  bank_name: string,
-  card_last_four: string,
-  generates_interest: boolean,
-  interest_rate: number,
-  credit_limit: number,
-  current_balance: number,
-  cut_off_day: number,
-  payment_due_day: number,
-  is_primary: boolean,
-  include_in_balance: boolean
-}
+#### 2. movements
+```sql
+CREATE TABLE movements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  type TEXT NOT NULL DEFAULT 'expense',
+  amount REAL NOT NULL DEFAULT 0,
+  title TEXT NOT NULL,
+  category_id INTEGER DEFAULT 0,
+  category_name TEXT DEFAULT '',
+  category_icon TEXT DEFAULT '',
+  category_color TEXT DEFAULT '',
+  account_id INTEGER NOT NULL,
+  to_account_id INTEGER,
+  date TEXT DEFAULT (datetime('now','localtime')),
+  notes TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now','localtime'))
+)
 ```
 
-#### 2. Movimientos (`/api/movements`)
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/api/movements` | Obtener todos los movimientos |
-| GET | `/api/movements/:id` | Obtener movimiento por ID |
-| POST | `/api/movements` | Crear nuevo movimiento |
-| PUT | `/api/movements/:id` | Actualizar movimiento |
-| DELETE | `/api/movements/:id` | Eliminar movimiento |
-| GET | `/api/movements/stats/summary` | Estadísticas de movimientos |
-
-**Tipos de Movimiento:**
-- `expense`: Gasto
-- `income`: Ingreso
-- `transfer`: Transferencia entre cuentas
-
-**Campos Principales:**
-```javascript
-{
-  type: 'expense' | 'income' | 'transfer',
-  amount: number,
-  title: string,
-  category_id: number,
-  category_name: string,
-  category_icon: string,
-  category_color: string,
-  account_id: number,
-  to_account_id: number,
-  date: string,
-  notes: string
-}
+#### 3. budgets
+```sql
+CREATE TABLE budgets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  type TEXT DEFAULT 'expense',
+  amount REAL NOT NULL DEFAULT 0,
+  current_amount REAL DEFAULT 0,
+  period TEXT DEFAULT 'monthly',
+  categories TEXT DEFAULT '[]',
+  start_date TEXT,
+  end_date TEXT,
+  created_at TEXT DEFAULT (datetime('now','localtime')),
+  updated_at TEXT DEFAULT (datetime('now','localtime'))
+)
 ```
 
-#### 3. Presupuestos (`/api/budgets`)
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/api/budgets` | Obtener todos los presupuestos |
-| GET | `/api/budgets/:id` | Obtener presupuesto por ID |
-| POST | `/api/budgets` | Crear nuevo presupuesto |
-| PUT | `/api/budgets/:id` | Actualizar presupuesto |
-| DELETE | `/api/budgets/:id` | Eliminar presupuesto |
-| GET | `/api/budgets/stats/summary` | Estadísticas de presupuestos |
-
-#### 4. Perfil de Usuario (`/api/profile`)
-
-Gestión de información del usuario y preferencias.
-
-#### 5. Metas de Ahorro (`/api/savings-goals`)
-
-Gestión de objetivos de ahorro con seguimiento de contribuciones.
-
-#### 6. Préstamos (`/api/loans`)
-
-Gestión de préstamos y pagos asociados.
-
-#### 7. Pagos Recurrentes (`/api/recurring-payments`)
-
-Gestión de suscripciones y pagos periódicos.
-
-#### 8. Vehículos (`/api/vehicles`)
-
-Gestión de vehículos, cargas de combustible y mantenimiento.
-
-#### 9. Notificaciones (`/api/notifications`)
-
-Configuración de notificaciones y alertas.
-
-### Middleware
-
-```javascript
-// CORS - Permite peticiones desde cualquier origen
-app.use(cors());
-
-// JSON Parser - Parsea el body de las peticiones
-app.use(express.json());
-
-// Error Handler - Manejo centralizado de errores
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    success: false, 
-    error: 'Algo salió mal en el servidor' 
-  });
-});
+#### 4. user_profile
+```sql
+CREATE TABLE user_profile (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT DEFAULT 'Usuario',
+  email TEXT DEFAULT '',
+  currency TEXT DEFAULT 'MXN',
+  avatar TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now','localtime')),
+  updated_at TEXT DEFAULT (datetime('now','localtime'))
+)
 ```
 
-### Formato de Respuesta
-
-Todas las respuestas siguen un formato consistente:
-
-**Éxito:**
-```javascript
-{
-  success: true,
-  data: { /* datos */ },
-  message: "Operación exitosa" // opcional
-}
+#### 5. savings_goals
+```sql
+CREATE TABLE savings_goals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  target_amount REAL NOT NULL DEFAULT 0,
+  current_amount REAL DEFAULT 0,
+  deadline TEXT,
+  icon TEXT DEFAULT 'star',
+  color TEXT DEFAULT '#FF9800',
+  account_id INTEGER,
+  notes TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now','localtime')),
+  updated_at TEXT DEFAULT (datetime('now','localtime'))
+)
 ```
 
-**Error:**
-```javascript
-{
-  success: false,
-  error: "Mensaje de error"
-}
+#### 6. goal_contributions
+```sql
+CREATE TABLE goal_contributions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  goal_id INTEGER NOT NULL,
+  amount REAL NOT NULL DEFAULT 0,
+  date TEXT DEFAULT (datetime('now','localtime')),
+  notes TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now','localtime'))
+)
 ```
+
+#### 7. loans
+```sql
+CREATE TABLE loans (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  type TEXT NOT NULL DEFAULT 'given',
+  person_name TEXT NOT NULL,
+  amount REAL NOT NULL DEFAULT 0,
+  remaining_amount REAL NOT NULL DEFAULT 0,
+  interest_rate REAL DEFAULT 0,
+  due_date TEXT,
+  account_id INTEGER,
+  notes TEXT DEFAULT '',
+  status TEXT DEFAULT 'active',
+  created_at TEXT DEFAULT (datetime('now','localtime')),
+  updated_at TEXT DEFAULT (datetime('now','localtime'))
+)
+```
+
+#### 8. loan_payments
+```sql
+CREATE TABLE loan_payments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  loan_id INTEGER NOT NULL,
+  amount REAL NOT NULL DEFAULT 0,
+  date TEXT DEFAULT (datetime('now','localtime')),
+  notes TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now','localtime'))
+)
+```
+
+#### 9. recurring_payments
+```sql
+CREATE TABLE recurring_payments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  amount REAL NOT NULL DEFAULT 0,
+  category_id INTEGER DEFAULT 0,
+  category_name TEXT DEFAULT '',
+  category_icon TEXT DEFAULT '',
+  category_color TEXT DEFAULT '',
+  frequency TEXT DEFAULT 'monthly',
+  next_payment_date TEXT,
+  account_id INTEGER,
+  notes TEXT DEFAULT '',
+  is_active INTEGER DEFAULT 1,
+  last_paid_date TEXT,
+  created_at TEXT DEFAULT (datetime('now','localtime')),
+  updated_at TEXT DEFAULT (datetime('now','localtime'))
+)
+```
+
+#### 10. vehicles
+```sql
+CREATE TABLE vehicles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  brand TEXT DEFAULT '',
+  model TEXT DEFAULT '',
+  year INTEGER DEFAULT 0,
+  plate TEXT DEFAULT '',
+  color TEXT DEFAULT '',
+  type TEXT DEFAULT 'car',
+  fuel_type TEXT DEFAULT 'gasoline',
+  notes TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now','localtime')),
+  updated_at TEXT DEFAULT (datetime('now','localtime'))
+)
+```
+
+#### 11. fuel_loads
+```sql
+CREATE TABLE fuel_loads (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  vehicle_id INTEGER NOT NULL,
+  liters REAL NOT NULL DEFAULT 0,
+  price_per_liter REAL NOT NULL DEFAULT 0,
+  total_cost REAL NOT NULL DEFAULT 0,
+  odometer REAL DEFAULT 0,
+  date TEXT DEFAULT (datetime('now','localtime')),
+  station TEXT DEFAULT '',
+  full_tank INTEGER DEFAULT 1,
+  account_id INTEGER,
+  notes TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now','localtime'))
+)
+```
+
+#### 12. maintenance
+```sql
+CREATE TABLE maintenance (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  vehicle_id INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  cost REAL NOT NULL DEFAULT 0,
+  odometer REAL DEFAULT 0,
+  date TEXT DEFAULT (datetime('now','localtime')),
+  workshop TEXT DEFAULT '',
+  account_id INTEGER,
+  notes TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now','localtime'))
+)
+```
+
+#### 13. notification_settings
+```sql
+CREATE TABLE notification_settings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  budget_alerts INTEGER DEFAULT 1,
+  payment_reminders INTEGER DEFAULT 1,
+  goal_updates INTEGER DEFAULT 1,
+  weekly_summary INTEGER DEFAULT 0,
+  budget_threshold REAL DEFAULT 80,
+  reminder_days_before INTEGER DEFAULT 3,
+  updated_at TEXT DEFAULT (datetime('now','localtime'))
+)
+```
+
+### Inicialización
+
+La base de datos se inicializa automáticamente al arrancar la app:
+
+```typescript
+// apps/mobile/app/_layout.tsx
+import { initDatabase } from '@/services/database';
+initDatabase(); // Crea tablas y seed de datos iniciales
+```
+
+La función `initDatabase()`:
+1. Abre/crea `cashpro.db` con `openDatabaseSync`
+2. Ejecuta `CREATE TABLE IF NOT EXISTS` para las 13 tablas
+3. Crea un perfil de usuario por defecto (id=1) si no existe
+4. Crea configuración de notificaciones por defecto (id=1) si no existe
 
 ---
 
@@ -312,20 +387,43 @@ CashPro utiliza Expo Router con navegación basada en archivos:
 ```
 app/
 ├── (tabs)/              # Navegación principal con tabs
-│   ├── index.tsx        # Inicio/Dashboard
+│   ├── index.tsx        # Dashboard
 │   ├── accounts.tsx     # Lista de cuentas
 │   ├── movements.tsx    # Historial de movimientos
-│   ├── explore.tsx      # Explorar/Análisis
+│   ├── explore.tsx      # Estadísticas y análisis
 │   ├── more.tsx         # Más opciones
+│   ├── settings.tsx     # Configuración
 │   └── _layout.tsx      # Layout de tabs
 ├── accounts/            # Pantallas de cuentas
+│   ├── add-account.tsx  # Crear cuenta
+│   ├── edit-account.tsx # Editar cuenta
+│   └── account-detail.tsx # Detalle de cuenta
 ├── budgets/             # Pantallas de presupuestos
+│   ├── index.tsx        # Lista de presupuestos
+│   ├── add-budget.tsx   # Crear presupuesto
+│   └── edit-budget.tsx  # Editar presupuesto
 ├── loans/               # Pantallas de préstamos
+│   ├── index.tsx        # Lista de préstamos
+│   ├── add-loan.tsx     # Crear préstamo
+│   └── loan-detail.tsx  # Detalle de préstamo
 ├── movements/           # Pantallas de movimientos
-├── savings-goals/       # Pantallas de metas
+│   ├── add-movement.tsx # Registrar movimiento
+│   └── movement-detail.tsx # Detalle de movimiento
+├── savings-goals/       # Pantallas de metas de ahorro
+│   ├── index.tsx        # Lista de metas
+│   ├── add-goal.tsx     # Crear meta
+│   └── goal-detail.tsx  # Detalle de meta
 ├── settings/            # Pantallas de configuración
+│   ├── edit-profile.tsx # Editar perfil
+│   └── notifications.tsx # Configuración de notificaciones
 ├── subscriptions/       # Pantallas de suscripciones
+│   ├── index.tsx        # Lista de suscripciones
+│   ├── add-subscription.tsx # Crear suscripción
+│   └── sub-detail.tsx   # Detalle de suscripción
 ├── vehicles/            # Pantallas de vehículos
+│   ├── index.tsx        # Lista de vehículos
+│   ├── add-vehicle.tsx  # Crear vehículo
+│   └── vehicle-detail.tsx # Detalle de vehículo
 └── _layout.tsx          # Layout raíz
 ```
 
@@ -335,40 +433,14 @@ app/
 
 **CurrencyContext** (`contexts/CurrencyContext.tsx`):
 - Gestiona la moneda seleccionada por el usuario
+- Lee/escribe directamente desde/a la base de datos SQLite
 - Proporciona funciones de formateo de moneda
-- Persiste la preferencia del usuario
 
 ```typescript
 interface CurrencyContextType {
   currency: string;
   setCurrency: (currency: string) => void;
   formatCurrency: (amount: number) => string;
-}
-```
-
-### Configuración de API
-
-**Archivo:** `apps/mobile/config/api.ts`
-
-```typescript
-export const API_CONFIG = {
-  BASE_URL: __DEV__ 
-    ? Platform.OS === 'android' 
-      ? `http://${LOCAL_IP}:3000/api`
-      : 'http://localhost:3000/api'
-    : 'http://localhost:3000/api',
-};
-```
-
-La IP local se configura en `app.json`:
-
-```json
-{
-  "expo": {
-    "extra": {
-      "apiHost": "192.168.1.21"
-    }
-  }
 }
 ```
 
@@ -379,7 +451,6 @@ La IP local se configura en `app.json`:
 - **themed-text.tsx**: Texto con soporte de temas
 - **themed-view.tsx**: Contenedor con soporte de temas
 - **currency-input.tsx**: Input especializado para montos
-- **bottom-nav-bar.tsx**: Barra de navegación inferior
 - **haptic-tab.tsx**: Tab con feedback háptico
 - **parallax-scroll-view.tsx**: Vista con efecto parallax
 
@@ -394,7 +465,7 @@ La IP local se configura en `app.json`:
 
 **Archivo:** `constants/theme.ts`
 
-Define colores, tipografía y estilos consistentes en toda la aplicación.
+Define colores, tipografía y estilos consistentes en toda la aplicación. Soporta modo claro y oscuro automáticamente.
 
 ### Hooks Personalizados
 
@@ -403,71 +474,108 @@ Define colores, tipografía y estilos consistentes en toda la aplicación.
 
 ---
 
-## Base de Datos
+## Servicio de Base de Datos
 
-### Implementación Actual (JSON)
+### Archivo: `apps/mobile/services/database.ts`
 
-**Archivo:** `apps/api/data.json`
+Archivo central (~1500 líneas) que contiene toda la lógica de acceso a datos y negocio. Reemplaza completamente la API REST anterior.
 
-Estructura temporal usando archivo JSON con las siguientes entidades:
+### Formato de Respuesta
 
-```javascript
-{
-  accounts: [],
-  nextAccountId: 1,
-  movements: [],
-  nextMovementId: 1,
-  categories: [],
-  nextCategoryId: 1,
-  budgets: [],
-  nextBudgetId: 1,
-  user_profile: [],
-  nextProfileId: 1,
-  savings_goals: [],
-  nextSavingsGoalId: 1,
-  goal_contributions: [],
-  nextGoalContributionId: 1,
-  loans: [],
-  nextLoanId: 1,
-  loan_payments: [],
-  nextLoanPaymentId: 1,
-  recurring_payments: [],
-  nextRecurringPaymentId: 1,
-  vehicles: [],
-  nextVehicleId: 1,
-  fuel_loads: [],
-  nextFuelLoadId: 1,
-  maintenance: [],
-  nextMaintenanceId: 1,
-  notification_settings: []
-}
+Todas las funciones devuelven un formato consistente:
+
+```typescript
+// Éxito
+{ success: true, data: { /* datos */ }, message?: "Operación exitosa" }
+
+// Error
+{ success: false, error: "Mensaje de error" }
 ```
 
-### Implementación Planeada (SQLite)
+### Funciones Principales
 
-**Archivo:** `apps/api/src/database/db.js`
+#### Inicialización
+- `initDatabase()` — Crea tablas y datos iniciales
 
-Se planea migrar a SQLite usando `better-sqlite3` para:
-- Mejor rendimiento
-- Consultas más complejas
-- Integridad referencial
-- Transacciones ACID
+#### Cuentas
+- `getAccounts()` — Obtener todas las cuentas
+- `getAccountById(id)` — Obtener cuenta por ID
+- `createAccount(data)` — Crear nueva cuenta
+- `updateAccount(id, data)` — Actualizar cuenta
+- `deleteAccount(id)` — Eliminar cuenta (cascada: elimina movimientos asociados)
+- `getTotalBalance()` — Balance total (incluye lógica de crédito)
+- `setAccountAsPrimary(id)` — Establecer cuenta principal
 
-### Capa de Abstracción
+#### Movimientos
+- `getMovements()` — Obtener todos los movimientos
+- `getMovementById(id)` — Obtener movimiento por ID
+- `createMovement(data)` — Crear movimiento (actualiza balances y presupuestos)
+- `updateMovement(id, data)` — Actualizar movimiento
+- `deleteMovement(id)` — Eliminar movimiento (revierte balance)
+- `getMovementsSummary()` — Estadísticas de ingresos/gastos del mes
 
-**Archivo:** `apps/api/src/database/db-json.js`
+#### Presupuestos
+- `getBudgets()` — Obtener todos los presupuestos
+- `getBudgetById(id)` — Obtener presupuesto por ID
+- `createBudget(data)` — Crear presupuesto
+- `updateBudget(id, data)` — Actualizar presupuesto
+- `deleteBudget(id)` — Eliminar presupuesto
+- `getBudgetStats()` — Estadísticas de presupuestos
 
-Proporciona una interfaz similar a SQLite para facilitar la migración:
+#### Perfil
+- `getProfile()` — Obtener perfil de usuario
+- `updateProfile(data)` — Actualizar perfil
 
-```javascript
-const db = {
-  prepare: (sql) => ({
-    all: () => { /* ... */ },
-    get: (id) => { /* ... */ },
-    run: (...params) => { /* ... */ }
-  })
-};
-```
+#### Metas de Ahorro
+- `getSavingsGoals()` — Obtener todas las metas
+- `getSavingsGoalById(id)` — Obtener meta por ID
+- `createSavingsGoal(data)` — Crear meta
+- `updateSavingsGoal(id, data)` — Actualizar meta
+- `deleteSavingsGoal(id)` — Eliminar meta (cascada: contribuciones)
+- `addContribution(goalId, data)` — Agregar contribución (crea movimiento)
+- `getSavingsGoalStats()` — Estadísticas de metas
+
+#### Préstamos
+- `getLoans()` — Obtener todos los préstamos
+- `getLoanById(id)` — Obtener préstamo por ID
+- `createLoan(data)` — Crear préstamo
+- `updateLoan(id, data)` — Actualizar préstamo
+- `deleteLoan(id)` — Eliminar préstamo (cascada: pagos)
+- `addLoanPayment(loanId, data)` — Registrar pago (crea movimiento de ingreso)
+- `getLoanStats()` — Estadísticas de préstamos
+
+#### Pagos Recurrentes
+- `getRecurringPayments()` — Obtener todas las suscripciones
+- `getRecurringPaymentById(id)` — Obtener suscripción por ID
+- `createRecurringPayment(data)` — Crear suscripción
+- `updateRecurringPayment(id, data)` — Actualizar suscripción
+- `deleteRecurringPayment(id)` — Eliminar suscripción
+- `registerRecurringPayment(id)` — Registrar pago (crea movimiento)
+- `getRecurringPaymentStats()` — Estadísticas
+
+#### Vehículos
+- `getVehicles()` — Obtener todos los vehículos
+- `getVehicleById(id)` — Obtener vehículo por ID
+- `createVehicle(data)` — Crear vehículo
+- `updateVehicle(id, data)` — Actualizar vehículo
+- `deleteVehicle(id)` — Eliminar vehículo (cascada: cargas, mantenimiento)
+- `getFuelLoads(vehicleId)` — Obtener cargas de combustible
+- `addFuelLoad(vehicleId, data)` — Agregar carga (crea movimiento de gasto)
+- `getMaintenanceRecords(vehicleId)` — Obtener registros de mantenimiento
+- `addMaintenance(vehicleId, data)` — Agregar mantenimiento (crea movimiento de gasto)
+- `getVehicleStats(vehicleId)` — Estadísticas del vehículo
+
+#### Notificaciones
+- `getNotificationSettings()` — Obtener configuración
+- `updateNotificationSettings(data)` — Actualizar configuración
+- `getPendingNotifications()` — Obtener alertas pendientes
+
+#### Exportación/Importación
+- `exportAllDataAsJSON()` — Exportar todas las tablas como JSON
+- `importDataFromJSON(jsonString)` — Importar datos desde JSON (reemplaza todo)
+- `exportMovementsAsCSV()` — Exportar movimientos como CSV
+- `getDatabasePath()` — Obtener ruta del archivo .db
+- `resetAllData()` — Eliminar todos los datos (DROP + recrear tablas)
 
 ---
 
@@ -475,23 +583,20 @@ const db = {
 
 ### Requisitos Previos
 
-- Node.js (v16 o superior)
+- Node.js (v18 o superior)
 - pnpm 10.30.0
 - Expo CLI
-- Dispositivo móvil o emulador
+- EAS CLI (≥ 15.0.0)
+- Cuenta en Expo (expo.dev)
 
 ### Instalación
 
 ```bash
+# Clonar repositorio
+git clone <repo-url>
+cd cash_pro
+
 # Instalar dependencias
-pnpm install
-
-# Instalar dependencias del API
-cd apps/api
-pnpm install
-
-# Instalar dependencias del móvil
-cd apps/mobile
 pnpm install
 ```
 
@@ -500,30 +605,17 @@ pnpm install
 #### Raíz del Proyecto
 
 ```bash
-# Iniciar API y móvil simultáneamente
+# Iniciar app en modo desarrollo
 pnpm dev
 
-# Iniciar solo API
-pnpm dev:api
+# Generar APK (preview)
+pnpm build:apk
 
-# Iniciar solo móvil con túnel
-pnpm dev:mobile
+# Generar AAB para Play Store
+pnpm build:production
 ```
 
-#### API
-
-```bash
-# Desarrollo con hot reload
-pnpm dev
-
-# Producción
-pnpm start
-
-# Poblar datos de demostración
-pnpm seed
-```
-
-#### Móvil
+#### Aplicación Móvil (`apps/mobile/`)
 
 ```bash
 # Iniciar Expo
@@ -538,40 +630,74 @@ pnpm ios
 # Web
 pnpm web
 
+# Generar APK
+pnpm build:apk
+
+# Generar AAB para producción
+pnpm build:production
+
 # Linting
 pnpm lint
 ```
 
-### Configuración de Red
-
-Para que la aplicación móvil se conecte al API:
-
-1. Obtener la IP local de tu máquina
-2. Actualizar `apps/mobile/app.json`:
+### Configuración de Expo (`app.json`)
 
 ```json
 {
   "expo": {
-    "extra": {
-      "apiHost": "TU_IP_LOCAL"
+    "name": "CashPro",
+    "slug": "cashpro",
+    "version": "1.1.0",
+    "android": {
+      "package": "com.cashpro.app",
+      "adaptiveIcon": { ... },
+      "edgeToEdgeEnabled": true
+    },
+    "ios": {
+      "bundleIdentifier": "com.cashpro.app",
+      "supportsTablet": true
+    },
+    "plugins": ["expo-router", "expo-splash-screen", "expo-sqlite"],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
     }
   }
 }
 ```
 
-3. Asegurarse de que el dispositivo móvil esté en la misma red
+### Configuración EAS Build (`eas.json`)
 
-### Variables de Entorno
-
-#### API
-
-```bash
-PORT=3000  # Puerto del servidor (opcional)
+```json
+{
+  "cli": {
+    "version": ">= 15.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      }
+    }
+  }
+}
 ```
-
-#### Móvil
-
-Configurado en `app.json` bajo `expo.extra`
 
 ---
 
@@ -605,33 +731,33 @@ Configurado en `app.json` bajo `expo.extra`
 
 - Definir objetivos financieros
 - Seguimiento de progreso
-- Contribuciones manuales
+- Contribuciones manuales (crean movimiento asociado)
 - Fechas objetivo
 - Visualización de avance
 
 ### 5. Gestión de Préstamos
 
 - Registro de préstamos otorgados/recibidos
-- Seguimiento de pagos
+- Seguimiento de pagos (crean movimiento de ingreso)
 - Cálculo de intereses
 - Historial de amortización
 
-### 6. Pagos Recurrentes
+### 6. Pagos Recurrentes / Suscripciones
 
 - Suscripciones y servicios
-- Recordatorios automáticos
+- Registro de pagos (crean movimiento de gasto)
 - Seguimiento de gastos recurrentes
 - Categorización
 
 ### 7. Control de Vehículos
 
 - Registro de vehículos
-- Cargas de combustible
-- Historial de mantenimiento
-- Cálculo de consumo
+- Cargas de combustible (crean movimiento de gasto)
+- Historial de mantenimiento (crean movimiento de gasto)
+- Cálculo de consumo (km/l)
 - Gastos asociados
 
-### 8. Análisis y Reportes
+### 8. Análisis y Reportes (Explore)
 
 - Balance total
 - Estadísticas de ingresos/gastos
@@ -641,10 +767,18 @@ Configurado en `app.json` bajo `expo.extra`
 
 ### 9. Configuración
 
-- Perfil de usuario
-- Preferencias de moneda
+- Perfil de usuario (nombre, email, avatar)
+- Preferencias de moneda (MXN, USD, EUR, etc.)
 - Notificaciones
-- Temas (claro/oscuro)
+- Temas (claro/oscuro automático)
+
+### 10. Gestión de Datos
+
+- **Exportar JSON:** Respaldo completo de todas las tablas
+- **Exportar CSV:** Movimientos en formato CSV
+- **Exportar Base de Datos:** Archivo SQLite (.db) directo
+- **Importar Datos:** Desde JSON o SQLite (.db)
+- **Eliminar Todos los Datos:** Reset completo con recreación de tablas
 
 ---
 
@@ -656,7 +790,7 @@ Configurado en `app.json` bajo `expo.extra`
 
 - **Gasto:** `balance = balance - amount`
 - **Ingreso:** `balance = balance + amount`
-- **Transferencia:** 
+- **Transferencia:**
   - Origen: `balance = balance - amount`
   - Destino: `balance = balance + amount`
 
@@ -679,98 +813,89 @@ Cuando se registra un gasto:
 
 ### Balance Total
 
-```javascript
+```
 total_balance = SUM(balance de cuentas no-crédito) - SUM(current_balance de cuentas crédito)
 ```
 
 Solo se incluyen cuentas con `include_in_balance = 1`
 
----
+### Efectos Secundarios de Operaciones
 
-## Seguridad y Mejores Prácticas
-
-### API
-
-- Validación de datos de entrada
-- Manejo centralizado de errores
-- Logs de operaciones
-- Respuestas consistentes
-
-### Móvil
-
-- Validación en cliente
-- Manejo de errores de red
-- Feedback visual al usuario
-- Optimización de peticiones
-
-### Pendientes de Implementación
-
-- Autenticación de usuarios
-- Encriptación de datos sensibles
-- Rate limiting en API
-- Validación de tokens
-- HTTPS en producción
-
----
-
-## Roadmap y Mejoras Futuras
-
-### Corto Plazo
-
-- [ ] Migración a SQLite
-- [ ] Autenticación de usuarios
-- [ ] Sincronización en la nube
-- [ ] Exportación de datos (CSV, PDF)
-- [ ] Gráficos y visualizaciones
-
-### Mediano Plazo
-
-- [ ] Múltiples usuarios
-- [ ] Compartir cuentas
-- [ ] Recordatorios inteligentes
-- [ ] Categorías personalizadas
-- [ ] Importación de transacciones bancarias
-
-### Largo Plazo
-
-- [ ] Machine Learning para predicciones
-- [ ] Asesoría financiera automatizada
-- [ ] Integración con bancos
-- [ ] Versión web completa
-- [ ] API pública
+| Operación | Efecto Secundario |
+|-----------|-------------------|
+| Crear movimiento gasto | Resta balance + actualiza presupuestos |
+| Crear movimiento ingreso | Suma balance |
+| Crear movimiento transferencia | Resta origen + suma destino |
+| Eliminar movimiento | Revierte el cambio de balance |
+| Agregar contribución a meta | Crea movimiento de gasto + actualiza meta |
+| Registrar pago de préstamo | Crea movimiento de ingreso + actualiza remaining_amount |
+| Registrar pago recurrente | Crea movimiento de gasto + actualiza next_payment_date |
+| Agregar carga combustible | Crea movimiento de gasto |
+| Agregar mantenimiento | Crea movimiento de gasto |
+| Eliminar cuenta | Elimina movimientos asociados en cascada |
+| Eliminar meta de ahorro | Elimina contribuciones en cascada |
+| Eliminar préstamo | Elimina pagos en cascada |
+| Eliminar vehículo | Elimina cargas y mantenimiento en cascada |
 
 ---
 
 ## Solución de Problemas
 
-### La app móvil no se conecta al API
+### La base de datos no se inicializa
 
-1. Verificar que el API esté corriendo (`pnpm dev:api`)
-2. Confirmar que la IP en `app.json` sea correcta
-3. Asegurar que ambos dispositivos estén en la misma red
-4. Verificar firewall y permisos de red
+1. Verificar que `expo-sqlite` esté en `app.json` plugins
+2. Asegurar que `initDatabase()` se llama en `_layout.tsx`
+3. Verificar logs de la consola para errores de SQL
 
-### Error de compilación en better-sqlite3
+### Error al exportar/importar
 
-El proyecto usa `db-json.js` temporalmente. Para usar SQLite:
+1. Verificar permisos de almacenamiento en el dispositivo
+2. Para importar JSON, asegurar que el formato coincide con el export
+3. Para importar .db, asegurar que es un archivo SQLite válido
 
-```bash
-cd apps/api
-pnpm rebuild better-sqlite3
-```
+### Error al generar APK
 
-### Datos de prueba
-
-```bash
-cd apps/api
-pnpm seed
-```
+1. Verificar que `eas.json` existe y es válido
+2. Asegurar que `android.package` está configurado en `app.json`
+3. Verificar cuenta y login de EAS: `eas login`
+4. Ver guía detallada en `docs/IMPLEMENTACION_APK.md`
 
 ### Resetear base de datos
 
-```bash
-POST http://localhost:3000/api/reset
-```
+Desde la app: Configuración → Eliminar Todos los Datos
+
+---
+
+## Roadmap y Mejoras Futuras
+
+### Completado
+
+- [x] Migración a SQLite local (standalone)
+- [x] Exportación multi-formato (JSON, CSV, SQLite)
+- [x] Importación de datos (JSON, SQLite)
+- [x] Configuración EAS Build para APK
+- [x] App funcional 100% offline
+
+### Corto Plazo
+
+- [ ] Gráficos y visualizaciones mejoradas
+- [ ] Categorías personalizadas
+- [ ] Búsqueda avanzada de movimientos
+- [ ] Notificaciones push locales
+
+### Mediano Plazo
+
+- [ ] Sincronización en la nube (opcional)
+- [ ] Recordatorios inteligentes
+- [ ] Importación de transacciones bancarias (CSV)
+- [ ] Widgets de Android
+
+### Largo Plazo
+
+- [ ] Machine Learning para predicciones de gastos
+- [ ] Asesoría financiera automatizada
+- [ ] Versión iOS en App Store
+- [ ] Versión web completa
 
 ---
 
@@ -804,11 +929,5 @@ ISC
 
 ---
 
-## Contacto y Soporte
-
-Para reportar bugs o solicitar funcionalidades, crear un issue en el repositorio del proyecto.
-
----
-
-**Última actualización:** Febrero 2026  
-**Versión del documento:** 1.0.0
+**Última actualización:** Febrero 2026
+**Versión del documento:** 2.0.0

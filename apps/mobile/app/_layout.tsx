@@ -5,6 +5,10 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { CurrencyProvider } from '@/contexts/CurrencyContext';
+import { initDatabase } from '@/services/database';
+
+// Initialize database synchronously before app renders
+initDatabase();
 
 export const unstable_settings = {
   anchor: '(tabs)',

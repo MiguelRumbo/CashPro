@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
 type Loan = {
@@ -38,9 +38,8 @@ export default function LoansScreen() {
 
   const fetchLoans = async () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/loans`);
-      const result = await response.json();
-      
+      const result = database.getLoans();
+
       if (result.success) {
         setLoans(result.data);
       }
@@ -73,11 +72,8 @@ export default function LoansScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const response = await fetch(`${API_CONFIG.BASE_URL}/loans/${id}`, {
-                method: 'DELETE',
-              });
-              const result = await response.json();
-              
+              const result = database.deleteLoan(id);
+
               if (result.success) {
                 fetchLoans();
               } else {

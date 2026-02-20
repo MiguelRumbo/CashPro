@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
 type Vehicle = {
@@ -91,9 +91,8 @@ export default function VehicleDetailScreen() {
   const fetchData = async () => {
     try {
       // Cargar vehículo
-      const vehicleRes = await fetch(`${API_CONFIG.BASE_URL}/vehicles/${id}`);
-      const vehicleData = await vehicleRes.json();
-      
+      const vehicleData = database.getVehicleById(id as string);
+
       if (vehicleData.success) {
         setVehicle(vehicleData.data);
       } else {
@@ -102,35 +101,31 @@ export default function VehicleDetailScreen() {
       }
 
       // Cargar cargas de gasolina
-      const fuelRes = await fetch(`${API_CONFIG.BASE_URL}/vehicles/${id}/fuel-loads`);
-      const fuelData = await fuelRes.json();
+      const fuelData = database.getVehicleFuelLoads(id as string);
       if (fuelData.success) {
         setFuelLoads(fuelData.data);
       }
 
       // Cargar mantenimientos
-      const maintRes = await fetch(`${API_CONFIG.BASE_URL}/vehicles/${id}/maintenance`);
-      const maintData = await maintRes.json();
+      const maintData = database.getVehicleMaintenance(id as string);
       if (maintData.success) {
         setMaintenance(maintData.data);
       }
 
       // Cargar estadísticas
-      const statsRes = await fetch(`${API_CONFIG.BASE_URL}/vehicles/${id}/stats`);
-      const statsData = await statsRes.json();
+      const statsData = database.getVehicleStats(id as string);
       if (statsData.success) {
         setStats(statsData.data);
       }
 
       // Cargar cuentas
-      const accountsRes = await fetch(`${API_CONFIG.BASE_URL}/accounts`);
-      const accountsData = await accountsRes.json();
+      const accountsData = database.getAccounts();
       if (accountsData.success) {
         setAccounts(accountsData.data);
-        const primary = accountsData.data.find((a: Account) => (a as any).is_primary === 1);
-        if (primary) {
-          setFuelAccount(primary.id);
-          setMaintAccount(primary.id);
+        const primaryAcct = accountsData.data.find((a: Account) => (a as any).is_primary === 1);
+        if (primaryAcct) {
+          setFuelAccount(primaryAcct.id);
+          setMaintAccount(primaryAcct.id);
         } else if (accountsData.data.length > 0) {
           setFuelAccount(accountsData.data[0].id);
           setMaintAccount(accountsData.data[0].id);
@@ -157,22 +152,17 @@ export default function VehicleDetailScreen() {
     const totalCost = parseFloat(fuelLiters) * parseFloat(fuelPrice);
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/vehicles/${id}/fuel-loads`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          liters: parseFloat(fuelLiters),
-          price_per_liter: parseFloat(fuelPrice),
-          total_cost: totalCost,
-          odometer: parseFloat(fuelOdometer),
-          station_name: fuelStation || null,
-          is_full_tank: true,
-          account_id: fuelAccount,
-          notes: fuelNotes || null,
-        }),
+      const result = database.createFuelLoad(id as string, {
+        liters: parseFloat(fuelLiters),
+        price_per_liter: parseFloat(fuelPrice),
+        total_cost: totalCost,
+        odometer: parseFloat(fuelOdometer),
+        station_name: fuelStation || null,
+        is_full_tank: true,
+        account_id: fuelAccount,
+        notes: fuelNotes || null,
       });
 
-      const result = await response.json();
       if (result.success) {
         setShowFuelModal(false);
         setFuelLiters('');
@@ -196,21 +186,16 @@ export default function VehicleDetailScreen() {
     }
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/vehicles/${id}/maintenance`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: maintType,
-          description: maintDescription,
-          cost: parseFloat(maintCost),
-          odometer: parseFloat(maintOdometer),
-          workshop_name: maintWorkshop || null,
-          account_id: maintAccount,
-          notes: maintNotes || null,
-        }),
+      const result = database.createMaintenance(id as string, {
+        type: maintType,
+        description: maintDescription,
+        cost: parseFloat(maintCost),
+        odometer: parseFloat(maintOdometer),
+        workshop_name: maintWorkshop || null,
+        account_id: maintAccount,
+        notes: maintNotes || null,
       });
 
-      const result = await response.json();
       if (result.success) {
         setShowMaintenanceModal(false);
         setMaintDescription('');

@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { ScrollView, View, StyleSheet, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { formatCurrency } from '@/utils/format';
 
 interface Account {
@@ -33,25 +33,23 @@ export default function AccountsScreen() {
   const textSub = '#64876f';
   const primary = '#20df60';
 
-  const fetchAccounts = async () => {
+  const fetchAccounts = () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/accounts`);
-      const result = await response.json();
-      
+      const result = database.getAccounts();
+
       if (result.success) {
         setAccounts(result.data);
       }
     } catch (error) {
       console.error('Error al cargar cuentas:', error);
-      Alert.alert('Error', 'No se pudieron cargar las cuentas. Verifica que el servidor esté corriendo.');
+      Alert.alert('Error', 'No se pudieron cargar las cuentas.');
     }
   };
 
-  const fetchTotalBalance = async () => {
+  const fetchTotalBalance = () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/accounts/stats/total-balance`);
-      const result = await response.json();
-      
+      const result = database.getAccountsStats();
+
       if (result.success) {
         setTotalBalance(result.data.total_balance);
       }
@@ -60,9 +58,10 @@ export default function AccountsScreen() {
     }
   };
 
-  const onRefresh = async () => {
+  const onRefresh = () => {
     setRefreshing(true);
-    await Promise.all([fetchAccounts(), fetchTotalBalance()]);
+    fetchAccounts();
+    fetchTotalBalance();
     setRefreshing(false);
   };
 
@@ -96,18 +95,15 @@ export default function AccountsScreen() {
         {
           text: 'Eliminar',
           style: 'destructive',
-          onPress: async () => {
+          onPress: () => {
             try {
-              const response = await fetch(`${API_CONFIG.BASE_URL}/accounts/${id}`, {
-                method: 'DELETE',
-              });
-              const result = await response.json();
-              
+              const result = database.deleteAccount(id);
+
               if (result.success) {
                 fetchAccounts();
                 fetchTotalBalance();
               } else {
-                Alert.alert('Error', result.error);
+                Alert.alert('Error', result.error || 'No se pudo eliminar la cuenta');
               }
             } catch (error) {
               Alert.alert('Error', 'No se pudo eliminar la cuenta');

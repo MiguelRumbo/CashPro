@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 
 const FUEL_TYPES = [
   { value: 'gasoline', label: 'Gasolina', icon: 'drop.fill', color: '#ef4444' },
@@ -75,13 +75,7 @@ export default function AddVehicleScreen() {
         body.tank_capacity = parseFloat(tankCapacity);
       }
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}/vehicles`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      const result = await response.json();
+      const result = database.createVehicle(body);
 
       if (result.success) {
         router.back();

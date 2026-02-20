@@ -6,7 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 
 type BudgetPeriod = 'daily' | 'weekly' | 'monthly';
 
@@ -54,25 +54,17 @@ export default function AddBudgetScreen() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/budgets`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: name.trim(),
-          type: 'expense',
-          amount: parseFloat(amount),
-          period,
-          start_date: startDate.toISOString().split('T')[0],
-          end_date: endDate ? endDate.toISOString().split('T')[0] : null,
-          icon: selectedIcon.icon,
-          color: selectedIcon.color,
-          category_ids: null,
-        }),
+      const result = database.createBudget({
+        name: name.trim(),
+        type: 'expense',
+        amount: parseFloat(amount),
+        period,
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate ? endDate.toISOString().split('T')[0] : null,
+        icon: selectedIcon.icon,
+        color: selectedIcon.color,
+        category_ids: null,
       });
-
-      const result = await response.json();
 
       if (result.success) {
         Alert.alert('Éxito', 'Presupuesto creado correctamente', [

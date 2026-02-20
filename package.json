@@ -5,9 +5,10 @@
   "main": "index.js",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n API,MOBILE -c auto \"pnpm --filter api dev\" \"pnpm --filter mobile start\"",
-    "dev:api": "pnpm --filter api dev",
-    "dev:mobile": "pnpm --filter mobile start -- --tunnel"
+    "dev": "pnpm --filter mobile start",
+    "dev:mobile": "pnpm --filter mobile start",
+    "build:apk": "pnpm --filter mobile build:apk",
+    "build:production": "pnpm --filter mobile build:production"
   },
   "keywords": [],
   "author": "",

@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 
 type NotificationSettings = {
   id: number;
@@ -33,11 +33,10 @@ export default function NotificationsScreen() {
   const borderColor = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'border');
   const primary = '#20df60';
 
-  const fetchSettings = async () => {
+  const fetchSettings = () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/notifications/settings`);
-      const result = await response.json();
-      
+      const result = database.getNotificationSettings();
+
       if (result.success) {
         setSettings(result.data);
       }
@@ -55,27 +54,22 @@ export default function NotificationsScreen() {
     }, [])
   );
 
-  const updateSetting = async (field: keyof NotificationSettings, value: any) => {
+  const updateSetting = (field: keyof NotificationSettings, value: any) => {
     if (!settings) return;
 
     const updatedSettings = { ...settings, [field]: value ? 1 : 0 };
     setSettings(updatedSettings);
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/notifications/settings`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedSettings),
-      });
+      const result = database.updateNotificationSettings(updatedSettings);
 
-      const result = await response.json();
       if (!result.success) {
         Alert.alert('Error', 'No se pudo actualizar la configuración');
         fetchSettings(); // Recargar configuración original
       }
     } catch (error) {
       console.error('Error al actualizar configuración:', error);
-      Alert.alert('Error', 'No se pudo conectar con el servidor');
+      Alert.alert('Error', 'No se pudo actualizar la configuración');
       fetchSettings();
     }
   };

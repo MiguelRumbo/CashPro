@@ -6,7 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
 type Loan = {
@@ -69,15 +69,9 @@ export default function LoanDetailScreen() {
 
   const fetchLoanData = async () => {
     try {
-      const [loanRes, paymentsRes, accountsRes] = await Promise.all([
-        fetch(`${API_CONFIG.BASE_URL}/loans/${id}`),
-        fetch(`${API_CONFIG.BASE_URL}/loans/${id}/payments`),
-        fetch(`${API_CONFIG.BASE_URL}/accounts`),
-      ]);
-
-      const loanResult = await loanRes.json();
-      const paymentsResult = await paymentsRes.json();
-      const accountsResult = await accountsRes.json();
+      const loanResult = database.getLoanById(id as string);
+      const paymentsResult = database.getLoanPayments(id as string);
+      const accountsResult = database.getAccounts();
 
       if (loanResult.success) {
         setLoan(loanResult.data);
@@ -134,20 +128,12 @@ export default function LoanDetailScreen() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/loans/${id}/payment`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: parseFloat(paymentAmount),
-          date: paymentDate.toISOString(),
-          notes: paymentNotes.trim() || null,
-          account_id: selectedAccount.id,
-        }),
+      const result = database.addLoanPayment(id as string, {
+        amount: parseFloat(paymentAmount),
+        date: paymentDate.toISOString(),
+        notes: paymentNotes.trim() || null,
+        account_id: selectedAccount.id,
       });
-
-      const result = await response.json();
 
       if (result.success) {
         setShowPaymentModal(false);
@@ -185,18 +171,10 @@ export default function LoanDetailScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const response = await fetch(`${API_CONFIG.BASE_URL}/loans/${id}`, {
-                method: 'PUT',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  status: 'forgiven',
-                  remaining_amount: 0,
-                }),
+              const result = database.updateLoan(id as string, {
+                status: 'forgiven',
+                remaining_amount: 0,
               });
-
-              const result = await response.json();
 
               if (result.success) {
                 await fetchLoanData();

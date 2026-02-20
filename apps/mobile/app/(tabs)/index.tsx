@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
 type RecentMovement = {
@@ -118,12 +118,11 @@ export default function DashboardScreen() {
   const fetchData = async () => {
     try {
       // Obtener perfil
-      const profileResponse = await fetch(`${API_CONFIG.BASE_URL}/profile`);
-      const profileResult = await profileResponse.json();
+      const profileResult = database.getProfile();
       if (profileResult.success && profileResult.data) {
         const name = profileResult.data.name || 'Usuario';
         setProfileName(name);
-        
+
         // Generar iniciales
         const parts = name.trim().split(' ');
         if (parts.length >= 2) {
@@ -132,21 +131,19 @@ export default function DashboardScreen() {
           setProfileInitials(name.substring(0, 2).toUpperCase());
         }
       }
-      
+
       // Obtener balance total
-      const balanceResponse = await fetch(`${API_CONFIG.BASE_URL}/accounts/stats/total-balance`);
-      const balanceResult = await balanceResponse.json();
+      const balanceResult = database.getAccountsStats();
       if (balanceResult.success) {
         setTotalBalance(balanceResult.data.total_balance);
       }
 
       // Obtener movimientos
-      const movementsResponse = await fetch(`${API_CONFIG.BASE_URL}/movements`);
-      const movementsResult = await movementsResponse.json();
-      
+      const movementsResult = database.getMovements();
+
       if (movementsResult.success) {
         const allMovements = movementsResult.data;
-        
+
         // Filtrar movimientos del mes actual
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -154,17 +151,17 @@ export default function DashboardScreen() {
           const movementDate = new Date(m.date);
           return movementDate >= monthStart && movementDate <= now;
         });
-        
+
         // Calcular estadísticas solo del mes actual
         const expenses = currentMonthMovements.filter((m: any) => m.type === 'expense');
         const incomes = currentMonthMovements.filter((m: any) => m.type === 'income');
-        
+
         const totalExpense = expenses.reduce((sum: number, m: any) => sum + m.amount, 0);
         const totalIncome = incomes.reduce((sum: number, m: any) => sum + m.amount, 0);
-        
+
         setTotalIncome(totalIncome);
         setTotalExpense(totalExpense);
-        
+
         // Calcular cambio porcentual comparando con mes anterior
         const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
@@ -172,10 +169,10 @@ export default function DashboardScreen() {
           const movementDate = new Date(m.date);
           return movementDate >= lastMonthStart && movementDate <= lastMonthEnd;
         });
-        
+
         const lastMonthExpenses = lastMonthMovements.filter((m: any) => m.type === 'expense');
         const lastMonthTotal = lastMonthExpenses.reduce((sum: number, m: any) => sum + m.amount, 0);
-        
+
         let change = 0;
         if (lastMonthTotal > 0) {
           change = ((totalExpense - lastMonthTotal) / lastMonthTotal) * 100;
@@ -183,7 +180,7 @@ export default function DashboardScreen() {
           change = 100;
         }
         setExpenseChange(change);
-        
+
         // Calcular categorías solo del mes actual
         calculateCategoryStats(expenses);
 
@@ -192,49 +189,42 @@ export default function DashboardScreen() {
       }
 
       // Obtener cuentas
-      const accountsResponse = await fetch(`${API_CONFIG.BASE_URL}/accounts`);
-      const accountsResult = await accountsResponse.json();
+      const accountsResult = database.getAccounts();
       if (accountsResult.success) {
         // Las cuentas ya vienen ordenadas por is_primary DESC desde la API
         setAccounts(accountsResult.data.slice(0, 3)); // Solo las primeras 3
       }
 
       // Obtener resumen de objetivos de ahorro
-      const goalsStatsResponse = await fetch(`${API_CONFIG.BASE_URL}/savings-goals/stats/summary`);
-      const goalsStatsResult = await goalsStatsResponse.json();
+      const goalsStatsResult = database.getSavingsGoalsStats();
       if (goalsStatsResult.success) {
         setSavingsGoalsSummary(goalsStatsResult.data);
       }
 
       // Obtener resumen de préstamos
-      const loansStatsResponse = await fetch(`${API_CONFIG.BASE_URL}/loans/stats/summary`);
-      const loansStatsResult = await loansStatsResponse.json();
+      const loansStatsResult = database.getLoansStats();
       if (loansStatsResult.success) {
         setLoansSummary(loansStatsResult.data);
       }
 
       // Obtener presupuestos
-      const budgetsResponse = await fetch(`${API_CONFIG.BASE_URL}/budgets`);
-      const budgetsResult = await budgetsResponse.json();
+      const budgetsResult = database.getBudgets();
       if (budgetsResult.success) {
         setBudgets(budgetsResult.data);
       }
 
       // Obtener resumen de suscripciones
-      const subsResponse = await fetch(`${API_CONFIG.BASE_URL}/recurring-payments/stats/summary`);
-      const subsResult = await subsResponse.json();
+      const subsResult = database.getRecurringPaymentsStats();
       if (subsResult.success) {
         setSubscriptionsSummary(subsResult.data);
       }
 
       // Obtener resumen de vehículos
-      const vehiclesResponse = await fetch(`${API_CONFIG.BASE_URL}/vehicles`);
-      const vehiclesResult = await vehiclesResponse.json();
+      const vehiclesResult = database.getVehicles();
       if (vehiclesResult.success && vehiclesResult.data.length > 0) {
         // Obtener estadísticas del primer vehículo
         const firstVehicle = vehiclesResult.data[0];
-        const statsResponse = await fetch(`${API_CONFIG.BASE_URL}/vehicles/${firstVehicle.id}/stats`);
-        const statsResult = await statsResponse.json();
+        const statsResult = database.getVehicleStats(firstVehicle.id);
         if (statsResult.success) {
           setVehiclesSummary({
             vehicle: firstVehicle,

@@ -6,8 +6,11 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
 
 type SettingsRowProps = {
   icon: React.ComponentProps<typeof IconSymbol>['name'];
@@ -109,11 +112,9 @@ export default function SettingsScreen() {
     }, [])
   );
 
-  const fetchProfile = async () => {
+  const fetchProfile = () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/profile`);
-      const result = await response.json();
-      
+      const result = database.getProfile();
       if (result.success && result.data) {
         setProfileName(result.data.name || 'Usuario');
         setProfileEmail(result.data.email || '');
@@ -123,9 +124,9 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleCurrencyChange = async (currencyCode: string) => {
+  const handleCurrencyChange = (currencyCode: string) => {
     setShowCurrencyModal(false);
-    await setGlobalCurrency(currencyCode as 'MXN' | 'USD' | 'EUR');
+    setGlobalCurrency(currencyCode as 'MXN' | 'USD' | 'EUR');
   };
 
   const getInitials = (name: string) => {
@@ -137,140 +138,188 @@ export default function SettingsScreen() {
     return name.substring(0, 2).toUpperCase();
   };
 
+  // ==========================================
+  // EXPORT HANDLERS
+  // ==========================================
+  const handleExportJSON = async () => {
+    try {
+      const result = database.exportAllDataAsJSON();
+      if (!result.success) {
+        Alert.alert('Error', result.error || 'No se pudieron obtener los datos');
+        return;
+      }
+
+      const fileName = `cashpro_backup_${new Date().toISOString().split('T')[0]}.json`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+
+      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(result.data, null, 2), {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, { mimeType: 'application/json', dialogTitle: 'Exportar respaldo JSON' });
+      } else {
+        Alert.alert('Archivo guardado', `Respaldo guardado en: ${fileUri}`);
+      }
+    } catch (error) {
+      console.error('Error al exportar JSON:', error);
+      Alert.alert('Error', 'No se pudo exportar el respaldo');
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      const result = database.exportMovementsAsCSV();
+      if (!result.success) {
+        Alert.alert('Sin datos', result.error || 'No hay movimientos para exportar');
+        return;
+      }
+
+      const fileName = `cashpro_movimientos_${new Date().toISOString().split('T')[0]}.csv`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+
+      await FileSystem.writeAsStringAsync(fileUri, result.data, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, { mimeType: 'text/csv', dialogTitle: 'Exportar CSV' });
+      } else {
+        Alert.alert('Archivo guardado', `CSV guardado en: ${fileUri}`);
+      }
+    } catch (error) {
+      console.error('Error al exportar CSV:', error);
+      Alert.alert('Error', 'No se pudo exportar el archivo CSV');
+    }
+  };
+
+  const handleExportDB = async () => {
+    try {
+      const dbPath = database.getDatabasePath();
+
+      const fileInfo = await FileSystem.getInfoAsync(dbPath);
+      if (!fileInfo.exists) {
+        Alert.alert('Error', 'No se encontró el archivo de base de datos');
+        return;
+      }
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(dbPath, {
+          mimeType: 'application/x-sqlite3',
+          dialogTitle: 'Exportar base de datos CashPro',
+        });
+      } else {
+        Alert.alert('Error', 'La función de compartir no está disponible en este dispositivo');
+      }
+    } catch (error) {
+      console.error('Error al exportar BD:', error);
+      Alert.alert('Error', 'No se pudo exportar la base de datos');
+    }
+  };
+
+  // ==========================================
+  // IMPORT HANDLER
+  // ==========================================
+  const handleImportData = async () => {
+    try {
+      const pickerResult = await DocumentPicker.getDocumentAsync({
+        type: ['application/json', 'text/csv', 'application/x-sqlite3', 'application/octet-stream'],
+        copyToCacheDirectory: true,
+      });
+
+      if (pickerResult.canceled) return;
+
+      const file = pickerResult.assets[0];
+      const fileName = file.name.toLowerCase();
+
+      if (fileName.endsWith('.json')) {
+        Alert.alert(
+          'Importar Respaldo JSON',
+          'Esto reemplazará TODOS los datos actuales con los del archivo. ¿Continuar?',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+              text: 'Importar',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  const content = await FileSystem.readAsStringAsync(file.uri);
+                  const jsonData = JSON.parse(content);
+                  const result = database.importDataFromJSON(jsonData);
+                  if (result.success) {
+                    Alert.alert('Importación exitosa', result.message || 'Datos importados correctamente');
+                    fetchProfile();
+                  } else {
+                    Alert.alert('Error', result.error || 'No se pudieron importar los datos');
+                  }
+                } catch (e) {
+                  Alert.alert('Error', 'El archivo JSON no tiene un formato válido');
+                }
+              },
+            },
+          ]
+        );
+      } else if (fileName.endsWith('.db')) {
+        Alert.alert(
+          'Importar Base de Datos',
+          'Esto reemplazará completamente la base de datos actual. ¿Continuar?',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+              text: 'Importar',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  const dbPath = database.getDatabasePath();
+                  await FileSystem.copyAsync({ from: file.uri, to: dbPath });
+                  database.initDatabase();
+                  Alert.alert('Importación exitosa', 'Base de datos restaurada correctamente. Reinicia la aplicación para ver los cambios.');
+                  fetchProfile();
+                } catch (e) {
+                  Alert.alert('Error', 'No se pudo importar la base de datos');
+                }
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Formato no soportado', 'Solo se admiten archivos .json y .db');
+      }
+    } catch (error) {
+      console.error('Error al importar datos:', error);
+      Alert.alert('Error', 'No se pudo importar el archivo');
+    }
+  };
+
+  // ==========================================
+  // RESET HANDLER
+  // ==========================================
   const handleDeleteAllData = () => {
     Alert.alert(
       'Eliminar Todos los Datos',
-      '¿Estás seguro de que deseas eliminar TODOS los datos? Esta acción no se puede deshacer.\n\nSe eliminarán:\n• Todas las cuentas\n• Todos los movimientos\n• Todos los presupuestos\n• Todos los objetivos de ahorro\n• Todos los préstamos\n• Todas las suscripciones\n• Todos los vehículos\n• Todas las categorías',
+      '¿Estás seguro de que deseas eliminar TODOS los datos? Esta acción no se puede deshacer.\n\nSe eliminarán:\n• Todas las cuentas\n• Todos los movimientos\n• Todos los presupuestos\n• Todos los objetivos de ahorro\n• Todos los préstamos\n• Todas las suscripciones\n• Todos los vehículos',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
           text: 'Eliminar Todo',
           style: 'destructive',
-          onPress: async () => {
+          onPress: () => {
             try {
-              const response = await fetch(`${API_CONFIG.BASE_URL}/reset`, {
-                method: 'POST',
-              });
-              const result = await response.json();
-              
+              const result = database.resetAllData();
               if (result.success) {
-                Alert.alert('Éxito', 'Todos los datos han sido eliminados correctamente');
+                Alert.alert('Datos eliminados', 'Todos los datos han sido eliminados correctamente');
+                fetchProfile();
               } else {
                 Alert.alert('Error', result.error || 'No se pudieron eliminar los datos');
               }
             } catch (error) {
               console.error('Error al eliminar datos:', error);
-              Alert.alert('Error', 'No se pudo conectar con el servidor');
+              Alert.alert('Error', 'No se pudieron eliminar los datos');
             }
           },
         },
       ]
     );
-  };
-
-  const handleExportCSV = async () => {
-    try {
-      // Obtener todos los movimientos
-      const response = await fetch(`${API_CONFIG.BASE_URL}/movements`);
-      const result = await response.json();
-      
-      if (!result.success) {
-        Alert.alert('Error', 'No se pudieron obtener los movimientos');
-        return;
-      }
-      
-      const movements = result.data;
-      
-      if (movements.length === 0) {
-        Alert.alert('Sin datos', 'No hay movimientos para exportar');
-        return;
-      }
-      
-      // Crear CSV
-      const headers = 'Fecha,Tipo,Título,Categoría,Monto,Cuenta,Notas\n';
-      const rows = movements.map((m: any) => {
-        const date = new Date(m.date).toLocaleDateString('es-MX');
-        const type = m.type === 'expense' ? 'Gasto' : m.type === 'income' ? 'Ingreso' : 'Transferencia';
-        const title = m.title || '';
-        const category = m.category_name || '';
-        const amount = m.amount || 0;
-        const account = m.account_name || '';
-        const notes = (m.notes || '').replace(/,/g, ';'); // Reemplazar comas en notas
-        
-        return `${date},${type},${title},${category},${amount},${account},${notes}`;
-      }).join('\n');
-      
-      const csv = headers + rows;
-      
-      // Guardar archivo
-      const FileSystem = require('expo-file-system');
-      const Sharing = require('expo-sharing');
-      
-      const fileName = `cashpro_movimientos_${new Date().toISOString().split('T')[0]}.csv`;
-      const fileUri = FileSystem.documentDirectory + fileName;
-      
-      await FileSystem.writeAsStringAsync(fileUri, csv, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
-      
-      // Compartir archivo
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri);
-      } else {
-        Alert.alert('Éxito', `Archivo guardado en: ${fileUri}`);
-      }
-    } catch (error) {
-      console.error('Error al exportar CSV:', error);
-      Alert.alert('Error', 'No se pudo exportar el archivo');
-    }
-  };
-
-  const handleExportBackup = async () => {
-    try {
-      // Obtener todos los datos
-      const [accountsRes, movementsRes, budgetsRes] = await Promise.all([
-        fetch(`${API_CONFIG.BASE_URL}/accounts`),
-        fetch(`${API_CONFIG.BASE_URL}/movements`),
-        fetch(`${API_CONFIG.BASE_URL}/budgets`),
-      ]);
-      
-      const [accountsData, movementsData, budgetsData] = await Promise.all([
-        accountsRes.json(),
-        movementsRes.json(),
-        budgetsRes.json(),
-      ]);
-      
-      const backup = {
-        version: '1.0.0',
-        exportDate: new Date().toISOString(),
-        data: {
-          accounts: accountsData.success ? accountsData.data : [],
-          movements: movementsData.success ? movementsData.data : [],
-          budgets: budgetsData.success ? budgetsData.data : [],
-        },
-      };
-      
-      // Guardar archivo JSON
-      const FileSystem = require('expo-file-system');
-      const Sharing = require('expo-sharing');
-      
-      const fileName = `cashpro_backup_${new Date().toISOString().split('T')[0]}.json`;
-      const fileUri = FileSystem.documentDirectory + fileName;
-      
-      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(backup, null, 2), {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
-      
-      // Compartir archivo
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri);
-      } else {
-        Alert.alert('Éxito', `Respaldo guardado en: ${fileUri}`);
-      }
-    } catch (error) {
-      console.error('Error al exportar respaldo:', error);
-      Alert.alert('Error', 'No se pudo crear el respaldo');
-    }
   };
 
   return (
@@ -291,7 +340,7 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* User Profile Card */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.profileCard, { backgroundColor: surfaceColor }]}
           onPress={() => router.push('/settings/edit-profile')}
         >
@@ -372,6 +421,28 @@ export default function SettingsScreen() {
         {/* DATOS */}
         <ThemedText style={styles.sectionLabel}>DATOS</ThemedText>
         <View style={[styles.sectionCard, { backgroundColor: surfaceColor }]}>
+          {/* Exportar JSON */}
+          <TouchableOpacity
+            style={[styles.settingsRow, { borderBottomWidth: 1, borderBottomColor: borderColor }]}
+            onPress={handleExportJSON}
+          >
+            <View style={styles.settingsRowLeft}>
+              <View style={[styles.settingsIcon, { backgroundColor: '#eff6ff' }]}>
+                <IconSymbol size={22} name="arrow.down.circle.fill" color="#2563eb" />
+              </View>
+              <View>
+                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>
+                  Exportar JSON
+                </ThemedText>
+                <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
+                  Respaldo completo de todos los datos
+                </ThemedText>
+              </View>
+            </View>
+            <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />
+          </TouchableOpacity>
+
+          {/* Exportar CSV */}
           <TouchableOpacity
             style={[styles.settingsRow, { borderBottomWidth: 1, borderBottomColor: borderColor }]}
             onPress={handleExportCSV}
@@ -391,27 +462,50 @@ export default function SettingsScreen() {
             </View>
             <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />
           </TouchableOpacity>
-          
+
+          {/* Exportar Base de Datos */}
           <TouchableOpacity
             style={[styles.settingsRow, { borderBottomWidth: 1, borderBottomColor: borderColor }]}
-            onPress={handleExportBackup}
+            onPress={handleExportDB}
           >
             <View style={styles.settingsRowLeft}>
-              <View style={[styles.settingsIcon, { backgroundColor: dataIconBg }]}>
-                <IconSymbol size={22} name="arrow.up.circle.fill" color={dataIconColor} />
+              <View style={[styles.settingsIcon, { backgroundColor: '#f0fdf4' }]}>
+                <IconSymbol size={22} name="arrow.up.circle.fill" color="#16a34a" />
               </View>
               <View>
                 <ThemedText style={[styles.settingsTitle, { color: textMain }]}>
-                  Exportar Respaldo
+                  Exportar Base de Datos
                 </ThemedText>
                 <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
-                  Todos los datos en JSON
+                  Archivo SQLite (.db)
                 </ThemedText>
               </View>
             </View>
             <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />
           </TouchableOpacity>
-          
+
+          {/* Importar Datos */}
+          <TouchableOpacity
+            style={[styles.settingsRow, { borderBottomWidth: 1, borderBottomColor: borderColor }]}
+            onPress={handleImportData}
+          >
+            <View style={styles.settingsRowLeft}>
+              <View style={[styles.settingsIcon, { backgroundColor: '#faf5ff' }]}>
+                <IconSymbol size={22} name="arrow.down.circle.fill" color="#9333ea" />
+              </View>
+              <View>
+                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>
+                  Importar Datos
+                </ThemedText>
+                <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
+                  Restaurar desde JSON o SQLite (.db)
+                </ThemedText>
+              </View>
+            </View>
+            <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />
+          </TouchableOpacity>
+
+          {/* Eliminar Todos los Datos */}
           <TouchableOpacity
             style={[styles.settingsRow]}
             onPress={handleDeleteAllData}
@@ -439,7 +533,7 @@ export default function SettingsScreen() {
         </TouchableOpacity>
 
         {/* Version */}
-        <ThemedText style={styles.versionText}>CashPro v1.0.2 • Build 2405</ThemedText>
+        <ThemedText style={styles.versionText}>CashPro v1.1.0 • Build 2602</ThemedText>
 
         <View style={{ height: 40 }} />
       </ScrollView>

@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { formatCurrencyInput, getNumericValue } from '@/utils/format';
 
@@ -60,15 +60,9 @@ export default function GoalDetailScreen() {
 
   const fetchGoalData = async () => {
     try {
-      const [goalResponse, contributionsResponse, accountsResponse] = await Promise.all([
-        fetch(`${API_CONFIG.BASE_URL}/savings-goals/${id}`),
-        fetch(`${API_CONFIG.BASE_URL}/savings-goals/${id}/contributions`),
-        fetch(`${API_CONFIG.BASE_URL}/accounts`),
-      ]);
-
-      const goalResult = await goalResponse.json();
-      const contributionsResult = await contributionsResponse.json();
-      const accountsResult = await accountsResponse.json();
+      const goalResult = database.getSavingsGoalById(id as string);
+      const contributionsResult = database.getGoalContributions(id as string);
+      const accountsResult = database.getAccounts();
 
       if (goalResult.success) {
         setGoal(goalResult.data);
@@ -117,19 +111,11 @@ export default function GoalDetailScreen() {
     }
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/savings-goals/${id}/contribute`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: getNumericValue(contributeAmount),
-          account_id: selectedAccount.id,
-          notes: contributeNotes.trim() || null,
-        }),
+      const result = database.addGoalContribution(id as string, {
+        amount: getNumericValue(contributeAmount),
+        account_id: selectedAccount.id,
+        notes: contributeNotes.trim() || null,
       });
-
-      const result = await response.json();
 
       if (result.success) {
         setShowContributeModal(false);

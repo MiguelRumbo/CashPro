@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
 const DATE_FILTERS = ['Este mes', 'Mes pasado', '3 meses', 'Personalizado'];
@@ -219,24 +219,23 @@ export default function ReportesScreen() {
     return { start, end };
   };
 
-  const fetchData = async (customRange?: DateRange) => {
+  const fetchData = (customRange?: DateRange) => {
     try {
       // Determinar el rango de fechas a usar
       const range = customRange || dateRange || getDateRangeForFilter(activeFilter);
-      
+
       // Obtener movimientos
-      const movementsResponse = await fetch(`${API_CONFIG.BASE_URL}/movements`);
-      const movementsResult = await movementsResponse.json();
-      
+      const movementsResult = database.getMovements();
+
       if (movementsResult.success) {
         const movements = movementsResult.data;
-        
+
         // Filtrar movimientos según el rango seleccionado
         const filteredMovements = movements.filter((m: any) => {
           const movementDate = new Date(m.date);
           return movementDate >= range.start && movementDate <= range.end;
         });
-        
+
         // Calcular total de gastos e ingresos del periodo
         const currentExpenses = filteredMovements.filter((m: any) => m.type === 'expense');
         const currentIncomes = filteredMovements.filter((m: any) => m.type === 'income');
@@ -244,24 +243,24 @@ export default function ReportesScreen() {
         const totalInc = currentIncomes.reduce((sum: number, m: any) => sum + m.amount, 0);
         setTotalExpense(totalExp);
         setTotalIncome(totalInc);
-        
+
         // Calcular cambio porcentual comparando con periodo anterior
         const periodDays = Math.ceil((range.end.getTime() - range.start.getTime()) / (1000 * 60 * 60 * 24));
         const previousStart = new Date(range.start);
         previousStart.setDate(previousStart.getDate() - periodDays);
         const previousEnd = new Date(range.start);
         previousEnd.setDate(previousEnd.getDate() - 1);
-        
+
         const previousMovements = movements.filter((m: any) => {
           const movementDate = new Date(m.date);
           return movementDate >= previousStart && movementDate <= previousEnd;
         });
-        
+
         const previousExpenses = previousMovements.filter((m: any) => m.type === 'expense');
         const previousIncomes = previousMovements.filter((m: any) => m.type === 'income');
         const previousTotalExp = previousExpenses.reduce((sum: number, m: any) => sum + m.amount, 0);
         const previousTotalInc = previousIncomes.reduce((sum: number, m: any) => sum + m.amount, 0);
-        
+
         let changeExp = 0;
         if (previousTotalExp > 0) {
           changeExp = ((totalExp - previousTotalExp) / previousTotalExp) * 100;
@@ -277,21 +276,20 @@ export default function ReportesScreen() {
           changeInc = 100;
         }
         setIncomeChange(changeInc);
-        
+
         // Calcular estadísticas por categoría del periodo
         const categoryData = calculateCategoryStats(currentExpenses);
         const incomeCategoryData = calculateIncomeCategoryStats(currentIncomes);
-        
+
         // Generar insight dinámico
         generateInsight(categoryData, changeExp, activeFilter);
-        
+
         // Calcular tendencia del periodo
         calculateMonthlyTrend(filteredMovements, range);
       }
 
       // Obtener presupuestos
-      const budgetsResponse = await fetch(`${API_CONFIG.BASE_URL}/budgets`);
-      const budgetsResult = await budgetsResponse.json();
+      const budgetsResult = database.getBudgets();
       if (budgetsResult.success) {
         const budgets = budgetsResult.data.map((b: any) => ({
           id: b.id,
@@ -306,8 +304,7 @@ export default function ReportesScreen() {
       }
 
       // Obtener objetivos de ahorro
-      const goalsResponse = await fetch(`${API_CONFIG.BASE_URL}/savings-goals`);
-      const goalsResult = await goalsResponse.json();
+      const goalsResult = database.getSavingsGoals();
       if (goalsResult.success) {
         const goals = goalsResult.data
           .filter((g: any) => g.status === 'active')
@@ -324,8 +321,7 @@ export default function ReportesScreen() {
       }
 
       // Obtener suscripciones
-      const subsResponse = await fetch(`${API_CONFIG.BASE_URL}/recurring-payments`);
-      const subsResult = await subsResponse.json();
+      const subsResult = database.getRecurringPayments();
       if (subsResult.success) {
         const subs = subsResult.data
           .filter((s: any) => s.is_active)
@@ -537,9 +533,9 @@ export default function ReportesScreen() {
     }
   };
 
-  const onRefresh = async () => {
+  const onRefresh = () => {
     setRefreshing(true);
-    await fetchData();
+    fetchData();
     setRefreshing(false);
   };
 

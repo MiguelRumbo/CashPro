@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
 type RecurringPayment = {
@@ -44,15 +44,16 @@ export default function SubDetailScreen() {
 
   const fetchPayment = async () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/recurring-payments/${id}`);
-      const result = await response.json();
+      const result = database.getRecurringPaymentById(id as string);
       if (result.success) {
         setPayment(result.data);
         // Fetch account name
-        const accResponse = await fetch(`${API_CONFIG.BASE_URL}/accounts/${result.data.account_id}`);
-        const accResult = await accResponse.json();
+        const accResult = database.getAccounts();
         if (accResult.success) {
-          setAccountName(accResult.data.name);
+          const account = accResult.data.find((a: any) => a.id === result.data.account_id);
+          if (account) {
+            setAccountName(account.name);
+          }
         }
       }
     } catch (error) {
@@ -119,12 +120,7 @@ export default function SubDetailScreen() {
   const handleToggleActive = async () => {
     if (!payment) return;
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/recurring-payments/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: !payment.is_active }),
-      });
-      const result = await response.json();
+      const result = database.updateRecurringPayment(id as string, { is_active: !payment.is_active });
       if (result.success) {
         setPayment(result.data);
       }
@@ -145,12 +141,7 @@ export default function SubDetailScreen() {
           text: 'Registrar',
           onPress: async () => {
             try {
-              const response = await fetch(`${API_CONFIG.BASE_URL}/recurring-payments/${id}/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ date: new Date().toISOString() }),
-              });
-              const result = await response.json();
+              const result = database.registerRecurringPayment(id as string, new Date().toISOString());
               if (result.success) {
                 Alert.alert('Registrado', 'Movimiento creado exitosamente');
                 fetchPayment();
@@ -178,10 +169,7 @@ export default function SubDetailScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const response = await fetch(`${API_CONFIG.BASE_URL}/recurring-payments/${id}`, {
-                method: 'DELETE',
-              });
-              const result = await response.json();
+              const result = database.deleteRecurringPayment(id as string);
               if (result.success) {
                 router.back();
               } else {

@@ -7,7 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { formatCurrencyInput, getNumericValue } from '@/utils/format';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
 type MovementType = 'expense' | 'income' | 'transfer';
@@ -100,17 +100,15 @@ export default function MovementDetailScreen() {
     fetchAccounts();
   }, [id]);
 
-  const fetchMovement = async () => {
+  const fetchMovement = () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_CONFIG.BASE_URL}/movements/${id}`);
-      const result = await response.json();
+      const result = database.getMovementById(Number(id));
 
       if (result.success) {
         const m = result.data;
         // Enrich with account info
-        const accResponse = await fetch(`${API_CONFIG.BASE_URL}/accounts/${m.account_id}`);
-        const accResult = await accResponse.json();
+        const accResult = database.getAccountById(m.account_id);
         if (accResult.success) {
           m.account_name = accResult.data.name;
           m.account_type = accResult.data.type;
@@ -126,10 +124,9 @@ export default function MovementDetailScreen() {
     }
   };
 
-  const fetchAccounts = async () => {
+  const fetchAccounts = () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/accounts`);
-      const result = await response.json();
+      const result = database.getAccounts();
       if (result.success) {
         setAccounts(result.data);
       }
@@ -196,13 +193,8 @@ export default function MovementDetailScreen() {
         updateData.to_account_id = editToAccount.id;
       }
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}/movements/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateData),
-      });
+      const result = database.updateMovement(Number(id), updateData);
 
-      const result = await response.json();
       if (result.success) {
         Alert.alert('Actualizado', 'Movimiento actualizado correctamente. Los balances y presupuestos se han ajustado.', [
           { text: 'OK', onPress: () => { setIsEditing(false); fetchMovement(); } }
@@ -211,7 +203,7 @@ export default function MovementDetailScreen() {
         Alert.alert('Error', result.error || 'No se pudo actualizar');
       }
     } catch (error) {
-      Alert.alert('Error', 'No se pudo conectar con el servidor');
+      Alert.alert('Error', 'No se pudo actualizar el movimiento');
     } finally {
       setSaving(false);
     }
@@ -224,10 +216,9 @@ export default function MovementDetailScreen() {
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Eliminar', style: 'destructive', onPress: async () => {
+          text: 'Eliminar', style: 'destructive', onPress: () => {
             try {
-              const response = await fetch(`${API_CONFIG.BASE_URL}/movements/${id}`, { method: 'DELETE' });
-              const result = await response.json();
+              const result = database.deleteMovement(Number(id));
               if (result.success) {
                 Alert.alert('Eliminado', 'Movimiento eliminado correctamente', [
                   { text: 'OK', onPress: () => router.back() }
@@ -236,7 +227,7 @@ export default function MovementDetailScreen() {
                 Alert.alert('Error', result.error || 'No se pudo eliminar');
               }
             } catch {
-              Alert.alert('Error', 'No se pudo conectar con el servidor');
+              Alert.alert('Error', 'No se pudo eliminar el movimiento');
             }
           }
         },

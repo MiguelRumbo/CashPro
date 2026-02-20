@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
 type Vehicle = {
@@ -50,16 +50,14 @@ export default function VehiclesScreen() {
 
   const fetchVehicles = async () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/vehicles`);
-      const result = await response.json();
+      const result = database.getVehicles();
 
       if (result.success) {
         setVehicles(result.data);
-        
+
         // Cargar estadísticas para cada vehículo
-        result.data.forEach(async (vehicle: Vehicle) => {
-          const statsResponse = await fetch(`${API_CONFIG.BASE_URL}/vehicles/${vehicle.id}/stats`);
-          const statsResult = await statsResponse.json();
+        result.data.forEach((vehicle: Vehicle) => {
+          const statsResult = database.getVehicleStats(vehicle.id);
           if (statsResult.success) {
             setStats(prev => ({ ...prev, [vehicle.id]: statsResult.data }));
           }
@@ -93,10 +91,7 @@ export default function VehiclesScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const response = await fetch(`${API_CONFIG.BASE_URL}/vehicles/${id}`, {
-                method: 'DELETE',
-              });
-              const result = await response.json();
+              const result = database.deleteVehicle(id);
               if (result.success) fetchVehicles();
               else Alert.alert('Error', result.error);
             } catch {

@@ -6,7 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 
 type BudgetPeriod = 'daily' | 'weekly' | 'monthly';
 
@@ -46,11 +46,10 @@ export default function EditBudgetScreen() {
     fetchBudget();
   }, [id]);
 
-  const fetchBudget = async () => {
+  const fetchBudget = () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/budgets/${id}`);
-      const result = await response.json();
-      
+      const result = database.getBudgetById(Number(id));
+
       if (result.success) {
         const budget = result.data;
         setName(budget.name);
@@ -60,7 +59,7 @@ export default function EditBudgetScreen() {
         if (budget.end_date) {
           setEndDate(new Date(budget.end_date));
         }
-        
+
         // Buscar el icono seleccionado
         const icon = BUDGET_ICONS.find(i => i.icon === budget.icon);
         if (icon) {
@@ -93,24 +92,16 @@ export default function EditBudgetScreen() {
     setSaving(true);
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/budgets/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: name.trim(),
-          type: 'expense',
-          amount: parseFloat(amount),
-          period,
-          start_date: startDate.toISOString().split('T')[0],
-          end_date: endDate ? endDate.toISOString().split('T')[0] : null,
-          icon: selectedIcon.icon,
-          color: selectedIcon.color,
-        }),
+      const result = database.updateBudget(Number(id), {
+        name: name.trim(),
+        type: 'expense',
+        amount: parseFloat(amount),
+        period,
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate ? endDate.toISOString().split('T')[0] : null,
+        icon: selectedIcon.icon,
+        color: selectedIcon.color,
       });
-
-      const result = await response.json();
 
       if (result.success) {
         Alert.alert('Éxito', 'Presupuesto actualizado correctamente', [

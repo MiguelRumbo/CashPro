@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
 type Budget = {
@@ -36,11 +36,10 @@ export default function BudgetsScreen() {
   const warning = '#f59e0b';
   const danger = '#ef4444';
 
-  const fetchBudgets = async () => {
+  const fetchBudgets = () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/budgets`);
-      const result = await response.json();
-      
+      const result = database.getBudgets();
+
       if (result.success) {
         // Filtrar solo presupuestos de tipo expense
         setBudgets(result.data.filter((b: Budget) => b.type === 'expense'));
@@ -51,9 +50,9 @@ export default function BudgetsScreen() {
     }
   };
 
-  const onRefresh = async () => {
+  const onRefresh = () => {
     setRefreshing(true);
-    await fetchBudgets();
+    fetchBudgets();
     setRefreshing(false);
   };
 
@@ -72,13 +71,10 @@ export default function BudgetsScreen() {
         {
           text: 'Eliminar',
           style: 'destructive',
-          onPress: async () => {
+          onPress: () => {
             try {
-              const response = await fetch(`${API_CONFIG.BASE_URL}/budgets/${id}`, {
-                method: 'DELETE',
-              });
-              const result = await response.json();
-              
+              const result = database.deleteBudget(id);
+
               if (result.success) {
                 fetchBudgets();
               } else {

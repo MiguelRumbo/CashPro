@@ -6,7 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
 type Account = {
@@ -46,9 +46,8 @@ export default function AddLoanScreen() {
 
   const fetchAccounts = async () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/accounts`);
-      const result = await response.json();
-      
+      const result = database.getAccounts();
+
       if (result.success) {
         setAccounts(result.data);
         // Preseleccionar la cuenta principal
@@ -83,23 +82,15 @@ export default function AddLoanScreen() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/loans`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          person_name: personName.trim(),
-          amount: parseFloat(amount),
-          date: date.toISOString().split('T')[0],
-          due_date: dueDate ? dueDate.toISOString().split('T')[0] : null,
-          notes: notes.trim() || null,
-          account_id: selectedAccount.id,
-          create_movement: createMovement,
-        }),
+      const result = database.createLoan({
+        person_name: personName.trim(),
+        amount: parseFloat(amount),
+        date: date.toISOString().split('T')[0],
+        due_date: dueDate ? dueDate.toISOString().split('T')[0] : null,
+        notes: notes.trim() || null,
+        account_id: selectedAccount.id,
+        create_movement: createMovement,
       });
-
-      const result = await response.json();
 
       if (result.success) {
         Alert.alert('Éxito', 'Préstamo registrado correctamente', [

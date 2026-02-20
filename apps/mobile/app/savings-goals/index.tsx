@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
 type SavingsGoal = {
@@ -39,9 +39,8 @@ export default function SavingsGoalsScreen() {
 
   const fetchGoals = async () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/savings-goals`);
-      const result = await response.json();
-      
+      const result = database.getSavingsGoals();
+
       if (result.success) {
         setGoals(result.data);
       }
@@ -74,11 +73,8 @@ export default function SavingsGoalsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const response = await fetch(`${API_CONFIG.BASE_URL}/savings-goals/${id}`, {
-                method: 'DELETE',
-              });
-              const result = await response.json();
-              
+              const result = database.deleteSavingsGoal(id);
+
               if (result.success) {
                 fetchGoals();
               } else {

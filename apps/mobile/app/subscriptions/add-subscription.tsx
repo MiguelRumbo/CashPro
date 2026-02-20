@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 
 type Account = {
   id: number;
@@ -77,8 +77,7 @@ export default function AddSubscriptionScreen() {
 
   const fetchAccounts = async () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/accounts`);
-      const result = await response.json();
+      const result = database.getAccounts();
       if (result.success) {
         setAccounts(result.data);
         const primaryAccount = result.data.find((a: Account) => (a as any).is_primary === 1);
@@ -127,13 +126,7 @@ export default function AddSubscriptionScreen() {
         body.specific_dates = specificDates;
       }
 
-      const response = await fetch(`${API_CONFIG.BASE_URL}/recurring-payments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      const result = await response.json();
+      const result = database.createRecurringPayment(body);
 
       if (result.success) {
         router.back();

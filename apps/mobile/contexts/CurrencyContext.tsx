@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 
 type CurrencyCode = 'MXN' | 'USD' | 'EUR';
 
@@ -26,11 +26,9 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     loadCurrency();
   }, []);
 
-  const loadCurrency = async () => {
+  const loadCurrency = () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/profile`);
-      const result = await response.json();
-      
+      const result = database.getProfile();
       if (result.success && result.data?.currency) {
         setCurrencyState(result.data.currency as CurrencyCode);
       }
@@ -41,25 +39,16 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const setCurrency = async (newCurrency: CurrencyCode) => {
+  const setCurrency = (newCurrency: CurrencyCode) => {
     setCurrencyState(newCurrency);
-    
-    // Guardar en el backend
+
     try {
-      const profileResponse = await fetch(`${API_CONFIG.BASE_URL}/profile`);
-      const profileResult = await profileResponse.json();
-      
+      const profileResult = database.getProfile();
       if (profileResult.success && profileResult.data) {
-        await fetch(`${API_CONFIG.BASE_URL}/profile`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: profileResult.data.name,
-            email: profileResult.data.email,
-            currency: newCurrency,
-          }),
+        database.updateProfile({
+          name: profileResult.data.name,
+          email: profileResult.data.email,
+          currency: newCurrency,
         });
       }
     } catch (error) {
@@ -69,7 +58,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
   const formatCurrency = (amount: number, showSymbol: boolean = true): string => {
     const config = CURRENCY_CONFIG[currency];
-    
+
     const formatted = new Intl.NumberFormat(config.locale, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,

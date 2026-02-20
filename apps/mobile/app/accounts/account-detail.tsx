@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { formatCurrency, maskCardNumber } from '@/utils/format';
 
 interface Account {
@@ -50,11 +50,10 @@ export default function AccountDetailScreen() {
     fetchAccount();
   }, [accountId]);
 
-  const fetchAccount = async () => {
+  const fetchAccount = () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/accounts/${accountId}`);
-      const result = await response.json();
-      
+      const result = database.getAccountById(Number(accountId));
+
       if (result.success) {
         setAccount(result.data);
         setIncludeInBalance(result.data.include_in_balance === 1 || result.data.include_in_balance === undefined);
@@ -96,23 +95,17 @@ export default function AccountDetailScreen() {
     router.push(`/accounts/edit-account?id=${accountId}`);
   };
 
-  const handleToggleIncludeInBalance = async (value: boolean) => {
+  const handleToggleIncludeInBalance = (value: boolean) => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/accounts/${accountId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ include_in_balance: value ? 1 : 0 }),
-      });
-      
-      const result = await response.json();
-      
+      const result = database.updateAccount(Number(accountId), { include_in_balance: value ? 1 : 0 });
+
       if (result.success) {
         setIncludeInBalance(value);
         setAccount(result.data);
         Alert.alert(
           'Actualizado',
-          value 
-            ? 'Esta cuenta ahora se incluye en el balance general' 
+          value
+            ? 'Esta cuenta ahora se incluye en el balance general'
             : 'Esta cuenta ya no se incluye en el balance general'
         );
       } else {
@@ -124,21 +117,17 @@ export default function AccountDetailScreen() {
     }
   };
 
-  const handleTogglePrimary = async (value: boolean) => {
+  const handleTogglePrimary = (value: boolean) => {
     try {
       if (value) {
         // Marcar como principal
-        const response = await fetch(`${API_CONFIG.BASE_URL}/accounts/${accountId}/set-primary`, {
-          method: 'PUT',
-        });
-        
-        const result = await response.json();
-        
+        const result = database.setAccountPrimary(Number(accountId));
+
         if (result.success) {
           setIsPrimary(true);
           setAccount(result.data);
           Alert.alert(
-            'Actualizado', 
+            'Actualizado',
             'Esta cuenta ahora es tu cuenta principal. Los cambios se verán reflejados en el dashboard.',
             [
               {
@@ -155,14 +144,8 @@ export default function AccountDetailScreen() {
         }
       } else {
         // Desmarcar como principal
-        const response = await fetch(`${API_CONFIG.BASE_URL}/accounts/${accountId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ is_primary: 0 }),
-        });
-        
-        const result = await response.json();
-        
+        const result = database.updateAccount(Number(accountId), { is_primary: 0 });
+
         if (result.success) {
           setIsPrimary(false);
           setAccount(result.data);
@@ -186,13 +169,10 @@ export default function AccountDetailScreen() {
         {
           text: 'Eliminar',
           style: 'destructive',
-          onPress: async () => {
+          onPress: () => {
             try {
-              const response = await fetch(`${API_CONFIG.BASE_URL}/accounts/${accountId}`, {
-                method: 'DELETE',
-              });
-              const result = await response.json();
-              
+              const result = database.deleteAccount(Number(accountId));
+
               if (result.success) {
                 router.back();
               } else {

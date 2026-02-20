@@ -7,7 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { formatCurrencyInput, getNumericValue } from '@/utils/format';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 
 type MovementType = 'expense' | 'income' | 'transfer';
 
@@ -69,14 +69,13 @@ export default function AddMovementScreen() {
     fetchAccounts();
   }, []);
 
-  const fetchAccounts = async () => {
+  const fetchAccounts = () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/accounts`);
-      const result = await response.json();
-      
+      const result = database.getAccounts();
+
       if (result.success) {
         setAccounts(result.data);
-        
+
         // Preseleccionar la cuenta principal
         const primaryAccount = result.data.find((acc: Account) => acc.is_primary === 1);
         if (primaryAccount && !selectedAccount) {
@@ -160,15 +159,7 @@ export default function AddMovementScreen() {
     }
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/movements`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(movementData),
-      });
-
-      const result = await response.json();
+      const result = database.createMovement(movementData);
 
       if (result.success) {
         Alert.alert('Éxito', 'Movimiento creado exitosamente', [
@@ -179,7 +170,7 @@ export default function AddMovementScreen() {
       }
     } catch (error) {
       console.error('Error al crear movimiento:', error);
-      Alert.alert('Error', 'No se pudo conectar con el servidor');
+      Alert.alert('Error', 'No se pudo crear el movimiento');
     }
   };
 

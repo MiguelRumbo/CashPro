@@ -3,7 +3,9 @@
     "allow": [
       "Bash(del \"c:\\\\Users\\\\MiguelAngelRumbo\\\\Videos\\\\cash_pro\\\\apps\\\\mobile\\\\app\\\\\\(tabs\\)\\\\profile.tsx\")",
       "Bash(ls:*)",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(dir:*)",
+      "Bash(npx expo install:*)"
     ]
   }
 }

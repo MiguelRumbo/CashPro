@@ -7,7 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { formatCurrencyInput, getNumericValue } from '@/utils/format';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 
 const GOAL_ICONS = [
   { id: 'target', name: 'target', color: '#20df60' },
@@ -81,15 +81,7 @@ export default function AddGoalScreen() {
     };
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/savings-goals`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(goalData),
-      });
-
-      const result = await response.json();
+      const result = database.createSavingsGoal(goalData);
 
       if (result.success) {
         Alert.alert('Éxito', 'Objetivo creado exitosamente', [

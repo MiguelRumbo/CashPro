@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API_CONFIG } from '@/config/api';
+import * as database from '@/services/database';
 import { useCurrency } from '@/contexts/CurrencyContext';
 
 const FILTERS = ['Mes', 'Hoy', 'Semana', 'Año', 'Personalizado'];
@@ -55,11 +55,10 @@ export default function MovementsScreen() {
     applyFilters();
   }, [movements, activeFilter, searchQuery]);
 
-  const fetchMovements = async () => {
+  const fetchMovements = () => {
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/movements`);
-      const result = await response.json();
-      
+      const result = database.getMovements();
+
       if (result.success) {
         setMovements(result.data);
       }
@@ -128,9 +127,9 @@ export default function MovementsScreen() {
     setFilteredMovements(filtered);
   };
 
-  const onRefresh = async () => {
+  const onRefresh = () => {
     setRefreshing(true);
-    await fetchMovements();
+    fetchMovements();
     setRefreshing(false);
   };
 
