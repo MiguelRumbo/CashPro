@@ -1,5 +1,7 @@
 {
-  "name": "api",
+  "name": "cashpro-api",
+  "version": "1.0.0",
+  "description": "API REST para CashPro",
   "main": "src/index.js",
   "type": "commonjs",
   "scripts": {

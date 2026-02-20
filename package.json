@@ -1,7 +1,7 @@
 {
-  "name": "cash_pro",
+  "name": "cashpro",
   "version": "1.0.0",
-  "description": "",
+  "description": "Aplicación móvil de gestión financiera personal",
   "main": "index.js",
   "private": true,
   "scripts": {

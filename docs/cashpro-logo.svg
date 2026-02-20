@@ -1,0 +1,44 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fondo circular con gradiente -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0066FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#20df60;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="arrowGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFA500;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Círculo de fondo -->
+  <circle cx="100" cy="100" r="90" fill="url(#bgGradient)"/>
+  
+  <!-- Símbolo de dólar estilizado -->
+  <g transform="translate(100, 100)">
+    <!-- Línea vertical del $ -->
+    <rect x="-4" y="-50" width="8" height="100" fill="white" rx="4"/>
+    
+    <!-- Curva superior del $ -->
+    <path d="M -25,-30 Q -35,-40 -25,-50 L 25,-50 Q 35,-40 25,-30 L -10,-30" 
+          fill="white" stroke="white" stroke-width="2"/>
+    
+    <!-- Curva inferior del $ -->
+    <path d="M 25,30 Q 35,40 25,50 L -25,50 Q -35,40 -25,30 L 10,30" 
+          fill="white" stroke="white" stroke-width="2"/>
+    
+    <!-- Flecha ascendente integrada -->
+    <g transform="translate(35, -35)">
+      <!-- Línea de la flecha -->
+      <line x1="0" y1="30" x2="0" y2="-10" stroke="url(#arrowGradient)" stroke-width="6" stroke-linecap="round"/>
+      <!-- Punta de la flecha -->
+      <polygon points="0,-15 -8,-5 8,-5" fill="url(#arrowGradient)"/>
+    </g>
+  </g>
+  
+  <!-- Texto CashPro -->
+  <text x="100" y="185" font-family="Arial, sans-serif" font-size="24" font-weight="bold" 
+        text-anchor="middle" fill="white">
+    <tspan font-weight="bold">Cash</tspan><tspan font-weight="normal">Pro</tspan>
+  </text>
+</svg>
