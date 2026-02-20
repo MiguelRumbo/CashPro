@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "791a2f26-10f0-4509-b6c6-989827055765"
+      }
+    },
+    "android": {
+      "package": "com.miguelrumbo.cashpro"
+    }
+  }
+}

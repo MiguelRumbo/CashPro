@@ -1,7 +1,8 @@
 {
   "cli": {
     "version": ">= 15.0.0",
-    "appVersionSource": "remote"
+    "appVersionSource": "remote",
+    "requireCommit": false
   },
   "build": {
     "development": {
@@ -16,12 +17,18 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_USE_METRO_WORKSPACE_ROOT": "1"
       }
     },
     "production": {
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_USE_METRO_WORKSPACE_ROOT": "1"
       }
     }
   }

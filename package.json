@@ -1,21 +1,18 @@
 {
   "name": "cashpro",
   "version": "1.0.0",
-  "description": "Aplicación móvil de gestión financiera personal",
-  "main": "index.js",
   "private": true,
+  "description": "Aplicación móvil de gestión financiera personal",
   "scripts": {
-    "dev": "pnpm --filter mobile start",
-    "dev:mobile": "pnpm --filter mobile start",
-    "build:apk": "pnpm --filter mobile build:apk",
-    "build:production": "pnpm --filter mobile build:production"
+    "dev": "pnpm -C apps/mobile start",
+    "dev:mobile": "pnpm -C apps/mobile start",
+    "doctor:mobile": "pnpm -C apps/mobile dlx expo-doctor",
+    "prebuild:mobile": "pnpm -C apps/mobile dlx expo prebuild --clean",
+    "build:android:preview": "pnpm -C apps/mobile dlx eas-cli build --platform android --profile preview",
+    "build:android:preview:local": "pnpm -C apps/mobile dlx eas-cli build --platform android --profile preview --local"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "packageManager": "pnpm@10.30.0",
   "devDependencies": {
     "concurrently": "^9.2.1"
   }
 }
-
