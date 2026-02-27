@@ -160,6 +160,33 @@ export default function AccountDetailScreen() {
     );
   };
 
+  const handlePayMsi = (id: number, desc: string, payment: number, nextPay: number, total: number) => {
+    Alert.alert(
+      'Registrar Pago MSI',
+      `¿Registrar pago ${nextPay}/${total} de "${desc}" por ${formatCurrencyCtx(payment)}?\n\nEsto creará un movimiento en tu historial.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Registrar',
+          onPress: () => {
+            try {
+              const result = database.payMsiInstallment(id);
+              if (result.success) {
+                fetchAccount();
+                fetchMsiPurchases();
+                Alert.alert('Pago registrado', result.message || 'Pago MSI registrado correctamente');
+              } else {
+                Alert.alert('Error', result.error || 'No se pudo registrar el pago');
+              }
+            } catch {
+              Alert.alert('Error', 'No se pudo registrar el pago');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const getAccountIcon = (type: string) => {
     switch (type) {
       case 'cash': return { name: 'banknote', color: '#16a34a', bg: '#f0fdf4' };
@@ -531,16 +558,23 @@ export default function AccountDetailScreen() {
                 const progress = msi.installments > 0
                   ? ((msi.paid_installments) / msi.installments) * 100
                   : 0;
+                const isComplete = msi.status === 'completed' || msi.paid_installments >= msi.installments;
                 return (
-                  <TouchableOpacity
+                  <View
                     key={msi.id}
-                    style={[styles.msiItem, { borderColor }]}
-                    onLongPress={() => handleDeleteMsi(msi.id, msi.description)}
+                    style={[styles.msiItem, { borderColor: isComplete ? primary : borderColor }]}
                   >
                     <View style={styles.msiItemHeader}>
-                      <ThemedText style={[styles.msiItemTitle, { color: textMain }]}>
-                        {msi.description}
-                      </ThemedText>
+                      <View style={{ flex: 1 }}>
+                        <ThemedText style={[styles.msiItemTitle, { color: textMain }]}>
+                          {msi.description}
+                        </ThemedText>
+                        {isComplete && (
+                          <ThemedText style={{ fontSize: 11, color: primary, fontWeight: '600' }}>
+                            Liquidado
+                          </ThemedText>
+                        )}
+                      </View>
                       <ThemedText style={[styles.msiItemAmount, { color: textMain }]}>
                         {formatCurrency(msi.total_amount)}
                       </ThemedText>
@@ -557,14 +591,37 @@ export default function AccountDetailScreen() {
                       <View
                         style={[
                           styles.msiProgressFill,
-                          { width: `${Math.min(progress, 100)}%`, backgroundColor: primary }
+                          { width: `${Math.min(progress, 100)}%`, backgroundColor: isComplete ? primary : '#3b82f6' }
                         ]}
                       />
                     </View>
-                    <ThemedText style={[styles.msiRemaining, { color: '#dc2626' }]}>
-                      Restante: {formatCurrency(msi.remaining_amount)}
-                    </ThemedText>
-                  </TouchableOpacity>
+                    {!isComplete ? (
+                      <View style={styles.msiItemFooter}>
+                        <ThemedText style={[styles.msiRemaining, { color: '#dc2626' }]}>
+                          Restante: {formatCurrency(msi.remaining_amount)}
+                        </ThemedText>
+                        <TouchableOpacity
+                          style={[styles.msiPayButton, { backgroundColor: '#3b82f6' }]}
+                          onPress={() => handlePayMsi(msi.id, msi.description, msi.monthly_payment, msi.paid_installments + 1, msi.installments)}
+                        >
+                          <ThemedText style={styles.msiPayButtonText}>
+                            Registrar Pago
+                          </ThemedText>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <ThemedText style={[styles.msiRemaining, { color: primary }]}>
+                        Completado
+                      </ThemedText>
+                    )}
+                    {!isComplete && (
+                      <TouchableOpacity onPress={() => handleDeleteMsi(msi.id, msi.description)}>
+                        <ThemedText style={{ fontSize: 12, color: '#dc2626', marginTop: 8, textAlign: 'right' }}>
+                          Eliminar
+                        </ThemedText>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 );
               })
             )}
@@ -855,6 +912,21 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   msiRemaining: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  msiItemFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  msiPayButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  msiPayButtonText: {
+    color: '#ffffff',
     fontSize: 12,
     fontWeight: '600',
   },

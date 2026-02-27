@@ -570,13 +570,13 @@ export function createMovement(data: any): DBResponse {
       }
     } else if (type === 'transfer') {
       if (account.type === 'credit') {
-        database.runSync('UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?', [amount, account_id]);
+        database.runSync('UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?', [amount, account_id]);
       } else {
         database.runSync('UPDATE accounts SET balance = balance - ? WHERE id = ?', [amount, account_id]);
       }
       const toAcc = database.getFirstSync<any>('SELECT * FROM accounts WHERE id = ?', [to_account_id]);
       if (toAcc?.type === 'credit') {
-        database.runSync('UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?', [amount, to_account_id]);
+        database.runSync('UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?', [amount, to_account_id]);
       } else {
         database.runSync('UPDATE accounts SET balance = balance + ? WHERE id = ?', [amount, to_account_id]);
       }
@@ -616,13 +616,13 @@ export function updateMovement(id: number, updates: any): DBResponse {
       }
     } else if (existing.type === 'transfer') {
       if (oldAccount?.type === 'credit') {
-        database.runSync('UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?', [existing.amount, existing.account_id]);
+        database.runSync('UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?', [existing.amount, existing.account_id]);
       } else {
         database.runSync('UPDATE accounts SET balance = balance + ? WHERE id = ?', [existing.amount, existing.account_id]);
       }
       const oldToAcc = database.getFirstSync<any>('SELECT * FROM accounts WHERE id = ?', [existing.to_account_id]);
       if (oldToAcc?.type === 'credit') {
-        database.runSync('UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?', [existing.amount, existing.to_account_id]);
+        database.runSync('UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?', [existing.amount, existing.to_account_id]);
       } else {
         database.runSync('UPDATE accounts SET balance = balance - ? WHERE id = ?', [existing.amount, existing.to_account_id]);
       }
@@ -664,13 +664,13 @@ export function updateMovement(id: number, updates: any): DBResponse {
       }
     } else if (updated.type === 'transfer') {
       if (newAccount?.type === 'credit') {
-        database.runSync('UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?', [updated.amount, updated.account_id]);
+        database.runSync('UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?', [updated.amount, updated.account_id]);
       } else {
         database.runSync('UPDATE accounts SET balance = balance - ? WHERE id = ?', [updated.amount, updated.account_id]);
       }
       const newToAcc = database.getFirstSync<any>('SELECT * FROM accounts WHERE id = ?', [updated.to_account_id]);
       if (newToAcc?.type === 'credit') {
-        database.runSync('UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?', [updated.amount, updated.to_account_id]);
+        database.runSync('UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?', [updated.amount, updated.to_account_id]);
       } else {
         database.runSync('UPDATE accounts SET balance = balance + ? WHERE id = ?', [updated.amount, updated.to_account_id]);
       }
@@ -712,13 +712,13 @@ export function deleteMovement(id: number): DBResponse {
       }
     } else if (existing.type === 'transfer') {
       if (account?.type === 'credit') {
-        database.runSync('UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?', [existing.amount, existing.account_id]);
+        database.runSync('UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?', [existing.amount, existing.account_id]);
       } else {
         database.runSync('UPDATE accounts SET balance = balance + ? WHERE id = ?', [existing.amount, existing.account_id]);
       }
       const toAcc = database.getFirstSync<any>('SELECT * FROM accounts WHERE id = ?', [existing.to_account_id]);
       if (toAcc?.type === 'credit') {
-        database.runSync('UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?', [existing.amount, existing.to_account_id]);
+        database.runSync('UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?', [existing.amount, existing.to_account_id]);
       } else {
         database.runSync('UPDATE accounts SET balance = balance - ? WHERE id = ?', [existing.amount, existing.to_account_id]);
       }
@@ -2041,6 +2041,49 @@ export function deleteMsiPurchase(id: number): DBResponse {
 
     database.runSync('DELETE FROM msi_purchases WHERE id = ?', [id]);
     return { success: true, message: 'Compra MSI eliminada' };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export function payMsiInstallment(msiId: number): DBResponse {
+  try {
+    const database = getDb();
+    const msi = database.getFirstSync<any>('SELECT * FROM msi_purchases WHERE id = ?', [msiId]);
+    if (!msi) return { success: false, error: 'Compra MSI no encontrada' };
+    if (msi.status === 'completed') return { success: false, error: 'Esta compra MSI ya está liquidada' };
+    if (msi.paid_installments >= msi.installments) return { success: false, error: 'Todos los pagos ya fueron registrados' };
+
+    const account = database.getFirstSync<any>('SELECT * FROM accounts WHERE id = ?', [msi.account_id]);
+    if (!account) return { success: false, error: 'Cuenta no encontrada' };
+
+    const ts = now();
+    const newPaid = msi.paid_installments + 1;
+    const newRemaining = Math.max(0, msi.remaining_amount - msi.monthly_payment);
+    const isComplete = newPaid >= msi.installments;
+
+    // Actualizar MSI tracking
+    database.runSync(
+      `UPDATE msi_purchases SET paid_installments = ?, remaining_amount = ?, status = ?, updated_at = ? WHERE id = ?`,
+      [newPaid, newRemaining, isComplete ? 'completed' : 'active', ts, msiId]
+    );
+
+    // Liberar crédito: reducir current_balance por la mensualidad pagada
+    database.runSync(
+      'UPDATE accounts SET current_balance = current_balance - ?, updated_at = ? WHERE id = ?',
+      [msi.monthly_payment, ts, msi.account_id]
+    );
+
+    // Crear movimiento informativo para historial
+    // Se inserta directo (no createMovement) porque el balance ya se ajustó arriba
+    database.runSync(
+      `INSERT INTO movements (type, amount, title, category_id, category_name, category_icon, category_color, account_id, to_account_id, date, notes, created_at, updated_at)
+       VALUES ('expense', ?, ?, NULL, 'MSI', 'creditcard', '#7c3aed', ?, NULL, ?, ?, ?, ?)`,
+      [msi.monthly_payment, `Pago MSI - ${msi.description}`, msi.account_id, ts, `Pago ${newPaid}/${msi.installments} - ${msi.description}`, ts, ts]
+    );
+
+    const updated = database.getFirstSync<any>('SELECT * FROM msi_purchases WHERE id = ?', [msiId]);
+    return { success: true, data: updated, message: isComplete ? 'MSI liquidado' : `Pago ${newPaid}/${msi.installments} registrado` };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
