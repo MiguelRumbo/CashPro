@@ -68,7 +68,9 @@ export default function EditAccountScreen() {
         setGeneratesInterest(account.generates_interest === 1);
         setInterestRate(account.interest_rate?.toString() || '');
         setCreditLimit(formatCurrencyInput(account.credit_limit?.toString() || '0'));
-        setCurrentBalance(formatCurrencyInput(account.current_balance?.toString() || '0'));
+        // Mostrar credito disponible = limite - usado
+        const available = (account.credit_limit || 0) - (account.current_balance || 0);
+        setCurrentBalance(formatCurrencyInput(available.toString()));
         setCutOffDay(account.cut_off_day?.toString() || '');
         setPaymentDueDay(account.payment_due_day?.toString() || '');
       } else {
@@ -134,8 +136,10 @@ export default function EditAccountScreen() {
     if (accountType === 'credit') {
       updateData.card_number = cardNumber.replace(/\s/g, '');
       updateData.bank_name = bankName;
-      updateData.credit_limit = getNumericValue(creditLimit);
-      updateData.current_balance = getNumericValue(currentBalance);
+      const limit = getNumericValue(creditLimit);
+      const available = getNumericValue(currentBalance);
+      updateData.credit_limit = limit;
+      updateData.current_balance = limit - available; // Lo usado = limite - disponible
       updateData.cut_off_day = parseInt(cutOffDay) || 1;
       updateData.payment_due_day = parseInt(paymentDueDay) || 1;
     }
@@ -383,7 +387,7 @@ export default function EditAccountScreen() {
             </View>
 
             <View style={styles.section}>
-              <ThemedText style={[styles.label, { color: textMain }]}>Saldo Actual (Deuda)</ThemedText>
+              <ThemedText style={[styles.label, { color: textMain }]}>Crédito Disponible</ThemedText>
               <TextInput
                 style={[styles.input, { backgroundColor: surfaceColor, color: textMain, borderColor }]}
                 placeholder="0.00"
@@ -392,6 +396,9 @@ export default function EditAccountScreen() {
                 value={currentBalance}
                 onChangeText={handleCurrentBalanceChange}
               />
+              <ThemedText style={[styles.hint, { color: textSub }]}>
+                Cuánto crédito tienes disponible actualmente
+              </ThemedText>
             </View>
 
             <View style={styles.row}>

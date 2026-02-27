@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { ScrollView, View, StyleSheet, TouchableOpacity, Alert, Modal, TextInput } from 'react-native';
+import { ScrollView, View, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, Platform } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect, Stack } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -7,6 +7,7 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import * as database from '@/services/database';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 type Vehicle = {
   id: number;
@@ -48,7 +49,10 @@ type Maintenance = {
 type Account = {
   id: number;
   name: string;
+  type: string;
   balance: number;
+  credit_limit?: number;
+  current_balance?: number;
 };
 
 export default function VehicleDetailScreen() {
@@ -66,10 +70,16 @@ export default function VehicleDetailScreen() {
   // Estados para modal de gasolina
   const [fuelLiters, setFuelLiters] = useState('');
   const [fuelPrice, setFuelPrice] = useState('');
+  const [fuelTotal, setFuelTotal] = useState('');
   const [fuelOdometer, setFuelOdometer] = useState('');
   const [fuelStation, setFuelStation] = useState('');
   const [fuelAccount, setFuelAccount] = useState<number | null>(null);
   const [fuelNotes, setFuelNotes] = useState('');
+  const [editingFuelId, setEditingFuelId] = useState<number | null>(null);
+  const [fuelDate, setFuelDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
 
   // Estados para modal de mantenimiento
   const [maintType, setMaintType] = useState('service');
@@ -143,33 +153,134 @@ export default function VehicleDetailScreen() {
     }, [id])
   );
 
+  // Track cuales campos el usuario edito manualmente
+  const [editedFields, setEditedFields] = useState<Set<string>>(new Set());
+
+  const recalculate = (field: string, newValue: string, liters: string, price: string, total: string) => {
+    const edited = new Set(editedFields);
+    edited.add(field);
+    // Solo mantener los ultimos 2 campos editados
+    if (edited.size > 2) {
+      const arr = Array.from(edited);
+      edited.delete(arr[0]);
+    }
+    setEditedFields(edited);
+
+    const l = field === 'liters' ? parseFloat(newValue) : parseFloat(liters);
+    const p = field === 'price' ? parseFloat(newValue) : parseFloat(price);
+    const t = field === 'total' ? parseFloat(newValue) : parseFloat(total);
+
+    // Calcular el campo que NO fue editado por el usuario
+    if (edited.has('liters') && edited.has('price') && !edited.has('total')) {
+      if (l > 0 && p > 0) setFuelTotal((l * p).toFixed(2));
+    } else if (edited.has('liters') && edited.has('total') && !edited.has('price')) {
+      if (l > 0 && t > 0) setFuelPrice((t / l).toFixed(2));
+    } else if (edited.has('price') && edited.has('total') && !edited.has('liters')) {
+      if (p > 0 && t > 0) setFuelLiters((t / p).toFixed(2));
+    } else if (edited.size === 1) {
+      // Solo un campo editado, calcular si hay otro con valor
+      if (field === 'liters' && l > 0) {
+        if (p > 0) setFuelTotal((l * p).toFixed(2));
+        else if (t > 0) setFuelPrice((t / l).toFixed(2));
+      } else if (field === 'price' && p > 0) {
+        if (l > 0) setFuelTotal((l * p).toFixed(2));
+        else if (t > 0) setFuelLiters((t / p).toFixed(2));
+      } else if (field === 'total' && t > 0) {
+        if (l > 0) setFuelPrice((t / l).toFixed(2));
+        else if (p > 0) setFuelLiters((t / p).toFixed(2));
+      }
+    }
+  };
+
+  const handleLitersChange = (value: string) => {
+    setFuelLiters(value);
+    recalculate('liters', value, value, fuelPrice, fuelTotal);
+  };
+
+  const handlePriceChange = (value: string) => {
+    setFuelPrice(value);
+    recalculate('price', value, fuelLiters, value, fuelTotal);
+  };
+
+  const handleTotalChange = (value: string) => {
+    setFuelTotal(value);
+    recalculate('total', value, fuelLiters, fuelPrice, value);
+  };
+
   const handleAddFuel = async () => {
-    if (!fuelLiters || !fuelPrice || !fuelOdometer || !fuelAccount) {
-      Alert.alert('Error', 'Completa todos los campos requeridos');
+    if (!fuelOdometer || !fuelAccount) {
+      Alert.alert('Error', 'Completa el kilometraje y la cuenta');
       return;
     }
 
-    const totalCost = parseFloat(fuelLiters) * parseFloat(fuelPrice);
+    // Validar que tengamos al menos 2 de los 3 valores
+    const hasLiters = fuelLiters && parseFloat(fuelLiters) > 0;
+    const hasPrice = fuelPrice && parseFloat(fuelPrice) > 0;
+    const hasTotal = fuelTotal && parseFloat(fuelTotal) > 0;
+    
+    const count = [hasLiters, hasPrice, hasTotal].filter(Boolean).length;
+    if (count < 2) {
+      Alert.alert('Error', 'Ingresa al menos 2 valores: litros, precio por litro o total');
+      return;
+    }
+
+    // Calcular valores faltantes
+    let liters = hasLiters ? parseFloat(fuelLiters) : 0;
+    let pricePerLiter = hasPrice ? parseFloat(fuelPrice) : 0;
+    let totalCost = hasTotal ? parseFloat(fuelTotal) : 0;
+
+    if (!hasLiters && hasPrice && hasTotal) {
+      liters = totalCost / pricePerLiter;
+    } else if (!hasPrice && hasLiters && hasTotal) {
+      pricePerLiter = totalCost / liters;
+    } else if (!hasTotal && hasLiters && hasPrice) {
+      totalCost = liters * pricePerLiter;
+    }
+
+    // Redondear a 2 decimales
+    liters = Math.round(liters * 100) / 100;
+    pricePerLiter = Math.round(pricePerLiter * 100) / 100;
+    totalCost = Math.round(totalCost * 100) / 100;
 
     try {
-      const result = database.createFuelLoad(id as string, {
-        liters: parseFloat(fuelLiters),
-        price_per_liter: parseFloat(fuelPrice),
-        total_cost: totalCost,
-        odometer: parseFloat(fuelOdometer),
-        station_name: fuelStation || null,
-        is_full_tank: true,
-        account_id: fuelAccount,
-        notes: fuelNotes || null,
-      });
+      let result;
+      if (editingFuelId) {
+        result = database.updateFuelLoad(editingFuelId.toString(), {
+          liters,
+          price_per_liter: pricePerLiter,
+          total_cost: totalCost,
+          odometer: parseFloat(fuelOdometer),
+          station_name: fuelStation || null,
+          is_full_tank: true,
+          account_id: fuelAccount,
+          date: fuelDate.toISOString(),
+          notes: fuelNotes || null,
+        });
+      } else {
+        result = database.createFuelLoad(id as string, {
+          liters,
+          price_per_liter: pricePerLiter,
+          total_cost: totalCost,
+          odometer: parseFloat(fuelOdometer),
+          station_name: fuelStation || null,
+          is_full_tank: true,
+          account_id: fuelAccount,
+          date: fuelDate.toISOString(),
+          notes: fuelNotes || null,
+        });
+      }
 
       if (result.success) {
         setShowFuelModal(false);
         setFuelLiters('');
         setFuelPrice('');
+        setFuelTotal('');
         setFuelOdometer('');
         setFuelStation('');
         setFuelNotes('');
+        setEditingFuelId(null);
+        setEditedFields(new Set());
+        setFuelDate(new Date());
         fetchData();
       } else {
         Alert.alert('Error', result.error);
@@ -177,6 +288,45 @@ export default function VehicleDetailScreen() {
     } catch {
       Alert.alert('Error', 'No se pudo registrar la carga');
     }
+  };
+
+  const handleEditFuel = (load: FuelLoad) => {
+    setEditingFuelId(load.id);
+    setFuelLiters(load.liters.toString());
+    setFuelPrice(load.price_per_liter.toString());
+    setFuelTotal(load.total_cost.toString());
+    setFuelOdometer(load.odometer.toString());
+    setFuelStation(load.station_name || '');
+    setFuelNotes(load.notes || '');
+    setFuelDate(new Date(load.date));
+    setFuelAccount(null); // Se establecerá con la cuenta actual
+    setShowFuelModal(true);
+  };
+
+  const handleDeleteFuel = (loadId: number) => {
+    Alert.alert(
+      'Eliminar carga',
+      '¿Estás seguro de que deseas eliminar esta carga de gasolina?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const result = database.deleteFuelLoad(loadId.toString());
+              if (result.success) {
+                fetchData();
+              } else {
+                Alert.alert('Error', result.error);
+              }
+            } catch {
+              Alert.alert('Error', 'No se pudo eliminar la carga');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleAddMaintenance = async () => {
@@ -222,7 +372,18 @@ export default function VehicleDetailScreen() {
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
-      <Stack.Screen options={{ title: vehicle.name, headerShown: true }} />
+      <Stack.Screen options={{ 
+        title: vehicle.name, 
+        headerShown: true,
+        headerRight: () => (
+          <TouchableOpacity
+            onPress={() => router.push(`/vehicles/edit-vehicle?id=${id}`)}
+            style={{ marginRight: 8 }}
+          >
+            <IconSymbol name="pencil" size={20} color={primary} />
+          </TouchableOpacity>
+        ),
+      }} />
 
       <ScrollView style={styles.scrollView}>
         {/* Header Card */}
@@ -307,7 +468,12 @@ export default function VehicleDetailScreen() {
           {activeTab === 'fuel' ? (
             fuelLoads.length > 0 ? (
               fuelLoads.map((load) => (
-                <View key={load.id} style={[styles.itemCard, { backgroundColor: surfaceColor, borderColor }]}>
+                <TouchableOpacity
+                  key={load.id}
+                  style={[styles.itemCard, { backgroundColor: surfaceColor, borderColor }]}
+                  onPress={() => handleEditFuel(load)}
+                  onLongPress={() => handleDeleteFuel(load.id)}
+                >
                   <View style={styles.itemHeader}>
                     <View>
                       <ThemedText style={[styles.itemTitle, { color: textMain }]}>
@@ -326,7 +492,7 @@ export default function VehicleDetailScreen() {
                       {load.station_name}
                     </ThemedText>
                   )}
-                </View>
+                </TouchableOpacity>
               ))
             ) : (
               <View style={styles.emptyState}>
@@ -377,7 +543,22 @@ export default function VehicleDetailScreen() {
       {/* FAB */}
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: primary }]}
-        onPress={() => activeTab === 'fuel' ? setShowFuelModal(true) : setShowMaintenanceModal(true)}
+        onPress={() => {
+          if (activeTab === 'fuel') {
+            setEditingFuelId(null);
+            setFuelLiters('');
+            setFuelPrice('');
+            setFuelTotal('');
+            setFuelOdometer('');
+            setFuelStation('');
+            setFuelNotes('');
+            setEditedFields(new Set());
+            setFuelDate(new Date());
+            setShowFuelModal(true);
+          } else {
+            setShowMaintenanceModal(true);
+          }
+        }}
       >
         <IconSymbol name="plus" size={24} color="#ffffff" />
       </TouchableOpacity>
@@ -387,8 +568,13 @@ export default function VehicleDetailScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
             <View style={styles.modalHeader}>
-              <ThemedText style={[styles.modalTitle, { color: textMain }]}>Registrar Carga de Gasolina</ThemedText>
-              <TouchableOpacity onPress={() => setShowFuelModal(false)}>
+              <ThemedText style={[styles.modalTitle, { color: textMain }]}>
+                {editingFuelId ? 'Editar Carga de Gasolina' : 'Registrar Carga de Gasolina'}
+              </ThemedText>
+              <TouchableOpacity onPress={() => {
+                setShowFuelModal(false);
+                setEditingFuelId(null);
+              }}>
                 <IconSymbol name="xmark" size={24} color={textMuted} />
               </TouchableOpacity>
             </View>
@@ -399,7 +585,7 @@ export default function VehicleDetailScreen() {
               <TextInput
                 style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
                 value={fuelLiters}
-                onChangeText={setFuelLiters}
+                onChangeText={handleLitersChange}
                 placeholder="25.5"
                 placeholderTextColor={textMuted}
                 keyboardType="decimal-pad"
@@ -410,21 +596,29 @@ export default function VehicleDetailScreen() {
               <TextInput
                 style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
                 value={fuelPrice}
-                onChangeText={setFuelPrice}
+                onChangeText={handlePriceChange}
                 placeholder="22.50"
                 placeholderTextColor={textMuted}
                 keyboardType="decimal-pad"
               />
               
-              {/* Total calculado */}
-              {fuelLiters && fuelPrice && (
-                <View style={[styles.totalBox, { backgroundColor: primary + '15', borderColor: primary + '30' }]}>
-                  <ThemedText style={[styles.totalLabel, { color: textMuted }]}>Total a pagar</ThemedText>
-                  <ThemedText style={[styles.totalValue, { color: primary }]}>
-                    {formatCurrency(parseFloat(fuelLiters) * parseFloat(fuelPrice))}
-                  </ThemedText>
-                </View>
-              )}
+              {/* Total */}
+              <ThemedText style={[styles.modalLabel, { color: textMain }]}>Total</ThemedText>
+              <TextInput
+                style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
+                value={fuelTotal}
+                onChangeText={handleTotalChange}
+                placeholder="573.75"
+                placeholderTextColor={textMuted}
+                keyboardType="decimal-pad"
+              />
+              
+              <View style={[styles.infoBox, { backgroundColor: '#3b82f6' + '15', borderColor: '#3b82f6' + '30' }]}>
+                <IconSymbol name="info.circle" size={16} color="#3b82f6" />
+                <ThemedText style={[styles.infoText, { color: '#3b82f6' }]}>
+                  Ingresa al menos 2 valores y el tercero se calculará automáticamente
+                </ThemedText>
+              </View>
               
               {/* Kilometraje */}
               <ThemedText style={[styles.modalLabel, { color: textMain }]}>Kilometraje actual</ThemedText>
@@ -446,47 +640,86 @@ export default function VehicleDetailScreen() {
                 placeholder="Ej: Pemex, Shell, BP"
                 placeholderTextColor={textMuted}
               />
-              
+
+              {/* Fecha y Hora */}
+              <ThemedText style={[styles.modalLabel, { color: textMain }]}>Fecha y Hora</ThemedText>
+              <View style={styles.dateTimeRow}>
+                <TouchableOpacity
+                  style={[styles.dateTimeButton, { backgroundColor: inputBg, borderColor, flex: 1 }]}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <IconSymbol name="calendar" size={16} color={textMuted} />
+                  <ThemedText style={[styles.dateTimeText, { color: textMain }]}>
+                    {fuelDate.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.dateTimeButton, { backgroundColor: inputBg, borderColor }]}
+                  onPress={() => setShowTimePicker(true)}
+                >
+                  <IconSymbol name="clock" size={16} color={textMuted} />
+                  <ThemedText style={[styles.dateTimeText, { color: textMain }]}>
+                    {fuelDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+
               {/* Selector de cuenta */}
               <ThemedText style={[styles.modalLabel, { color: textMain }]}>Cuenta de pago</ThemedText>
-              <View style={styles.accountsList}>
-                {accounts.map((account) => (
-                  <TouchableOpacity
-                    key={account.id}
-                    style={[
-                      styles.accountOption,
-                      {
-                        backgroundColor: fuelAccount === account.id ? primary + '20' : inputBg,
-                        borderColor: fuelAccount === account.id ? primary : borderColor,
-                      },
-                    ]}
-                    onPress={() => setFuelAccount(account.id)}
-                  >
-                    <View style={styles.accountOptionLeft}>
-                      <View style={[
-                        styles.accountRadio,
-                        {
-                          borderColor: fuelAccount === account.id ? primary : borderColor,
-                          backgroundColor: fuelAccount === account.id ? primary : 'transparent',
-                        },
-                      ]}>
-                        {fuelAccount === account.id && (
-                          <IconSymbol name="checkmark" size={12} color="#ffffff" />
-                        )}
-                      </View>
-                      <View>
-                        <ThemedText style={[styles.accountName, { color: textMain }]}>
-                          {account.name}
-                        </ThemedText>
-                        <ThemedText style={[styles.accountBalance, { color: textMuted }]}>
-                          {formatCurrency(account.balance)}
-                        </ThemedText>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              
+              <TouchableOpacity
+                style={[styles.input, { backgroundColor: inputBg, borderColor, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+                onPress={() => setShowAccountDropdown(!showAccountDropdown)}
+              >
+                <ThemedText style={{ color: fuelAccount ? textMain : textMuted, fontSize: 16 }}>
+                  {fuelAccount ? accounts.find(a => a.id === fuelAccount)?.name || 'Seleccionar' : 'Seleccionar cuenta'}
+                </ThemedText>
+                <IconSymbol name="chevron.down" size={16} color={textMuted} />
+              </TouchableOpacity>
+              {showAccountDropdown && (
+                <View style={[styles.accountsList, { borderColor, borderWidth: 1, borderRadius: 12, marginTop: -8 }]}>
+                  {accounts.map((account) => {
+                    const displayBal = account.type === 'credit'
+                      ? (account.credit_limit || 0) - (account.current_balance || 0)
+                      : account.balance;
+                    return (
+                      <TouchableOpacity
+                        key={account.id}
+                        style={[
+                          styles.accountOption,
+                          {
+                            backgroundColor: fuelAccount === account.id ? primary + '20' : inputBg,
+                            borderColor: fuelAccount === account.id ? primary : borderColor,
+                          },
+                        ]}
+                        onPress={() => { setFuelAccount(account.id); setShowAccountDropdown(false); }}
+                      >
+                        <View style={styles.accountOptionLeft}>
+                          <View style={[
+                            styles.accountRadio,
+                            {
+                              borderColor: fuelAccount === account.id ? primary : borderColor,
+                              backgroundColor: fuelAccount === account.id ? primary : 'transparent',
+                            },
+                          ]}>
+                            {fuelAccount === account.id && (
+                              <IconSymbol name="checkmark" size={12} color="#ffffff" />
+                            )}
+                          </View>
+                          <View>
+                            <ThemedText style={[styles.accountName, { color: textMain }]}>
+                              {account.name}
+                            </ThemedText>
+                            <ThemedText style={[styles.accountBalance, { color: textMuted }]}>
+                              {account.type === 'credit' ? 'Disponible: ' : ''}{formatCurrency(displayBal)}
+                            </ThemedText>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+
               {/* Notas */}
               <ThemedText style={[styles.modalLabel, { color: textMain }]}>Notas (opcional)</ThemedText>
               <TextInput
@@ -503,7 +736,10 @@ export default function VehicleDetailScreen() {
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton, { backgroundColor: borderColor }]}
-                onPress={() => setShowFuelModal(false)}
+                onPress={() => {
+                  setShowFuelModal(false);
+                  setEditingFuelId(null);
+                }}
               >
                 <ThemedText style={[styles.buttonText, { color: textMain }]}>Cancelar</ThemedText>
               </TouchableOpacity>
@@ -511,7 +747,9 @@ export default function VehicleDetailScreen() {
                 style={[styles.modalButton, styles.saveButton, { backgroundColor: primary }]}
                 onPress={handleAddFuel}
               >
-                <ThemedText style={[styles.buttonText, { color: '#ffffff' }]}>Guardar</ThemedText>
+                <ThemedText style={[styles.buttonText, { color: '#ffffff' }]}>
+                  {editingFuelId ? 'Actualizar' : 'Guardar'}
+                </ThemedText>
               </TouchableOpacity>
             </View>
           </View>
@@ -614,41 +852,46 @@ export default function VehicleDetailScreen() {
               {/* Selector de cuenta */}
               <ThemedText style={[styles.modalLabel, { color: textMain }]}>Cuenta de pago</ThemedText>
               <View style={styles.accountsList}>
-                {accounts.map((account) => (
-                  <TouchableOpacity
-                    key={account.id}
-                    style={[
-                      styles.accountOption,
-                      {
-                        backgroundColor: maintAccount === account.id ? primary + '20' : inputBg,
-                        borderColor: maintAccount === account.id ? primary : borderColor,
-                      },
-                    ]}
-                    onPress={() => setMaintAccount(account.id)}
-                  >
-                    <View style={styles.accountOptionLeft}>
-                      <View style={[
-                        styles.accountRadio,
+                {accounts.map((account) => {
+                  const displayBal = account.type === 'credit'
+                    ? (account.credit_limit || 0) - (account.current_balance || 0)
+                    : account.balance;
+                  return (
+                    <TouchableOpacity
+                      key={account.id}
+                      style={[
+                        styles.accountOption,
                         {
+                          backgroundColor: maintAccount === account.id ? primary + '20' : inputBg,
                           borderColor: maintAccount === account.id ? primary : borderColor,
-                          backgroundColor: maintAccount === account.id ? primary : 'transparent',
                         },
-                      ]}>
-                        {maintAccount === account.id && (
-                          <IconSymbol name="checkmark" size={12} color="#ffffff" />
-                        )}
+                      ]}
+                      onPress={() => setMaintAccount(account.id)}
+                    >
+                      <View style={styles.accountOptionLeft}>
+                        <View style={[
+                          styles.accountRadio,
+                          {
+                            borderColor: maintAccount === account.id ? primary : borderColor,
+                            backgroundColor: maintAccount === account.id ? primary : 'transparent',
+                          },
+                        ]}>
+                          {maintAccount === account.id && (
+                            <IconSymbol name="checkmark" size={12} color="#ffffff" />
+                          )}
+                        </View>
+                        <View>
+                          <ThemedText style={[styles.accountName, { color: textMain }]}>
+                            {account.name}
+                          </ThemedText>
+                          <ThemedText style={[styles.accountBalance, { color: textMuted }]}>
+                            {account.type === 'credit' ? 'Disponible: ' : ''}{formatCurrency(displayBal)}
+                          </ThemedText>
+                        </View>
                       </View>
-                      <View>
-                        <ThemedText style={[styles.accountName, { color: textMain }]}>
-                          {account.name}
-                        </ThemedText>
-                        <ThemedText style={[styles.accountBalance, { color: textMuted }]}>
-                          {formatCurrency(account.balance)}
-                        </ThemedText>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                ))}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
               
               {/* Notas */}
@@ -681,6 +924,35 @@ export default function VehicleDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Date/Time Pickers */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={fuelDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={(e, d) => {
+            setShowDatePicker(false);
+            if (d) setFuelDate(d);
+          }}
+        />
+      )}
+      {showTimePicker && (
+        <DateTimePicker
+          value={fuelDate}
+          mode="time"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={(e, d) => {
+            setShowTimePicker(false);
+            if (d) {
+              const nd = new Date(fuelDate);
+              nd.setHours(d.getHours());
+              nd.setMinutes(d.getMinutes());
+              setFuelDate(nd);
+            }
+          }}
+        />
+      )}
     </ThemedView>
   );
 }
@@ -721,9 +993,14 @@ const styles = StyleSheet.create({
   totalBox: { padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   totalLabel: { fontSize: 14 },
   totalValue: { fontSize: 20, fontWeight: '700' },
+  infoBox: { padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  infoText: { fontSize: 12, flex: 1 },
   typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
   typeChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
   typeChipText: { fontSize: 13, fontWeight: '600' },
+  dateTimeRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  dateTimeButton: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 14, borderRadius: 12, borderWidth: 1 },
+  dateTimeText: { fontSize: 15, fontWeight: '500' },
   accountsList: { marginBottom: 16 },
   accountOption: { padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 8 },
   accountOptionLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },

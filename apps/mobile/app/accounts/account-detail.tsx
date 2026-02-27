@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ScrollView, View, StyleSheet, TouchableOpacity, Alert, Switch } from 'react-native';
+import { ScrollView, View, StyleSheet, TouchableOpacity, Alert, Switch, Modal, TextInput } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -7,6 +7,7 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import * as database from '@/services/database';
 import { formatCurrency, maskCardNumber } from '@/utils/format';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 interface Account {
   id: number;
@@ -38,6 +39,12 @@ export default function AccountDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [includeInBalance, setIncludeInBalance] = useState(true);
   const [isPrimary, setIsPrimary] = useState(false);
+  const [msiPurchases, setMsiPurchases] = useState<any[]>([]);
+  const [showMsiModal, setShowMsiModal] = useState(false);
+  const [msiDescription, setMsiDescription] = useState('');
+  const [msiAmount, setMsiAmount] = useState('');
+  const [msiInstallments, setMsiInstallments] = useState('');
+  const { formatCurrency: formatCurrencyCtx } = useCurrency();
 
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1c2e24' }, 'surface');
@@ -69,6 +76,88 @@ export default function AccountDetailScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchMsiPurchases = () => {
+    try {
+      const result = database.getMsiPurchases(Number(accountId));
+      if (result.success) {
+        setMsiPurchases(result.data);
+      }
+    } catch (error) {
+      console.error('Error al cargar MSI:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (account?.type === 'credit') {
+      fetchMsiPurchases();
+    }
+  }, [account?.type]);
+
+  const handleAddMsi = () => {
+    if (!msiDescription.trim() || !msiAmount || !msiInstallments) {
+      Alert.alert('Error', 'Completa todos los campos');
+      return;
+    }
+
+    const totalAmount = parseFloat(msiAmount);
+    const installments = parseInt(msiInstallments);
+
+    if (totalAmount <= 0 || installments <= 0) {
+      Alert.alert('Error', 'Los valores deben ser mayores a 0');
+      return;
+    }
+
+    try {
+      const result = database.createMsiPurchase({
+        account_id: Number(accountId),
+        description: msiDescription.trim(),
+        total_amount: totalAmount,
+        installments,
+        start_date: new Date().toISOString(),
+      });
+
+      if (result.success) {
+        setShowMsiModal(false);
+        setMsiDescription('');
+        setMsiAmount('');
+        setMsiInstallments('');
+        fetchAccount();
+        fetchMsiPurchases();
+      } else {
+        Alert.alert('Error', result.error || 'No se pudo registrar');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo registrar la compra MSI');
+    }
+  };
+
+  const handleDeleteMsi = (id: number, desc: string) => {
+    Alert.alert(
+      'Eliminar MSI',
+      `¿Eliminar "${desc}"? Se revertirá el monto restante al crédito disponible.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => {
+            try {
+              const result = database.deleteMsiPurchase(id);
+              if (result.success) {
+                fetchAccount();
+                fetchMsiPurchases();
+              } else {
+                Alert.alert('Error', result.error || 'No se pudo eliminar');
+              }
+            } catch {
+              Alert.alert('Error', 'No se pudo eliminar');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const getAccountIcon = (type: string) => {
@@ -200,7 +289,8 @@ export default function AccountDetailScreen() {
 
   const iconData = getAccountIcon(account.type);
   const isCredit = account.type === 'credit';
-  const displayBalance = isCredit ? account.current_balance || 0 : account.balance;
+  const creditAvailable = isCredit ? (account.credit_limit || 0) - (account.current_balance || 0) : 0;
+  const displayBalance = isCredit ? creditAvailable : account.balance;
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
@@ -228,10 +318,10 @@ export default function AccountDetailScreen() {
             <IconSymbol size={48} name={iconData.name as any} color={iconData.color} />
           </View>
           <ThemedText style={[styles.balanceLabel, { color: textSub }]}>
-            {isCredit ? 'Saldo Actual (Deuda)' : 'Balance Disponible'}
+            {isCredit ? 'Crédito Disponible' : 'Balance Disponible'}
           </ThemedText>
-          <ThemedText style={[styles.balanceAmount, { color: isCredit ? '#dc2626' : textMain }]}>
-            {isCredit ? '-' : ''}{formatCurrency(displayBalance)}
+          <ThemedText style={[styles.balanceAmount, { color: isCredit ? primary : textMain }]}>
+            {formatCurrency(displayBalance)}
           </ThemedText>
           {isCredit && account.credit_limit && (
             <ThemedText style={[styles.creditLimit, { color: textSub }]}>
@@ -357,7 +447,16 @@ export default function AccountDetailScreen() {
               <View style={styles.infoRow}>
                 <ThemedText style={[styles.infoLabel, { color: textSub }]}>Crédito Disponible</ThemedText>
                 <ThemedText style={[styles.infoValue, { color: primary }]}>
-                  {formatCurrency((account.credit_limit || 0) - (account.current_balance || 0))}
+                  {formatCurrency(creditAvailable)}
+                </ThemedText>
+              </View>
+
+              <View style={[styles.divider, { backgroundColor: borderColor }]} />
+
+              <View style={styles.infoRow}>
+                <ThemedText style={[styles.infoLabel, { color: textSub }]}>Crédito Utilizado</ThemedText>
+                <ThemedText style={[styles.infoValue, { color: '#dc2626' }]}>
+                  {formatCurrency(account.current_balance || 0)}
                 </ThemedText>
               </View>
 
@@ -389,8 +488,8 @@ export default function AccountDetailScreen() {
                   </ThemedText>
                   <ThemedText style={[styles.toggleDescription, { color: textSub }]}>
                     {includeInBalance 
-                      ? 'La deuda de esta tarjeta se resta del balance total' 
-                      : 'La deuda de esta tarjeta no afecta el balance total'}
+                      ? 'El crédito disponible se suma al balance total' 
+                      : 'El crédito disponible no afecta el balance total'}
                   </ThemedText>
                 </View>
                 <Switch
@@ -404,6 +503,74 @@ export default function AccountDetailScreen() {
           </>
         )}
 
+        {/* MSI Purchases - Solo para crédito */}
+        {isCredit && (
+          <View style={[styles.section, { backgroundColor: surfaceColor }]}>
+            <View style={styles.msiHeader}>
+              <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
+                Compras a MSI
+              </ThemedText>
+              <TouchableOpacity
+                style={[styles.msiAddButton, { backgroundColor: primary }]}
+                onPress={() => setShowMsiModal(true)}
+              >
+                <IconSymbol size={16} name="plus" color="#ffffff" />
+                <ThemedText style={styles.msiAddButtonText}>Agregar</ThemedText>
+              </TouchableOpacity>
+            </View>
+
+            {msiPurchases.length === 0 ? (
+              <View style={styles.msiEmpty}>
+                <IconSymbol size={32} name="creditcard" color={textSub} />
+                <ThemedText style={[styles.msiEmptyText, { color: textSub }]}>
+                  No hay compras a MSI
+                </ThemedText>
+              </View>
+            ) : (
+              msiPurchases.map((msi) => {
+                const progress = msi.installments > 0
+                  ? ((msi.paid_installments) / msi.installments) * 100
+                  : 0;
+                return (
+                  <TouchableOpacity
+                    key={msi.id}
+                    style={[styles.msiItem, { borderColor }]}
+                    onLongPress={() => handleDeleteMsi(msi.id, msi.description)}
+                  >
+                    <View style={styles.msiItemHeader}>
+                      <ThemedText style={[styles.msiItemTitle, { color: textMain }]}>
+                        {msi.description}
+                      </ThemedText>
+                      <ThemedText style={[styles.msiItemAmount, { color: textMain }]}>
+                        {formatCurrency(msi.total_amount)}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.msiItemDetails}>
+                      <ThemedText style={[styles.msiItemDetail, { color: textSub }]}>
+                        {formatCurrency(msi.monthly_payment)}/mes x {msi.installments} meses
+                      </ThemedText>
+                      <ThemedText style={[styles.msiItemDetail, { color: textSub }]}>
+                        {msi.paid_installments}/{msi.installments} pagados
+                      </ThemedText>
+                    </View>
+                    <View style={[styles.msiProgressBar, { backgroundColor: borderColor }]}>
+                      <View
+                        style={[
+                          styles.msiProgressFill,
+                          { width: `${Math.min(progress, 100)}%`, backgroundColor: primary }
+                        ]}
+                      />
+                    </View>
+                    <ThemedText style={[styles.msiRemaining, { color: '#dc2626' }]}>
+                      Restante: {formatCurrency(msi.remaining_amount)}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </View>
+        )}
+
         {/* Botón Eliminar */}
         <TouchableOpacity
           style={[styles.deleteButton, { borderColor: '#dc2626' }]}
@@ -415,6 +582,90 @@ export default function AccountDetailScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Modal MSI */}
+      <Modal visible={showMsiModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={[styles.modalTitle, { color: textMain }]}>
+                Nueva Compra MSI
+              </ThemedText>
+              <TouchableOpacity onPress={() => setShowMsiModal(false)}>
+                <IconSymbol name="xmark" size={24} color={textSub} />
+              </TouchableOpacity>
+            </View>
+
+            <ThemedText style={[styles.modalLabel, { color: textMain }]}>Descripción</ThemedText>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor, borderColor, color: textMain }]}
+              value={msiDescription}
+              onChangeText={setMsiDescription}
+              placeholder="Ej: Laptop, Televisión"
+              placeholderTextColor={textSub}
+            />
+
+            <ThemedText style={[styles.modalLabel, { color: textMain }]}>Monto Total</ThemedText>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor, borderColor, color: textMain }]}
+              value={msiAmount}
+              onChangeText={setMsiAmount}
+              placeholder="0.00"
+              placeholderTextColor={textSub}
+              keyboardType="decimal-pad"
+            />
+
+            <ThemedText style={[styles.modalLabel, { color: textMain }]}>Número de Meses</ThemedText>
+            <View style={styles.msiMonthsGrid}>
+              {[3, 6, 9, 12, 18, 24].map((n) => (
+                <TouchableOpacity
+                  key={n}
+                  style={[
+                    styles.msiMonthChip,
+                    {
+                      backgroundColor: msiInstallments === n.toString() ? primary + '20' : backgroundColor,
+                      borderColor: msiInstallments === n.toString() ? primary : borderColor,
+                    },
+                  ]}
+                  onPress={() => setMsiInstallments(n.toString())}
+                >
+                  <ThemedText
+                    style={[
+                      styles.msiMonthChipText,
+                      { color: msiInstallments === n.toString() ? primary : textSub },
+                    ]}
+                  >
+                    {n}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {msiAmount && msiInstallments ? (
+              <View style={[styles.msiPreview, { backgroundColor: primary + '10', borderColor: primary + '30' }]}>
+                <ThemedText style={[styles.msiPreviewText, { color: primary }]}>
+                  Mensualidad: {formatCurrency(parseFloat(msiAmount) / parseInt(msiInstallments))}
+                </ThemedText>
+              </View>
+            ) : null}
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: borderColor }]}
+                onPress={() => setShowMsiModal(false)}
+              >
+                <ThemedText style={[styles.modalButtonText, { color: textMain }]}>Cancelar</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: primary }]}
+                onPress={handleAddMsi}
+              >
+                <ThemedText style={[styles.modalButtonText, { color: '#ffffff' }]}>Guardar</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ThemedView>
   );
 }
@@ -535,5 +786,155 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#dc2626',
+  },
+  // MSI styles
+  msiHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  msiAddButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  msiAddButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  msiEmpty: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 8,
+  },
+  msiEmptyText: {
+    fontSize: 14,
+  },
+  msiItem: {
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  msiItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  msiItemTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    flex: 1,
+  },
+  msiItemAmount: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  msiItemDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  msiItemDetail: {
+    fontSize: 12,
+  },
+  msiProgressBar: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
+  msiProgressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  msiRemaining: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  modalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  msiMonthsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  msiMonthChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    minWidth: 56,
+    alignItems: 'center',
+  },
+  msiMonthChipText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  msiPreview: {
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  msiPreviewText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

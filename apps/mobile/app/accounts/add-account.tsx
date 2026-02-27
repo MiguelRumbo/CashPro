@@ -111,8 +111,10 @@ export default function AddAccountScreen() {
     }
 
     if (accountType === 'credit') {
-      accountData.credit_limit = getNumericValue(creditLimit);
-      accountData.current_balance = getNumericValue(currentBalance);
+      const limit = getNumericValue(creditLimit);
+      const available = getNumericValue(currentBalance);
+      accountData.credit_limit = limit;
+      accountData.current_balance = limit - available; // Lo usado = limite - disponible
       accountData.cut_off_day = parseInt(cutOffDay) || 1;
       accountData.payment_due_day = parseInt(paymentDueDay) || 1;
     }
@@ -383,7 +385,7 @@ export default function AddAccountScreen() {
             </View>
 
             <View style={styles.section}>
-              <ThemedText style={[styles.label, { color: textMain }]}>Saldo Actual (Deuda)</ThemedText>
+              <ThemedText style={[styles.label, { color: textMain }]}>Crédito Disponible</ThemedText>
               <TextInput
                 style={[styles.input, { backgroundColor: surfaceColor, color: textMain, borderColor }]}
                 placeholder="0.00"
@@ -392,6 +394,9 @@ export default function AddAccountScreen() {
                 value={currentBalance}
                 onChangeText={handleCurrentBalanceChange}
               />
+              <ThemedText style={[styles.hint, { color: textSub }]}>
+                Cuánto crédito tienes disponible actualmente
+              </ThemedText>
             </View>
 
             <View style={styles.row}>

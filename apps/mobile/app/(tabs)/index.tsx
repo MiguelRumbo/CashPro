@@ -433,7 +433,7 @@ export default function DashboardScreen() {
             ) : (
               accounts.map((account, index) => {
                 const isPrimary = account.is_primary === 1;
-                const displayBalance = account.type === 'credit' ? account.current_balance || 0 : account.balance;
+                const displayBalance = account.type === 'credit' ? (account.credit_limit || 0) - (account.current_balance || 0) : account.balance;
                 
                 if (isPrimary) {
                   return (

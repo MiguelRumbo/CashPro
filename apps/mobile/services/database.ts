@@ -256,6 +256,24 @@ export function initDatabase(): void {
     );
   `);
 
+  database.execSync(`
+    CREATE TABLE IF NOT EXISTS msi_purchases (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      account_id INTEGER NOT NULL,
+      description TEXT NOT NULL,
+      total_amount REAL NOT NULL,
+      installments INTEGER NOT NULL,
+      monthly_payment REAL NOT NULL,
+      paid_installments INTEGER DEFAULT 0,
+      remaining_amount REAL NOT NULL,
+      start_date TEXT NOT NULL,
+      status TEXT DEFAULT 'active',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+    );
+  `);
+
   // Seed defaults
   const profile = database.getFirstSync<any>('SELECT id FROM user_profile WHERE id = 1');
   if (!profile) {
@@ -285,7 +303,8 @@ function updateAccountBalance(accountId: number, amount: number, operation: 'add
   if (!account) return;
 
   if (account.type === 'credit') {
-    if (operation === 'add') {
+    // Para crédito: 'subtract' = gasto = deuda SUBE, 'add' = pago/reversa = deuda BAJA
+    if (operation === 'subtract') {
       database.runSync('UPDATE accounts SET current_balance = current_balance + ?, updated_at = ? WHERE id = ?', [amount, now(), accountId]);
     } else {
       database.runSync('UPDATE accounts SET current_balance = current_balance - ?, updated_at = ? WHERE id = ?', [amount, now(), accountId]);
@@ -447,17 +466,17 @@ export function getAccountsStats(): DBResponse {
     const database = getDb();
     const result = database.getFirstSync<any>(`
       SELECT
-        SUM(CASE WHEN type != 'credit' THEN balance ELSE 0 END) as total_balance,
-        SUM(CASE WHEN type = 'credit' THEN current_balance ELSE 0 END) as total_credit_debt
+        SUM(CASE WHEN type != 'credit' AND include_in_balance = 1 THEN balance ELSE 0 END) as total_balance,
+        SUM(CASE WHEN type = 'credit' AND include_in_balance = 1 THEN (credit_limit - current_balance) ELSE 0 END) as total_credit_available
       FROM accounts
     `);
-    const total = (result?.total_balance || 0) - (result?.total_credit_debt || 0);
+    const total = (result?.total_balance || 0) + (result?.total_credit_available || 0);
     return {
       success: true,
       data: {
         total_balance: total,
         assets: result?.total_balance || 0,
-        debts: result?.total_credit_debt || 0,
+        credit_available: result?.total_credit_available || 0,
       },
     };
   } catch (error: any) {
@@ -1638,6 +1657,89 @@ export function createFuelLoad(vehicleId: number, data: any): DBResponse {
   }
 }
 
+export function updateFuelLoad(id: number, data: any): DBResponse {
+  try {
+    const database = getDb();
+    const { liters, price_per_liter, total_cost, odometer, station_name, is_full_tank, account_id, date, notes } = data;
+    if (!liters || !price_per_liter || !total_cost || !odometer || !account_id) return { success: false, error: 'Faltan campos requeridos' };
+
+    const fuelLoad = database.getFirstSync<any>('SELECT * FROM fuel_loads WHERE id = ?', [id]);
+    if (!fuelLoad) return { success: false, error: 'Carga de gasolina no encontrada' };
+
+    const vehicle = database.getFirstSync<any>('SELECT * FROM vehicles WHERE id = ?', [fuelLoad.vehicle_id]);
+    if (!vehicle) return { success: false, error: 'Vehículo no encontrado' };
+
+    const oldAccountId = fuelLoad.account_id;
+    const oldTotalCost = fuelLoad.total_cost;
+    const newDate = date || fuelLoad.date;
+
+    // Update fuel load
+    database.runSync(
+      `UPDATE fuel_loads SET liters = ?, price_per_liter = ?, total_cost = ?, odometer = ?, station_name = ?, is_full_tank = ?, account_id = ?, date = ?, notes = ? WHERE id = ?`,
+      [parseFloat(liters), parseFloat(price_per_liter), parseFloat(total_cost), parseFloat(odometer), station_name ?? null, is_full_tank ? 1 : 0, parseInt(account_id), newDate, notes ?? null, id]
+    );
+
+    // Update odometer
+    database.runSync('UPDATE vehicles SET odometer = ? WHERE id = ?', [parseFloat(odometer), fuelLoad.vehicle_id]);
+
+    // Update movement
+    const movement = database.getFirstSync<any>(
+      `SELECT * FROM movements WHERE category_name = 'Transporte' AND category_icon = 'car' AND date = ? AND ABS(amount - ?) < 0.01 ORDER BY created_at DESC LIMIT 1`,
+      [fuelLoad.date, oldTotalCost]
+    );
+
+    if (movement) {
+      database.runSync(
+        `UPDATE movements SET amount = ?, title = ?, account_id = ?, date = ?, notes = ?, updated_at = ? WHERE id = ?`,
+        [parseFloat(total_cost), `Gasolina - ${vehicle.name}`, parseInt(account_id), newDate, `${liters}L @ ${price_per_liter}/L${station_name ? ` - ${station_name}` : ''}${notes ? ` - ${notes}` : ''}`, now(), movement.id]
+      );
+
+      // Adjust account balances
+      if (oldAccountId === parseInt(account_id)) {
+        const diff = parseFloat(total_cost) - oldTotalCost;
+        if (diff > 0) {
+          updateAccountBalance(parseInt(account_id), Math.abs(diff), 'subtract');
+        } else if (diff < 0) {
+          updateAccountBalance(parseInt(account_id), Math.abs(diff), 'add');
+        }
+      } else {
+        updateAccountBalance(oldAccountId, oldTotalCost, 'add');
+        updateAccountBalance(parseInt(account_id), parseFloat(total_cost), 'subtract');
+      }
+    }
+
+    const updated = database.getFirstSync<any>('SELECT * FROM fuel_loads WHERE id = ?', [id]);
+    return { success: true, data: updated };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export function deleteFuelLoad(id: number): DBResponse {
+  try {
+    const database = getDb();
+    const fuelLoad = database.getFirstSync<any>('SELECT * FROM fuel_loads WHERE id = ?', [id]);
+    if (!fuelLoad) return { success: false, error: 'Carga de gasolina no encontrada' };
+
+    // Find and delete associated movement
+    const movement = database.getFirstSync<any>(
+      `SELECT * FROM movements WHERE category_name = 'Transporte' AND category_icon = 'car' AND date = ? AND ABS(amount - ?) < 0.01 ORDER BY created_at DESC LIMIT 1`,
+      [fuelLoad.date, fuelLoad.total_cost]
+    );
+
+    if (movement) {
+      updateAccountBalance(fuelLoad.account_id, fuelLoad.total_cost, 'add');
+      database.runSync('DELETE FROM movements WHERE id = ?', [movement.id]);
+    }
+
+    database.runSync('DELETE FROM fuel_loads WHERE id = ?', [id]);
+    return { success: true, data: null };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+
 export function getVehicleMaintenance(vehicleId: number): DBResponse {
   try {
     const database = getDb();
@@ -1875,12 +1977,82 @@ export function getPendingNotifications(): DBResponse {
 }
 
 // =============================================
+// MSI PURCHASES
+// =============================================
+export function getMsiPurchases(accountId: number): DBResponse {
+  try {
+    const database = getDb();
+    const purchases = database.getAllSync<any>(
+      'SELECT * FROM msi_purchases WHERE account_id = ? ORDER BY created_at DESC',
+      [accountId]
+    );
+    return { success: true, data: purchases };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export function createMsiPurchase(data: any): DBResponse {
+  try {
+    const database = getDb();
+    const { account_id, description, total_amount, installments, start_date } = data;
+
+    if (!account_id || !description || !total_amount || !installments) {
+      return { success: false, error: 'Faltan campos requeridos' };
+    }
+
+    const account = database.getFirstSync<any>('SELECT * FROM accounts WHERE id = ? AND type = ?', [account_id, 'credit']);
+    if (!account) return { success: false, error: 'Cuenta de crédito no encontrada' };
+
+    const monthlyPayment = Math.round((total_amount / installments) * 100) / 100;
+    const ts = now();
+
+    const result = database.runSync(
+      `INSERT INTO msi_purchases (account_id, description, total_amount, installments, monthly_payment, paid_installments, remaining_amount, start_date, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 0, ?, ?, 'active', ?, ?)`,
+      [account_id, description, total_amount, installments, monthlyPayment, total_amount, start_date || ts, ts, ts]
+    );
+
+    // Aumentar current_balance (reduce credito disponible)
+    database.runSync(
+      'UPDATE accounts SET current_balance = current_balance + ?, updated_at = ? WHERE id = ?',
+      [total_amount, ts, account_id]
+    );
+
+    const created = database.getFirstSync<any>('SELECT * FROM msi_purchases WHERE id = ?', [result.lastInsertRowId]);
+    return { success: true, data: created };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+export function deleteMsiPurchase(id: number): DBResponse {
+  try {
+    const database = getDb();
+    const purchase = database.getFirstSync<any>('SELECT * FROM msi_purchases WHERE id = ?', [id]);
+    if (!purchase) return { success: false, error: 'Compra MSI no encontrada' };
+
+    // Revertir el monto restante al credito disponible
+    const ts = now();
+    database.runSync(
+      'UPDATE accounts SET current_balance = current_balance - ?, updated_at = ? WHERE id = ?',
+      [purchase.remaining_amount, ts, purchase.account_id]
+    );
+
+    database.runSync('DELETE FROM msi_purchases WHERE id = ?', [id]);
+    return { success: true, message: 'Compra MSI eliminada' };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// =============================================
 // DATA MANAGEMENT (Export/Import/Reset)
 // =============================================
 export function resetAllData(): DBResponse {
   try {
     const database = getDb();
-    const tables = ['movements', 'fuel_loads', 'maintenance', 'goal_contributions', 'loan_payments', 'accounts', 'budgets', 'savings_goals', 'loans', 'recurring_payments', 'vehicles', 'notification_settings', 'user_profile'];
+    const tables = ['movements', 'fuel_loads', 'maintenance', 'goal_contributions', 'loan_payments', 'msi_purchases', 'accounts', 'budgets', 'savings_goals', 'loans', 'recurring_payments', 'vehicles', 'notification_settings', 'user_profile'];
     tables.forEach(t => database.runSync(`DELETE FROM ${t}`));
 
     // Re-seed defaults
@@ -1912,6 +2084,7 @@ export function exportAllDataAsJSON(): DBResponse {
         vehicles: database.getAllSync<any>('SELECT * FROM vehicles'),
         fuel_loads: database.getAllSync<any>('SELECT * FROM fuel_loads'),
         maintenance: database.getAllSync<any>('SELECT * FROM maintenance'),
+        msi_purchases: database.getAllSync<any>('SELECT * FROM msi_purchases'),
         notification_settings: database.getAllSync<any>('SELECT * FROM notification_settings'),
       },
     };
@@ -1946,6 +2119,7 @@ export function importDataFromJSON(jsonData: any): DBResponse {
       vehicles: ['id', 'name', 'brand', 'model', 'year', 'license_plate', 'odometer', 'fuel_type', 'tank_capacity', 'created_at'],
       fuel_loads: ['id', 'vehicle_id', 'liters', 'price_per_liter', 'total_cost', 'odometer', 'station_name', 'is_full_tank', 'date', 'account_id', 'notes', 'created_at'],
       maintenance: ['id', 'vehicle_id', 'type', 'description', 'cost', 'odometer', 'workshop_name', 'date', 'next_date', 'next_odometer', 'account_id', 'notes', 'created_at'],
+      msi_purchases: ['id', 'account_id', 'description', 'total_amount', 'installments', 'monthly_payment', 'paid_installments', 'remaining_amount', 'start_date', 'status', 'created_at', 'updated_at'],
       notification_settings: ['id', 'daily_reminder', 'daily_reminder_time', 'credit_card_alerts', 'budget_alerts', 'loan_alerts', 'subscription_alerts', 'salary_alerts', 'savings_goal_alerts', 'vacation_mode', 'vacation_mode_until', 'push_token', 'created_at', 'updated_at'],
     };
 

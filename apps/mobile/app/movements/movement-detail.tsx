@@ -25,6 +25,8 @@ type Account = {
   name: string;
   type: string;
   balance: number;
+  credit_limit?: number;
+  current_balance?: number;
   is_primary?: number;
 };
 
@@ -296,6 +298,37 @@ export default function MovementDetailScreen() {
     );
   }
 
+  // Detect fuel movements
+  const isFuelMovement = movement.title?.startsWith('Gasolina -') &&
+    movement.category_name === 'Transporte' &&
+    movement.category_icon === 'car';
+
+  const handleEditPress = () => {
+    if (isFuelMovement) {
+      // Find the vehicle by name extracted from the title
+      const vehicleName = movement.title.replace('Gasolina - ', '');
+      const vehiclesResult = database.getVehicles();
+      if (vehiclesResult.success) {
+        const vehicle = vehiclesResult.data.find((v: any) => v.name === vehicleName);
+        if (vehicle) {
+          Alert.alert(
+            'Movimiento de gasolina',
+            'Este movimiento fue generado por una carga de gasolina. Para editarlo, ve al detalle del vehículo.',
+            [
+              { text: 'Cancelar', style: 'cancel' },
+              { text: 'Ir al vehículo', onPress: () => router.push(`/vehicles/vehicle-detail?id=${vehicle.id}`) },
+            ]
+          );
+          return;
+        }
+      }
+      // Fallback if vehicle not found
+      setIsEditing(true);
+    } else {
+      setIsEditing(true);
+    }
+  };
+
   // VIEW MODE
   if (!isEditing) {
     const typeColor = getTypeColor(movement.type);
@@ -312,7 +345,7 @@ export default function MovementDetailScreen() {
             headerTintColor: textMain,
             headerRight: () => (
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.headerBtn}>
+                <TouchableOpacity onPress={handleEditPress} style={styles.headerBtn}>
                   <IconSymbol size={20} name="pencil" color={primary} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleDelete} style={styles.headerBtn}>
@@ -413,9 +446,9 @@ export default function MovementDetailScreen() {
           </View>
 
           {/* Action Buttons */}
-          <TouchableOpacity style={[styles.editButton, { backgroundColor: primary }]} onPress={() => setIsEditing(true)}>
-            <IconSymbol size={20} name="pencil" color="#fff" />
-            <ThemedText style={styles.editButtonText}>Editar Movimiento</ThemedText>
+          <TouchableOpacity style={[styles.editButton, { backgroundColor: primary }]} onPress={handleEditPress}>
+            <IconSymbol size={20} name={isFuelMovement ? 'car' as any : 'pencil'} color="#fff" />
+            <ThemedText style={styles.editButtonText}>{isFuelMovement ? 'Ir al Vehículo' : 'Editar Movimiento'}</ThemedText>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.deleteButton, { borderColor: '#ef4444' }]} onPress={handleDelete}>
@@ -665,13 +698,20 @@ export default function MovementDetailScreen() {
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
-              {accounts.map((acc) => (
-                <TouchableOpacity key={acc.id} style={[styles.accountItem, { borderBottomColor: borderColor }]}
-                  onPress={() => { setEditAccount(acc); setShowAccountModal(false); }}>
-                  <ThemedText style={[styles.accountName, { color: textMain }]}>{acc.name}</ThemedText>
-                  <ThemedText style={[styles.accountBalance, { color: textMuted }]}>${acc.balance.toFixed(2)}</ThemedText>
-                </TouchableOpacity>
-              ))}
+              {accounts.map((acc) => {
+                const displayBal = acc.type === 'credit'
+                  ? (acc.credit_limit || 0) - (acc.current_balance || 0)
+                  : acc.balance;
+                return (
+                  <TouchableOpacity key={acc.id} style={[styles.accountItem, { borderBottomColor: borderColor }]}
+                    onPress={() => { setEditAccount(acc); setShowAccountModal(false); }}>
+                    <ThemedText style={[styles.accountName, { color: textMain }]}>{acc.name}</ThemedText>
+                    <ThemedText style={[styles.accountBalance, { color: textMuted }]}>
+                      {acc.type === 'credit' ? 'Disponible: ' : ''}${displayBal.toFixed(2)}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
         </View>
@@ -688,13 +728,20 @@ export default function MovementDetailScreen() {
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
-              {accounts.filter(a => a.id !== (editAccount?.id || movement?.account_id)).map((acc) => (
-                <TouchableOpacity key={acc.id} style={[styles.accountItem, { borderBottomColor: borderColor }]}
-                  onPress={() => { setEditToAccount(acc); setShowToAccountModal(false); }}>
-                  <ThemedText style={[styles.accountName, { color: textMain }]}>{acc.name}</ThemedText>
-                  <ThemedText style={[styles.accountBalance, { color: textMuted }]}>${acc.balance.toFixed(2)}</ThemedText>
-                </TouchableOpacity>
-              ))}
+              {accounts.filter(a => a.id !== (editAccount?.id || movement?.account_id)).map((acc) => {
+                const displayBal = acc.type === 'credit'
+                  ? (acc.credit_limit || 0) - (acc.current_balance || 0)
+                  : acc.balance;
+                return (
+                  <TouchableOpacity key={acc.id} style={[styles.accountItem, { borderBottomColor: borderColor }]}
+                    onPress={() => { setEditToAccount(acc); setShowToAccountModal(false); }}>
+                    <ThemedText style={[styles.accountName, { color: textMain }]}>{acc.name}</ThemedText>
+                    <ThemedText style={[styles.accountBalance, { color: textMuted }]}>
+                      {acc.type === 'credit' ? 'Disponible: ' : ''}${displayBal.toFixed(2)}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
         </View>

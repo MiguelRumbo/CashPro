@@ -24,6 +24,8 @@ type Account = {
   name: string;
   type: string;
   balance: number;
+  credit_limit?: number;
+  current_balance?: number;
   is_primary?: number;
 };
 
@@ -488,23 +490,28 @@ export default function AddMovementScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              {accounts.map((account) => (
-                <TouchableOpacity
-                  key={account.id}
-                  style={[styles.accountItem, { borderBottomColor: borderColor }]}
-                  onPress={() => {
-                    setSelectedAccount(account);
-                    setShowAccountModal(false);
-                  }}
-                >
-                  <ThemedText style={[styles.accountName, { color: textMain }]}>
-                    {account.name}
-                  </ThemedText>
-                  <ThemedText style={[styles.accountBalance, { color: textSub }]}>
-                    ${account.balance.toFixed(2)}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
+              {accounts.map((account) => {
+                const displayBal = account.type === 'credit'
+                  ? (account.credit_limit || 0) - (account.current_balance || 0)
+                  : account.balance;
+                return (
+                  <TouchableOpacity
+                    key={account.id}
+                    style={[styles.accountItem, { borderBottomColor: borderColor }]}
+                    onPress={() => {
+                      setSelectedAccount(account);
+                      setShowAccountModal(false);
+                    }}
+                  >
+                    <ThemedText style={[styles.accountName, { color: textMain }]}>
+                      {account.name}
+                    </ThemedText>
+                    <ThemedText style={[styles.accountBalance, { color: textSub }]}>
+                      {account.type === 'credit' ? 'Disponible: ' : ''}${displayBal.toFixed(2)}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
         </View>
@@ -529,23 +536,28 @@ export default function AddMovementScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              {accounts.filter(a => a.id !== selectedAccount?.id).map((account) => (
-                <TouchableOpacity
-                  key={account.id}
-                  style={[styles.accountItem, { borderBottomColor: borderColor }]}
-                  onPress={() => {
-                    setSelectedToAccount(account);
-                    setShowToAccountModal(false);
-                  }}
-                >
-                  <ThemedText style={[styles.accountName, { color: textMain }]}>
-                    {account.name}
-                  </ThemedText>
-                  <ThemedText style={[styles.accountBalance, { color: textSub }]}>
-                    ${account.balance.toFixed(2)}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
+              {accounts.filter(a => a.id !== selectedAccount?.id).map((account) => {
+                const displayBal = account.type === 'credit'
+                  ? (account.credit_limit || 0) - (account.current_balance || 0)
+                  : account.balance;
+                return (
+                  <TouchableOpacity
+                    key={account.id}
+                    style={[styles.accountItem, { borderBottomColor: borderColor }]}
+                    onPress={() => {
+                      setSelectedToAccount(account);
+                      setShowToAccountModal(false);
+                    }}
+                  >
+                    <ThemedText style={[styles.accountName, { color: textMain }]}>
+                      {account.name}
+                    </ThemedText>
+                    <ThemedText style={[styles.accountBalance, { color: textSub }]}>
+                      {account.type === 'credit' ? 'Disponible: ' : ''}${displayBal.toFixed(2)}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
         </View>
