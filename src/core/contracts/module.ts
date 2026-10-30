@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 
 import type { FrozenAppConfig, ModuleId } from '@/config/schema';
 
@@ -65,6 +65,8 @@ export interface ModuleManifest {
   readonly tabs?: readonly TabContribution[];
   readonly screens?: Readonly<Record<ScreenId, ComponentType>>;
   readonly actions?: readonly ActionContribution[];
+  /** Envuelve toda la app (p. ej. bloqueo biométrico). Se aplican en orden de registro. */
+  readonly gate?: ComponentType<{ children: ReactNode }>;
   readonly dataPort?: () => DataPort;
   register(ctx: ModuleContext): void | Promise<void>;
   subscriptions?: () => EventHandlers;

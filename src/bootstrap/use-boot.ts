@@ -22,7 +22,7 @@ export function useBoot(): BootState {
     let runtime: AppRuntime | undefined;
     (async () => {
       try {
-        const db = await openAppDatabase(appConfig.db.fileName);
+        const db = await openAppDatabase(appConfig.db);
         runtime = await startModules({ config: appConfig, db, logger, loaders: manifestLoaders });
         if (!cancelled) setState({ status: 'ready', runtime });
       } catch (error) {

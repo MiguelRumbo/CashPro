@@ -24,9 +24,12 @@ export const appConfigSchema = z
         vehicles: moduleToggleSchema,
         alerts: moduleToggleSchema,
         settings: moduleToggleSchema,
+        security: moduleToggleSchema,
       })
       .strict(),
-    db: z.object({ fileName: z.string().regex(/^[\w-]+\.db$/) }).strict(),
+    db: z
+      .object({ fileName: z.string().regex(/^[\w-]+\.db$/), keyStorageKey: z.string().regex(/^[\w.-]+$/) })
+      .strict(),
     logger: z.object({ devMinLevel: logLevelSchema, prodMinLevel: logLevelSchema }).strict(),
     currency: z
       .object({
@@ -91,6 +94,12 @@ export const appConfigSchema = z
       .refine((a) => a.budgetWarningPercent < a.budgetExceededPercent, {
         message: 'budgetWarningPercent debe ser menor que budgetExceededPercent',
       }),
+    security: z
+      .object({
+        lockOnBackgroundMs: z.number().int().min(0),
+        preventScreenshots: z.boolean(),
+      })
+      .strict(),
     ui: z
       .object({
         splashFadeMs: z.number().int().min(0),

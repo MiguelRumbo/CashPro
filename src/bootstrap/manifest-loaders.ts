@@ -8,6 +8,7 @@ export type ManifestLoaders = Readonly<Record<ModuleId, () => ModuleManifest>>;
  * Solo se importa el index.ts (API pública) de cada módulo.
  */
 export const manifestLoaders: ManifestLoaders = {
+  security: () => require('@/modules/security').manifest,
   settings: () => require('@/modules/settings').manifest,
   accounts: () => require('@/modules/accounts').manifest,
   movements: () => require('@/modules/movements').manifest,

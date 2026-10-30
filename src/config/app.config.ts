@@ -18,9 +18,13 @@ export const rawAppConfig = {
     vehicles: { enabled: true },
     alerts: { enabled: true },
     settings: { enabled: true },
+    security: { enabled: true },
   },
   // Nombre del archivo SQLite. NO cambiar: los datos de v1 viven en este archivo.
-  db: { fileName: 'cashpro.db' },
+  db: {
+    fileName: 'cashpro.db',
+    keyStorageKey: 'cashpro.db.key', // entrada de expo-secure-store con la llave SQLCipher
+  },
   logger: { devMinLevel: 'debug', prodMinLevel: 'warn' },
   currency: {
     default: 'MXN',
@@ -60,6 +64,10 @@ export const rawAppConfig = {
     subscriptionDueDaysBefore: [1, 0], // días antes del cobro de una suscripción
     goalDaysPerMonth: 30, // días: aproximación de un mes para metas de ahorro
     goalBehindRatio: 0.5, // fracción del restante por mes que marca la meta como atrasada
+  },
+  security: {
+    lockOnBackgroundMs: 0, // ms en segundo plano antes de volver a pedir autenticación (0 = siempre)
+    preventScreenshots: true, // FLAG_SECURE: oculta la app en capturas y en recientes
   },
   ui: {
     splashFadeMs: 250, // ms

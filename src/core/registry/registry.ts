@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 
 import type { ModuleId } from '@/config/schema';
 
@@ -80,6 +80,10 @@ export class ModuleRegistry {
       .flatMap((m) => m.actions ?? [])
       .filter((a) => a.slot === slot)
       .sort(byOrder);
+  }
+
+  gates(): ComponentType<{ children: ReactNode }>[] {
+    return this.activeModules().flatMap((m) => (m.gate ? [m.gate] : []));
   }
 
   dataPorts(): { moduleId: ModuleId; port: DataPort }[] {

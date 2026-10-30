@@ -124,6 +124,8 @@ const MAPPING = {
   'arrow.clockwise': 'refresh',
   // Variantes con .fill
   'cart.fill': 'shopping-cart',
+  // Seguridad
+  'lock.fill': 'lock',
 } as IconMapping;
 
 /**

@@ -6,6 +6,7 @@ import { StyleSheet } from 'react-native';
 import 'react-native-reanimated';
 
 import { useBoot } from '@/bootstrap';
+import { ModuleGates } from '@/core/registry/module-gates';
 import { CoreProvider } from '@/core/registry/react';
 import { coreTexts } from '@/core/texts';
 import { ThemedText, ThemedView, useColorScheme } from '@/core/ui-kit';
@@ -34,9 +35,11 @@ export default function RootLayout() {
   return (
     <CoreProvider value={runtime}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        </Stack>
+        <ModuleGates>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          </Stack>
+        </ModuleGates>
         <StatusBar style="auto" />
       </ThemeProvider>
     </CoreProvider>
