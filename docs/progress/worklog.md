@@ -1,5 +1,39 @@
 # Bitácora
 
+## 2026-10-30 — Fase 1 (parte 1): seguridad y release
+
+**Decisiones del usuario:** package `com.cashpro.app`; llaves en EAS; no hay APK instalado (sin datos que preservar); versión 2.0.0 / versionCode 3; dependencias de v2 aprobadas.
+
+### Hecho
+
+- Dependencias: `expo-secure-store`, `expo-local-authentication`, `expo-crypto`, `expo-screen-capture`.
+- SQLCipher (`app.json`) con llave de 256 bits en secure-store (`core/db/encryption-key.ts`), `PRAGMA key` al abrir y verificación de lectura.
+- Módulo `security`: bloqueo biométrico/PIN al abrir y al volver (`LockGate`, `useAppLock`, `LockView`) y `FLAG_SECURE`. Nueva contribución `gate` (ADR-003).
+- `android.allowBackup: false`.
+- Plugins `with-release-signing` y `with-android-abis` con tests; `release.yml`.
+- Versión 2.0.0 / versionCode 3 en `app.json` y `package.json`.
+- Docs: release (cómo sacar la llave de EAS), seguridad, pruebas MT-09..13, arquitectura, módulo security, ADR-003, preguntas abiertas.
+
+### Verificado
+
+- `format:check`, `lint`, `typecheck`, `test` (11 suites, 57 tests) en verde; `expo export --platform android` empaqueta.
+- `expo prebuild --clean --no-install`: `build.gradle` con firma de release, `reactNativeArchitectures=arm64-v8a`, `expo.sqlite.useSQLCipher=true`, `allowBackup="false"`, permisos `USE_BIOMETRIC`/`USE_FINGERPRINT`.
+
+### No verificado
+
+- **Nada en dispositivo**: MT-01..MT-13 pendientes (en especial que SQLCipher abra y el bloqueo funcione).
+- `release.yml` no se ha ejecutado: faltan los secretos y variables en GitHub (`docs/release.md`). Tampoco `./gradlew assembleRelease` local (no hay SDK de Android en el entorno).
+
+### Sigue
+
+1. Cargar secretos de firma en GitHub y correr `release.yml` (o un dev build) para probar en el teléfono.
+2. Esquema v2: centavos, ms, saldos derivados, categorías en tabla, `wallet` (regenerando la base, OQ-017).
+3. Respaldo cifrado (OQ-106).
+
+### Bloqueos
+
+- OQ-106 (librería de cifrado para el respaldo) y OQ-107 (ABIs).
+
 ## 2026-10-30 — Reestructuración modular (Fase 0) y documentos de v2
 
 **Rama:** `claude/nifty-hypatia-kdc8j8`, publicada también como `refactor/modular-architecture-v2`.

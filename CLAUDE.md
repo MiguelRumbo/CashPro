@@ -103,7 +103,7 @@ drizzle/     migraciones versionadas
 docs/        documentación viva
 ```
 
-Módulos actuales (`src/modules/`): `accounts`, `movements`, `budgets`, `savings-goals`, `loans`, `subscriptions`, `vehicles`, `alerts`, `settings`, `dashboard`, `reports`. Módulos v2 previstos: `ingestion` (eventos crudos y bandeja "Sin procesar"), `notification-capture`, `email-sync`, `statements`, `reconciliation`, `categorization`, `security`. Detalle en `specs.md` §3.
+Módulos actuales (`src/modules/`): `accounts`, `movements`, `budgets`, `savings-goals`, `loans`, `subscriptions`, `vehicles`, `alerts`, `settings`, `dashboard`, `reports`, `security`. Módulos v2 previstos: `ingestion` (eventos crudos y bandeja "Sin procesar"), `notification-capture`, `email-sync`, `statements`, `reconciliation`, `categorization`. Detalle en `specs.md` §3.
 
 Reglas de dependencia (las hace cumplir una regla ESLint local, `tools/eslint/module-boundaries.js`):
 
@@ -142,7 +142,7 @@ src/modules/<modulo>/
   - otro hace `ctx.resolve(key)`, que devuelve `undefined` si el proveedor está apagado;
   - las claves se crean con `createCapabilityKey<T>()` en `core/contracts` (las de finanzas están en `core/contracts/finance.ts`);
   - se resuelven **al usarse**, no al registrarse.
-- **Contribuciones a la UI vía manifest**: `tabs` (con ícono semántico), `screens` (por `ScreenId`), `settingsSections`, `detailSections`, `actions` (slots con nombre), `panels`. El registry las ordena por `order`.
+- **Contribuciones a la UI vía manifest**: `tabs` (con ícono semántico), `screens` (por `ScreenId`), `settingsSections`, `detailSections`, `actions` (slots con nombre), `panels`, `gate` (envuelve toda la app; ADR-003). El registry las ordena por `order`.
 
 ### 6.4 Interruptor por módulo
 
@@ -291,8 +291,9 @@ Antes de fijar la versión de una acción (`actions/checkout@vN`, etc.), verifí
 
 - `expo-sqlite` + **Drizzle ORM** (estable) + `drizzle-kit`. Las migraciones `.sql` se empaquetan con `babel-plugin-inline-import`, y Metro agrega `sql` a `sourceExts`.
 - Un solo handle compartido (UI y tareas en segundo plano), `PRAGMA foreign_keys = ON`, migraciones al arrancar con pantalla de error si fallan.
-- Unidades internas SI, timestamps en ms UTC; la conversión solo ocurre en presentación (`core/units`). **Montos: centavos enteros.** Excepción temporal: las tablas heredadas de v1 guardan `REAL` e ISO strings hasta la migración de datos de la Fase 1 (`docs/migration-v1-v2.md` §4); no agregues columnas nuevas con esos formatos.
-- La BD real del usuario existe desde v1 (`cashpro.db`): **nunca** cambies `db.fileName` ni reescribas la migración `0000_baseline_v1` (es idempotente con `IF NOT EXISTS`).
+- Unidades internas SI, timestamps en ms UTC; la conversión solo ocurre en presentación (`core/units`). **Montos: centavos enteros.** Excepción temporal: las tablas heredadas de v1 guardan `REAL` e ISO strings hasta el nuevo esquema de la Fase 1 (`docs/migration-v1-v2.md` §4); no agregues columnas nuevas con esos formatos.
+- No hay datos de v1 instalados en ningún teléfono (OQ-017): **hasta publicar 2.0.0** el esquema se puede regenerar desde cero; **después de publicar 2.0.0, nunca** se reescriben migraciones publicadas ni se cambia `db.fileName`.
+- La BD está cifrada con SQLCipher; la llave vive en secure-store (`db.keyStorageKey`). Nunca la registres ni la exportes.
 - No se guardan datos derivables (se calculan con consultas). Si el rendimiento exige un caché, se propone con un ADR.
 - Migraciones **aditivas** sin preguntar; destructivas, solo con permiso. Cambiar el algoritmo de un cálculo guardado usa `algorithmVersion` en la config con un recálculo único al abrir.
 - Tests de repositorios con **sql.js** en memoria aplicando las migraciones reales (`core/db/testing.ts`, nunca importado desde el código de la app).

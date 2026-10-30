@@ -21,19 +21,19 @@ Límites de importación: los hace cumplir `tools/eslint/module-boundaries.js` (
 ## Arranque
 
 1. `app/_layout.tsx` llama a `useBoot()` y mantiene el splash.
-2. `openAppDatabase()` abre `cashpro.db` (WAL, `foreign_keys = ON`) y aplica las migraciones de `drizzle/`. Si fallan, se muestra la pantalla de error (`coreTexts.bootError*`) y no se toca nada más.
+2. `openAppDatabase()` obtiene la llave SQLCipher de secure-store (la crea la primera vez), abre `cashpro.db` con `PRAGMA key` (WAL, `foreign_keys = ON`) y aplica las migraciones de `drizzle/`. Si fallan, se muestra la pantalla de error (`coreTexts.bootError*`) y no se toca nada más.
 3. `startModules()`:
    - **Fase 1:** por cada módulo con `enabled: true`, `require` perezoso de su `index.ts` y `register(ctx)` (crea servicios y `ctx.provide` de capacidades). Si un módulo falla, se revocan sus capacidades y la app sigue sin él.
    - Suscribe los `subscriptions()` de todos los módulos activos al `EventBus`.
    - **Fase 2:** `onReady()` de cada módulo (siembra de filas por defecto, sincronizar preferencias).
-4. `CoreProvider` expone registry, preferencias, config y logger a la UI; se oculta el splash.
+4. `CoreProvider` expone registry, preferencias, config y logger a la UI; `ModuleGates` aplica los `gate` (bloqueo); se oculta el splash.
 
 ## Comunicación entre módulos
 
 - **Capacidades** (`core/contracts/finance.ts`): `accountsQueryKey`, `movementsLedgerKey`, `budgetsQueryKey`, `savingsGoalsQueryKey`, `loansQueryKey`, `subscriptionsQueryKey`, `vehiclesQueryKey`, `profileQueryKey`. Se resuelven al usarse (`ctx.resolve` en servicios, `useCapability` en UI) y valen `undefined` si el proveedor está apagado.
 - **Eventos** (`core/events/event-map.ts`): `movement.recorded` (con `origin` y `affectsBalance`), `movement.updated`, `movement.deleted`, `account.deleted`, `data.cleared`, `data.imported`. Despacho síncrono dentro de la transacción del emisor.
 - **Libro de movimientos:** cualquier módulo que necesite registrar dinero llama `movementsLedgerKey.record(...)`; `accounts` ajusta saldos y `budgets` acumulados escuchando los eventos.
-- **Contribuciones a la UI:** `tabs`, `screens` (por `ScreenId`), `actions` (slot `more.menu`) y `dataPort` (respaldo JSON y "borrar todo").
+- **Contribuciones a la UI:** `tabs`, `screens` (por `ScreenId`), `actions` (slot `more.menu`), `gate` (envoltorio de toda la app, p. ej. el bloqueo; ver ADR-003) y `dataPort` (respaldo JSON y "borrar todo").
 
 ## Rutas
 
@@ -59,32 +59,35 @@ Una pestaña cuyo módulo está apagado se oculta (`href: null`); una ruta de m�
 
 ## Configuración (`src/config/app.config.ts`)
 
-| Clave                                 | Valor                                            | Unidad     | Propósito                                    |
-| ------------------------------------- | ------------------------------------------------ | ---------- | -------------------------------------------- |
-| `app.name`                            | `CashPro`                                        | —          | Nombre visible                               |
-| `app.locale`                          | `es-MX`                                          | BCP 47     | Formato de fechas en CSV                     |
-| `modules.<id>.enabled`                | `true` (los 11)                                  | bool       | Interruptor por módulo                       |
-| `db.fileName`                         | `cashpro.db`                                     | —          | Archivo SQLite (**no cambiar**: datos de v1) |
-| `logger.devMinLevel` / `prodMinLevel` | `debug` / `warn`                                 | nivel      | Nivel mínimo de log                          |
-| `currency.default`                    | `MXN`                                            | ISO 4217   | Moneda por defecto                           |
-| `currency.formats`                    | MXN `es-MX $`, USD `en-US $`, EUR `de-DE €`      | —          | Locale y símbolo por moneda                  |
-| `currency.fractionDigits`             | 2                                                | dígitos    | Decimales mostrados                          |
-| `accounts.cardLastDigits`             | 4                                                | dígitos    | Dígitos de tarjeta que se guardan            |
-| `budgets.defaults.*`                  | íconos y colores                                 | —          | Valores por defecto al crear presupuesto     |
-| `savingsGoals.defaults.*`             | `target`, `#20df60`                              | —          | Ícono y color por defecto de metas           |
-| `subscriptions.monthlyFactor`         | semanal 4.33, quincenal 2, mensual 1, anual 1/12 | factor     | Conversión a monto mensual                   |
-| `subscriptions.upcomingWindowDays`    | 7                                                | días       | Ventana de "próximos pagos"                  |
-| `subscriptions.defaults.*`            | `creditcard`, `#6b7280`, 1                       | —, —, días | Valores por defecto                          |
-| `alerts.creditCutoffDaysBefore`       | [3, 0]                                           | días       | Avisos antes del corte                       |
-| `alerts.creditPaymentDaysBefore`      | [5, 3, 0]                                        | días       | Avisos antes del pago                        |
-| `alerts.budgetWarningPercent`         | 80                                               | %          | Advertencia de presupuesto                   |
-| `alerts.budgetExceededPercent`        | 100                                              | %          | Presupuesto excedido                         |
-| `alerts.loanDueWithinDays`            | 7                                                | días       | Ventana de préstamos por vencer              |
-| `alerts.subscriptionDueDaysBefore`    | [1, 0]                                           | días       | Aviso de cobro de suscripción                |
-| `alerts.goalDaysPerMonth`             | 30                                               | días       | Aproximación de mes para metas               |
-| `alerts.goalBehindRatio`              | 0.5                                              | fracción   | Umbral de meta atrasada                      |
-| `ui.splashFadeMs`                     | 250                                              | ms         | Desvanecido del splash                       |
-| `ui.primaryColor`                     | `#20df60`                                        | color      | Color activo de pestañas                     |
+| Clave                                 | Valor                                            | Unidad     | Propósito                                                     |
+| ------------------------------------- | ------------------------------------------------ | ---------- | ------------------------------------------------------------- |
+| `app.name`                            | `CashPro`                                        | —          | Nombre visible                                                |
+| `app.locale`                          | `es-MX`                                          | BCP 47     | Formato de fechas en CSV                                      |
+| `modules.<id>.enabled`                | `true` (los 12)                                  | bool       | Interruptor por módulo                                        |
+| `db.fileName`                         | `cashpro.db`                                     | —          | Archivo SQLite                                                |
+| `db.keyStorageKey`                    | `cashpro.db.key`                                 | —          | Entrada de secure-store con la llave SQLCipher                |
+| `logger.devMinLevel` / `prodMinLevel` | `debug` / `warn`                                 | nivel      | Nivel mínimo de log                                           |
+| `currency.default`                    | `MXN`                                            | ISO 4217   | Moneda por defecto                                            |
+| `currency.formats`                    | MXN `es-MX $`, USD `en-US $`, EUR `de-DE €`      | —          | Locale y símbolo por moneda                                   |
+| `currency.fractionDigits`             | 2                                                | dígitos    | Decimales mostrados                                           |
+| `accounts.cardLastDigits`             | 4                                                | dígitos    | Dígitos de tarjeta que se guardan                             |
+| `budgets.defaults.*`                  | íconos y colores                                 | —          | Valores por defecto al crear presupuesto                      |
+| `savingsGoals.defaults.*`             | `target`, `#20df60`                              | —          | Ícono y color por defecto de metas                            |
+| `subscriptions.monthlyFactor`         | semanal 4.33, quincenal 2, mensual 1, anual 1/12 | factor     | Conversión a monto mensual                                    |
+| `subscriptions.upcomingWindowDays`    | 7                                                | días       | Ventana de "próximos pagos"                                   |
+| `subscriptions.defaults.*`            | `creditcard`, `#6b7280`, 1                       | —, —, días | Valores por defecto                                           |
+| `alerts.creditCutoffDaysBefore`       | [3, 0]                                           | días       | Avisos antes del corte                                        |
+| `alerts.creditPaymentDaysBefore`      | [5, 3, 0]                                        | días       | Avisos antes del pago                                         |
+| `alerts.budgetWarningPercent`         | 80                                               | %          | Advertencia de presupuesto                                    |
+| `alerts.budgetExceededPercent`        | 100                                              | %          | Presupuesto excedido                                          |
+| `alerts.loanDueWithinDays`            | 7                                                | días       | Ventana de préstamos por vencer                               |
+| `alerts.subscriptionDueDaysBefore`    | [1, 0]                                           | días       | Aviso de cobro de suscripción                                 |
+| `alerts.goalDaysPerMonth`             | 30                                               | días       | Aproximación de mes para metas                                |
+| `alerts.goalBehindRatio`              | 0.5                                              | fracción   | Umbral de meta atrasada                                       |
+| `security.lockOnBackgroundMs`         | 0                                                | ms         | Tiempo en segundo plano antes de volver a pedir autenticación |
+| `security.preventScreenshots`         | `true`                                           | bool       | `FLAG_SECURE`                                                 |
+| `ui.splashFadeMs`                     | 250                                              | ms         | Desvanecido del splash                                        |
+| `ui.primaryColor`                     | `#20df60`                                        | color      | Color activo de pestañas                                      |
 
 ## Deuda técnica conocida
 

@@ -42,6 +42,8 @@ Mapa de archivos: `app/(tabs)/index.tsx` → `src/modules/dashboard/ui/dashboard
 
 ## 4. Migración de datos pendiente (Fase 1)
 
+> **Actualización 2026-10-30:** el APK v1 no está instalado en ningún teléfono (OQ-017), así que no hay datos que migrar. Antes de publicar 2.0.0, los cambios de esta tabla se harán como **un esquema v2 nuevo** (regenerando `0000`) en lugar de migraciones incrementales con respaldo. M7 (cifrado) ya está hecho: la BD se crea cifrada desde el primer arranque.
+
 Cambios que sí tocan datos del usuario. Cada uno es una migración Drizzle con prueba sobre una copia de la BD real anonimizada, y se ejecuta **después de un respaldo JSON automático**.
 
 | #   | Cambio                                                                                                                                 | Tipo                                     | Requiere OK |
@@ -79,6 +81,8 @@ Se mantuvieron para no cambiar el comportamiento en la Fase 0. Están registrada
 - **OQ-013:** importar un archivo `.db` reemplaza el archivo con la BD abierta (riesgo de corrupción con WAL).
 
 ## 6. Cómo actualizar el teléfono
+
+> Hoy no aplica (no hay instalación de v1). Se conserva para cuando exista una versión publicada de v2.
 
 1. En v1: **Ajustes → Exportar respaldo JSON** y guárdalo fuera del teléfono.
 2. Instala la build nueva **firmada con la misma llave** que v1 (si la llave cambia, Android no deja instalar encima y se pierden los datos). Ver OQ-006.

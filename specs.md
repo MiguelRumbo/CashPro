@@ -149,14 +149,15 @@ CLAUDE.md §13 prohíbe guardar datos derivables. En v2:
 
 Todo vive en `src/config/app.config.ts` (tabla completa en `docs/architecture.md`). Secciones nuevas de v2 (valores propuestos):
 
-| Clave                              | Valor                              | Unidad | Propósito                                        |
-| ---------------------------------- | ---------------------------------- | ------ | ------------------------------------------------ |
-| `ingestion.allowedPackages`        | `{}` (se llena con el dispositivo) | —      | Lista blanca banco → paquete Android             |
-| `ingestion.drainIntervalMs`        | 900000                             | ms     | Vaciado periódico de la cola nativa              |
-| `reconciliation.mergeWindowDays`   | 1                                  | días   | Fusión notificación/correo                       |
-| `reconciliation.confirmWindowDays` | 3                                  | días   | Confirmación con estado de cuenta                |
-| `security.lockOnBackgroundMs`      | 0                                  | ms     | Tiempo en segundo plano antes de pedir biometría |
-| `statements.maxFileBytes`          | 10485760                           | bytes  | Tamaño máximo de archivo importado               |
+| Clave                              | Valor                              | Unidad | Propósito                                                          |
+| ---------------------------------- | ---------------------------------- | ------ | ------------------------------------------------------------------ |
+| `ingestion.allowedPackages`        | `{}` (se llena con el dispositivo) | —      | Lista blanca banco → paquete Android                               |
+| `ingestion.drainIntervalMs`        | 900000                             | ms     | Vaciado periódico de la cola nativa                                |
+| `reconciliation.mergeWindowDays`   | 1                                  | días   | Fusión notificación/correo                                         |
+| `reconciliation.confirmWindowDays` | 3                                  | días   | Confirmación con estado de cuenta                                  |
+| `security.lockOnBackgroundMs`      | 0                                  | ms     | Tiempo en segundo plano antes de pedir biometría (✅ implementado) |
+| `security.preventScreenshots`      | `true`                             | bool   | `FLAG_SECURE` (✅ implementado)                                    |
+| `statements.maxFileBytes`          | 10485760                           | bytes  | Tamaño máximo de archivo importado                                 |
 
 ## 6. Seguridad y privacidad
 
@@ -164,22 +165,22 @@ Detalle en `docs/security.md`. Resumen: todo local; SQLCipher + Keystore; biomet
 
 ## 7. Riesgos
 
-| Riesgo                                                                 | Impacto                          | Mitigación                                                                                                                                                                          |
-| ---------------------------------------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Migrar datos de v1 (REAL→centavos, ISO→ms, saldos guardados→derivados) | Saldos distintos tras actualizar | Respaldo JSON automático antes de migrar; migración con `algorithmVersion`; test con BD de v1 real anonimizada; comparar saldo guardado vs. derivado y registrar ajuste de apertura |
-| Activar SQLCipher sobre la BD sin cifrar                               | Pérdida de acceso a datos        | `sqlcipher_export` a un archivo nuevo, verificar, luego reemplazar; spike en dispositivo antes                                                                                      |
-| Bancos cambian el texto de sus avisos                                  | El parser deja de reconocer      | Fixtures + tests + bandeja "Sin procesar"                                                                                                                                           |
-| Android mata el listener                                               | Se pierden avisos                | Exclusión de batería, `requestRebind`, indicador de salud; correos y estados de cuenta como red de seguridad                                                                        |
-| Token de Gmail caduca en modo Testing                                  | El sync se detiene               | Publicar el proyecto "In production" (uso personal) o IMAP _(OQ-101)_                                                                                                               |
-| PDF distinto por producto del mismo banco                              | Parser frágil                    | Un parser por producto + validación de saldo                                                                                                                                        |
-| Pantallas heredadas grandes (hasta 1,700 líneas)                       | Cambios lentos y riesgosos       | Partirlas en `XxxView` + hooks conforme se toquen (deuda registrada en el worklog)                                                                                                  |
+| Riesgo                                                                         | Impacto                          | Mitigación                                                                                                                                                                          |
+| ------------------------------------------------------------------------------ | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Migrar datos de v1 (REAL→centavos, ISO→ms, saldos guardados→derivados)         | Saldos distintos tras actualizar | Respaldo JSON automático antes de migrar; migración con `algorithmVersion`; test con BD de v1 real anonimizada; comparar saldo guardado vs. derivado y registrar ajuste de apertura |
+| Perder la llave de SQLCipher (borrar datos de la app o restaurar sin Keystore) | La BD queda ilegible             | `allowBackup: false`; respaldos por JSON (cifrado en OQ-106); la pantalla de error no borra nada                                                                                    |
+| Bancos cambian el texto de sus avisos                                          | El parser deja de reconocer      | Fixtures + tests + bandeja "Sin procesar"                                                                                                                                           |
+| Android mata el listener                                                       | Se pierden avisos                | Exclusión de batería, `requestRebind`, indicador de salud; correos y estados de cuenta como red de seguridad                                                                        |
+| Token de Gmail caduca en modo Testing                                          | El sync se detiene               | Publicar el proyecto "In production" (uso personal) o IMAP _(OQ-101)_                                                                                                               |
+| PDF distinto por producto del mismo banco                                      | Parser frágil                    | Un parser por producto + validación de saldo                                                                                                                                        |
+| Pantallas heredadas grandes (hasta 1,700 líneas)                               | Cambios lentos y riesgosos       | Partirlas en `XxxView` + hooks conforme se toquen (deuda registrada en el worklog)                                                                                                  |
 
 ## 8. Fases
 
 No se avanza de fase con la anterior rota. Cada fase termina con DoD (`CLAUDE.md` §16).
 
-- **Fase 0 — Fundamentos.** ✅ Reestructura modular, config Zod, core, Drizzle con migración base, transacciones, tooling, CI de checks, smoke tests. ⏳ Pendiente: `release.yml` y plugins de firma (esperan keystore, OQ-006), partir pantallas grandes.
-- **Fase 1 — Datos v2 y seguridad.** Migración de datos (centavos, ms, saldos derivados, categorías en tabla, `wallet`), SQLCipher, biometría, `FLAG_SECURE`, respaldo cifrado.
+- **Fase 0 — Fundamentos.** ✅ Reestructura modular, config Zod, core, Drizzle con migración base, transacciones, tooling, CI de checks, smoke tests. ⏳ Partir pantallas grandes (se hace al tocarlas).
+- **Fase 1 — Datos v2 y seguridad.** ✅ SQLCipher (llave en secure-store), bloqueo biométrico, `FLAG_SECURE`, `allowBackup: false`, release a GitHub (`release.yml` + plugins). ⏳ Esquema v2 (centavos, ms, saldos derivados, categorías en tabla, `wallet`) regenerando la base (OQ-017); respaldo cifrado (OQ-106).
 - **Fase 1b — Estados de cuenta.** `statements` + `ingestion` (sin nativo para CSV/XML), vista previa, lotes reversibles, validación de saldo; después extracción PDF nativa.
 - **Fase 2 — Notificaciones.** Spike del listener en dispositivo, módulo nativo, cola, pantalla de permisos, parsers de 1–2 bancos.
 - **Fase 3 — Conciliación.** Fingerprint, fusión, `pending/confirmed`, conflictos.

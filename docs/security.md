@@ -4,7 +4,11 @@
 
 - **Todo es local.** No hay backend; la app no tiene cuentas de usuario.
 - **Cero credenciales bancarias**, ni ahora ni en v2.
-- Hoy la BD **no está cifrada** (igual que v1). El cifrado con SQLCipher y la llave en Android Keystore llegan en la Fase 1 (`specs.md` §6, `docs/migration-v1-v2.md` M7).
+- **BD cifrada con SQLCipher** (`app.json` → `expo-sqlite.android.useSQLCipher`). La llave (256 bits aleatorios, `expo-crypto`) se genera en el primer arranque y se guarda en `expo-secure-store` (Android Keystore) bajo `db.keyStorageKey`. Se aplica con `PRAGMA key` antes de cualquier otra sentencia; si no abre, la app muestra la pantalla de error sin tocar el archivo.
+- **`android.allowBackup: false`**: Android no copia la BD a Google Drive (además, sin la llave del Keystore sería ilegible).
+- **Bloqueo** (módulo `security`): al abrir y al volver de segundo plano (`security.lockOnBackgroundMs`) se pide huella, rostro o el PIN/patrón del teléfono. Si el teléfono no tiene ningún método configurado, **no hay bloqueo** (no hay con qué verificar); se avisará en Ajustes en una fase posterior.
+- **`FLAG_SECURE`** (`security.preventScreenshots`): la app no aparece en capturas ni en la vista de recientes.
+- "Exportar base de datos" entrega el archivo **cifrado**; solo se puede abrir con la llave de ese teléfono.
 
 ## Salidas de red
 
@@ -18,13 +22,13 @@ La pantalla de privacidad dentro de la app se agrega en la Fase 1.
 
 ## Permisos Android
 
-v1 y la Fase 0 no declaran permisos propios (solo los que agregan las librerías de Expo). Previstos en v2:
+Permisos propios de la app (además de los que agregan las librerías de Expo):
 
 | Permiso                                                                                     | Para qué                                              | Fase |
 | ------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ---- |
 | `BIND_NOTIFICATION_LISTENER_SERVICE` (en el `<service>`, se concede en Ajustes del sistema) | Leer notificaciones de apps bancarias en lista blanca | 2    |
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`                                                      | Que Android no mate el listener                       | 2    |
-| `USE_BIOMETRIC`                                                                             | Bloqueo biométrico                                    | 1    |
+| `USE_BIOMETRIC`, `USE_FINGERPRINT` (los agrega `expo-local-authentication`)                 | Bloqueo biométrico                                    | 1 ✅ |
 | `INTERNET`                                                                                  | Correo y respaldo                                     | 4    |
 
 ## Logs
