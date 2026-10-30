@@ -1,5 +1,27 @@
 # Bitácora
 
+## 2026-10-30 — Release 2.0.0 y rama estable `prod`
+
+### Hecho
+
+- Llave de release: keystore de EAS para `com.cashpro.app`; alias y SHA-256 fijos en `release.yml`; secretos cargados por el usuario en GitHub.
+- La rama estable es `prod` (OQ-020): `release.yml`, CLAUDE.md y docs ajustados.
+- `CHANGELOG.md`: sección `[2.0.0] - 2026-10-30` (OK del usuario).
+
+### Verificado
+
+- `format:check`, `lint`, `typecheck`, `test` en verde; YAML de `release.yml` válido.
+
+### No verificado
+
+- `release.yml` nunca ha corrido; el merge del PR a `prod` lo ejecutará por primera vez.
+- Nada probado en dispositivo (MT-01..MT-13).
+
+### Sigue
+
+- Revisar la ejecución de `release.yml` tras el merge e instalar el APK (MT-13, MT-09..MT-12).
+- Esquema v2 con migraciones (OQ-021).
+
 ## 2026-10-30 — Fase 1 (parte 1): seguridad y release
 
 **Decisiones del usuario:** package `com.cashpro.app`; llaves en EAS; no hay APK instalado (sin datos que preservar); versión 2.0.0 / versionCode 3; dependencias de v2 aprobadas.

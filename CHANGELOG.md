@@ -4,6 +4,8 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versionado
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-30
+
 ### Añadido
 
 - La base de datos se guarda cifrada (SQLCipher); la llave vive en el almacén seguro del teléfono.

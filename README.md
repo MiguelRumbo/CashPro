@@ -2,7 +2,7 @@
 
 App móvil de finanzas personales **local-first** para Android: cuentas, movimientos, presupuestos, metas de ahorro, préstamos, suscripciones, vehículos y compras a MSI. La v2 agrega la captura automática de movimientos bancarios (notificaciones, correos y estados de cuenta) sin pedir credenciales bancarias.
 
-- **Versión:** 2.0.0 (sin publicar) · **Estado:** Fase 0 terminada; Fase 1 en curso (BD cifrada, bloqueo y release listos; falta el esquema de datos v2).
+- **Versión:** 2.0.0 · **Estado:** Fase 0 terminada; Fase 1 en curso (BD cifrada, bloqueo y release listos; falta el esquema de datos v2).
 - **Plataforma:** Android (Expo SDK 54, development build). Uso personal; APK en GitHub Releases.
 
 ## Requisitos
