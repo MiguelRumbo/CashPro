@@ -100,7 +100,11 @@ export function computeAlerts(
         alerts.push({
           type: 'budget_warning',
           title: t.budgetWarning.title(config.budgetWarningPercent),
-          message: t.budgetWarning.message(budget.name, pct.toFixed(0), formatAmount(budget.amount - budget.current_amount)),
+          message: t.budgetWarning.message(
+            budget.name,
+            pct.toFixed(0),
+            formatAmount(budget.amount - budget.current_amount),
+          ),
           data: { budget_id: budget.id },
         });
       }

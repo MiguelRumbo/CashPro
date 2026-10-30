@@ -23,7 +23,8 @@ export const manifest: ModuleManifest = {
   subscriptions: () => {
     const { accounts } = getAccountsRuntime();
     return {
-      'movement.recorded': ({ movement, affectsBalance }) => accounts.onMovementRecorded(movement, affectsBalance),
+      'movement.recorded': ({ movement, affectsBalance }) =>
+        accounts.onMovementRecorded(movement, affectsBalance),
       'movement.updated': ({ before, after }) => accounts.onMovementUpdated(before, after),
       'movement.deleted': ({ movement }) => accounts.onMovementDeleted(movement),
     };

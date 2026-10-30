@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react';
-import { ScrollView, View, StyleSheet, TouchableOpacity, TextInput, Modal, Platform, Alert } from 'react-native';
+import {
+  ScrollView,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Modal,
+  Platform,
+  Alert,
+} from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ThemedText } from '@/core/ui-kit/themed-text';
@@ -9,15 +18,20 @@ import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
 import { formatCurrencyInput, getNumericValue } from '@/core/units/format';
 import { useCurrency } from '@/core/preferences/use-currency';
 import { categories as CATEGORIES, type Category } from '../domain/categories';
-import { accountsQueryKey, vehiclesQueryKey, type AccountRecord, type MovementWithAccount } from '@/core/contracts/finance';
+import {
+  accountsQueryKey,
+  vehiclesQueryKey,
+  type AccountRecord,
+  type MovementWithAccount,
+  MovementType,
+} from '@/core/contracts/finance';
 import { ok } from '@/core/contracts/result';
-import { useCapability } from '@/core/registry/react';
+import { useCapability, useErrorReporter } from '@/core/registry/react';
 import { getMovementsRuntime } from '../runtime';
-import { useErrorReporter } from '@/core/registry/react';
-import type { MovementType } from '@/core/contracts/finance';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
+import type { MovementDraft } from '../domain/movement-rules';
 type Account = AccountRecord;
 type Movement = MovementWithAccount;
-
 
 export function MovementDetailScreen() {
   const { movements: movementsService } = getMovementsRuntime();
@@ -56,12 +70,7 @@ export function MovementDetailScreen() {
   const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#374151' }, 'border');
   const cardBg = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
 
-  useEffect(() => {
-    fetchMovement();
-    fetchAccounts();
-  }, [id]);
-
-  const fetchMovement = () => {
+  const fetchMovement = useStableCallback(() => {
     try {
       setLoading(true);
       const result = movementsService.getMovementById(Number(id));
@@ -78,9 +87,9 @@ export function MovementDetailScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  });
 
-  const fetchAccounts = () => {
+  const fetchAccounts = useStableCallback(() => {
     try {
       const result = ok(accountsQuery?.list() ?? []);
       if (result.success) {
@@ -89,7 +98,12 @@ export function MovementDetailScreen() {
     } catch (error) {
       reportError('Error fetching accounts:', error);
     }
-  };
+  });
+
+  useEffect(() => {
+    fetchMovement();
+    fetchAccounts();
+  }, [id, fetchAccounts, fetchMovement]);
 
   const populateEditFields = (m: Movement) => {
     setEditType(m.type);
@@ -99,7 +113,7 @@ export function MovementDetailScreen() {
     setEditDate(new Date(m.date));
 
     if (m.category_id) {
-      const cat = CATEGORIES.find(c => c.id === m.category_id);
+      const cat = CATEGORIES.find((c) => c.id === m.category_id);
       if (cat) {
         setEditCategory(cat);
       } else {
@@ -126,7 +140,7 @@ export function MovementDetailScreen() {
 
     setSaving(true);
     try {
-      const updateData: any = {
+      const updateData: MovementDraft = {
         type: editType,
         amount: getNumericValue(editAmount),
         title: editTitle.trim() || (editType === 'transfer' ? 'Transferencia' : editCategory?.name),
@@ -152,13 +166,23 @@ export function MovementDetailScreen() {
       const result = movementsService.updateMovement(Number(id), updateData);
 
       if (result.success) {
-        Alert.alert('Actualizado', 'Movimiento actualizado correctamente. Los balances y presupuestos se han ajustado.', [
-          { text: 'OK', onPress: () => { setIsEditing(false); fetchMovement(); } }
-        ]);
+        Alert.alert(
+          'Actualizado',
+          'Movimiento actualizado correctamente. Los balances y presupuestos se han ajustado.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setIsEditing(false);
+                fetchMovement();
+              },
+            },
+          ],
+        );
       } else {
         Alert.alert('Error', result.error || 'No se pudo actualizar');
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'No se pudo actualizar el movimiento');
     } finally {
       setSaving(false);
@@ -172,12 +196,14 @@ export function MovementDetailScreen() {
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: 'Eliminar', style: 'destructive', onPress: () => {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => {
             try {
               const result = movementsService.deleteMovement(Number(id));
               if (result.success) {
                 Alert.alert('Eliminado', 'Movimiento eliminado correctamente', [
-                  { text: 'OK', onPress: () => router.back() }
+                  { text: 'OK', onPress: () => router.back() },
                 ]);
               } else {
                 Alert.alert('Error', result.error || 'No se pudo eliminar');
@@ -185,43 +211,58 @@ export function MovementDetailScreen() {
             } catch {
               Alert.alert('Error', 'No se pudo eliminar el movimiento');
             }
-          }
+          },
         },
-      ]
+      ],
     );
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'income': return primary;
-      case 'expense': return '#ef4444';
-      case 'transfer': return '#3b82f6';
-      default: return textMain;
+      case 'income':
+        return primary;
+      case 'expense':
+        return '#ef4444';
+      case 'transfer':
+        return '#3b82f6';
+      default:
+        return textMain;
     }
   };
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case 'income': return 'Ingreso';
-      case 'expense': return 'Gasto';
-      case 'transfer': return 'Transferencia';
-      default: return type;
+      case 'income':
+        return 'Ingreso';
+      case 'expense':
+        return 'Gasto';
+      case 'transfer':
+        return 'Transferencia';
+      default:
+        return type;
     }
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'income': return 'arrow.down';
-      case 'expense': return 'arrow.up';
-      case 'transfer': return 'arrow.left.arrow.right';
-      default: return 'banknote';
+      case 'income':
+        return 'arrow.down';
+      case 'expense':
+        return 'arrow.up';
+      case 'transfer':
+        return 'arrow.left.arrow.right';
+      default:
+        return 'banknote';
     }
   };
 
   const formatFullDate = (dateStr: string) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString('es-MX', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
     });
   };
 
@@ -233,7 +274,13 @@ export function MovementDetailScreen() {
   if (loading) {
     return (
       <ThemedView style={[styles.container, { backgroundColor }]}>
-        <Stack.Screen options={{ title: 'Detalle', headerStyle: { backgroundColor: surfaceColor }, headerTintColor: textMain }} />
+        <Stack.Screen
+          options={{
+            title: 'Detalle',
+            headerStyle: { backgroundColor: surfaceColor },
+            headerTintColor: textMain,
+          }}
+        />
         <View style={styles.loadingContainer}>
           <ThemedText style={{ color: textMuted }}>Cargando...</ThemedText>
         </View>
@@ -244,7 +291,13 @@ export function MovementDetailScreen() {
   if (!movement) {
     return (
       <ThemedView style={[styles.container, { backgroundColor }]}>
-        <Stack.Screen options={{ title: 'Detalle', headerStyle: { backgroundColor: surfaceColor }, headerTintColor: textMain }} />
+        <Stack.Screen
+          options={{
+            title: 'Detalle',
+            headerStyle: { backgroundColor: surfaceColor },
+            headerTintColor: textMain,
+          }}
+        />
         <View style={styles.loadingContainer}>
           <ThemedText style={{ color: textMuted }}>Movimiento no encontrado</ThemedText>
         </View>
@@ -253,7 +306,8 @@ export function MovementDetailScreen() {
   }
 
   // Detect fuel movements
-  const isFuelMovement = movement.title?.startsWith('Gasolina -') &&
+  const isFuelMovement =
+    movement.title?.startsWith('Gasolina -') &&
     movement.category_name === 'Transporte' &&
     movement.category_icon === 'car';
 
@@ -270,8 +324,11 @@ export function MovementDetailScreen() {
             'Este movimiento fue generado por una carga de gasolina. Para editarlo, ve al detalle del vehículo.',
             [
               { text: 'Cancelar', style: 'cancel' },
-              { text: 'Ir al vehículo', onPress: () => router.push(`/vehicles/vehicle-detail?id=${vehicle.id}`) },
-            ]
+              {
+                text: 'Ir al vehículo',
+                onPress: () => router.push(`/vehicles/vehicle-detail?id=${vehicle.id}`),
+              },
+            ],
           );
           return;
         }
@@ -310,17 +367,22 @@ export function MovementDetailScreen() {
           }}
         />
 
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.detailContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.detailContent}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Amount Hero */}
           <View style={styles.amountHero}>
             <View style={[styles.heroIcon, { backgroundColor: iconBg }]}>
               <IconSymbol size={32} name={iconName as IconSymbolName} color={iconColor} />
             </View>
             <ThemedText style={[styles.heroAmount, { color: textMain }]}>
-              {movement.type === 'income' ? '+' : movement.type === 'expense' ? '-' : ''}{formatCurrency(movement.amount)}
+              {movement.type === 'income' ? '+' : movement.type === 'expense' ? '-' : ''}
+              {formatCurrency(movement.amount)}
             </ThemedText>
             <View style={[styles.typeBadge, { backgroundColor: typeColor + '15' }]}>
-              <IconSymbol size={14} name={getTypeIcon(movement.type) as any} color={typeColor} />
+              <IconSymbol size={14} name={getTypeIcon(movement.type) as IconSymbolName} color={typeColor} />
               <ThemedText style={[styles.typeBadgeText, { color: typeColor }]}>
                 {getTypeLabel(movement.type)}
               </ThemedText>
@@ -344,8 +406,12 @@ export function MovementDetailScreen() {
                   <ThemedText style={[styles.infoLabel, { color: textMuted }]}>Categoría</ThemedText>
                 </View>
                 <View style={styles.categoryBadge}>
-                  <View style={[styles.categoryDot, { backgroundColor: movement.category_color || '#64748b' }]} />
-                  <ThemedText style={[styles.infoValue, { color: textMain }]}>{movement.category_name}</ThemedText>
+                  <View
+                    style={[styles.categoryDot, { backgroundColor: movement.category_color || '#64748b' }]}
+                  />
+                  <ThemedText style={[styles.infoValue, { color: textMain }]}>
+                    {movement.category_name}
+                  </ThemedText>
                 </View>
               </View>
             )}
@@ -355,7 +421,9 @@ export function MovementDetailScreen() {
                 <IconSymbol size={18} name="creditcard" color={textMuted} />
                 <ThemedText style={[styles.infoLabel, { color: textMuted }]}>Cuenta</ThemedText>
               </View>
-              <ThemedText style={[styles.infoValue, { color: textMain }]}>{movement.account_name || `Cuenta #${movement.account_id}`}</ThemedText>
+              <ThemedText style={[styles.infoValue, { color: textMain }]}>
+                {movement.account_name || `Cuenta #${movement.account_id}`}
+              </ThemedText>
             </View>
 
             <View style={[styles.infoRow, { borderBottomColor: borderColor }]}>
@@ -363,7 +431,9 @@ export function MovementDetailScreen() {
                 <IconSymbol size={18} name="calendar" color={textMuted} />
                 <ThemedText style={[styles.infoLabel, { color: textMuted }]}>Fecha</ThemedText>
               </View>
-              <ThemedText style={[styles.infoValue, { color: textMain }]}>{formatFullDate(movement.date)}</ThemedText>
+              <ThemedText style={[styles.infoValue, { color: textMain }]}>
+                {formatFullDate(movement.date)}
+              </ThemedText>
             </View>
 
             <View style={[styles.infoRow, { borderBottomColor: borderColor }]}>
@@ -371,7 +441,9 @@ export function MovementDetailScreen() {
                 <IconSymbol size={18} name="clock" color={textMuted} />
                 <ThemedText style={[styles.infoLabel, { color: textMuted }]}>Hora</ThemedText>
               </View>
-              <ThemedText style={[styles.infoValue, { color: textMain }]}>{formatTime(movement.date)}</ThemedText>
+              <ThemedText style={[styles.infoValue, { color: textMain }]}>
+                {formatTime(movement.date)}
+              </ThemedText>
             </View>
 
             {movement.notes ? (
@@ -394,15 +466,24 @@ export function MovementDetailScreen() {
             <View style={styles.infoRow}>
               <ThemedText style={[styles.metaLabel, { color: textMuted }]}>Creado</ThemedText>
               <ThemedText style={[styles.metaValue, { color: textMuted }]}>
-                {new Date(movement.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}
+                {new Date(movement.created_at).toLocaleDateString('es-MX', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
               </ThemedText>
             </View>
           </View>
 
           {/* Action Buttons */}
-          <TouchableOpacity style={[styles.editButton, { backgroundColor: primary }]} onPress={handleEditPress}>
-            <IconSymbol size={20} name={isFuelMovement ? 'car' as any : 'pencil'} color="#fff" />
-            <ThemedText style={styles.editButtonText}>{isFuelMovement ? 'Ir al Vehículo' : 'Editar Movimiento'}</ThemedText>
+          <TouchableOpacity
+            style={[styles.editButton, { backgroundColor: primary }]}
+            onPress={handleEditPress}
+          >
+            <IconSymbol size={20} name={isFuelMovement ? 'car' : 'pencil'} color="#fff" />
+            <ThemedText style={styles.editButtonText}>
+              {isFuelMovement ? 'Ir al Vehículo' : 'Editar Movimiento'}
+            </ThemedText>
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.deleteButton, { borderColor: '#ef4444' }]} onPress={handleDelete}>
@@ -425,32 +506,48 @@ export function MovementDetailScreen() {
           headerStyle: { backgroundColor: surfaceColor },
           headerTintColor: textMain,
           headerRight: () => (
-            <TouchableOpacity onPress={() => { setIsEditing(false); if (movement) populateEditFields(movement); }}>
+            <TouchableOpacity
+              onPress={() => {
+                setIsEditing(false);
+                if (movement) populateEditFields(movement);
+              }}
+            >
               <ThemedText style={{ color: '#ef4444', fontWeight: '600' }}>Cancelar</ThemedText>
             </TouchableOpacity>
           ),
         }}
       />
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.editContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.editContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Type Selector */}
         <View style={styles.typeSelector}>
           {(['expense', 'income', 'transfer'] as MovementType[]).map((type) => {
             const isActive = editType === type;
             const color = type === 'expense' ? '#ef4444' : type === 'income' ? primary : '#3b82f6';
             const label = type === 'expense' ? 'Gasto' : type === 'income' ? 'Ingreso' : 'Transferir';
-            const icon = type === 'expense' ? 'arrow.down' : type === 'income' ? 'arrow.up' : 'arrow.left.arrow.right';
+            const icon =
+              type === 'expense' ? 'arrow.down' : type === 'income' ? 'arrow.up' : 'arrow.left.arrow.right';
             return (
               <TouchableOpacity
                 key={type}
                 style={[
                   styles.typeButton,
-                  { backgroundColor: isActive ? color + '15' : surfaceColor, borderColor: isActive ? color : borderColor, borderWidth: isActive ? 2 : 1 }
+                  {
+                    backgroundColor: isActive ? color + '15' : surfaceColor,
+                    borderColor: isActive ? color : borderColor,
+                    borderWidth: isActive ? 2 : 1,
+                  },
                 ]}
                 onPress={() => setEditType(type)}
               >
                 <IconSymbol size={18} name={icon as IconSymbolName} color={isActive ? color : textMuted} />
-                <ThemedText style={[styles.typeButtonText, { color: isActive ? color : textMuted }]}>{label}</ThemedText>
+                <ThemedText style={[styles.typeButtonText, { color: isActive ? color : textMuted }]}>
+                  {label}
+                </ThemedText>
               </TouchableOpacity>
             );
           })}
@@ -474,11 +571,18 @@ export function MovementDetailScreen() {
 
         {/* Category */}
         {editType !== 'transfer' && (
-          <TouchableOpacity style={[styles.editField, { backgroundColor: surfaceColor, borderColor }]} onPress={() => setShowCategoryModal(true)}>
+          <TouchableOpacity
+            style={[styles.editField, { backgroundColor: surfaceColor, borderColor }]}
+            onPress={() => setShowCategoryModal(true)}
+          >
             <View style={styles.fieldLeft}>
               {editCategory ? (
                 <View style={[styles.fieldIcon, { backgroundColor: editCategory.bg }]}>
-                  <IconSymbol size={20} name={editCategory.icon as IconSymbolName} color={editCategory.color} />
+                  <IconSymbol
+                    size={20}
+                    name={editCategory.icon as IconSymbolName}
+                    color={editCategory.color}
+                  />
                 </View>
               ) : (
                 <View style={[styles.fieldIcon, { backgroundColor: borderColor }]}>
@@ -487,7 +591,9 @@ export function MovementDetailScreen() {
               )}
               <View>
                 <ThemedText style={[styles.fieldLabel, { color: textMuted }]}>Categoría</ThemedText>
-                <ThemedText style={[styles.fieldValue, { color: textMain }]}>{editCategory?.name || 'Seleccionar'}</ThemedText>
+                <ThemedText style={[styles.fieldValue, { color: textMain }]}>
+                  {editCategory?.name || 'Seleccionar'}
+                </ThemedText>
               </View>
             </View>
             <IconSymbol size={20} name="chevron.right" color={textMuted} />
@@ -514,15 +620,22 @@ export function MovementDetailScreen() {
         </View>
 
         {/* Account */}
-        <TouchableOpacity style={[styles.editField, { backgroundColor: surfaceColor, borderColor }]} onPress={() => setShowAccountModal(true)}>
+        <TouchableOpacity
+          style={[styles.editField, { backgroundColor: surfaceColor, borderColor }]}
+          onPress={() => setShowAccountModal(true)}
+        >
           <View style={styles.fieldLeft}>
             <View style={[styles.fieldIcon, { backgroundColor: borderColor }]}>
               <IconSymbol size={20} name="creditcard" color={textMuted} />
             </View>
             <View>
-              <ThemedText style={[styles.fieldLabel, { color: textMuted }]}>{editType === 'transfer' ? 'Desde' : 'Cuenta'}</ThemedText>
+              <ThemedText style={[styles.fieldLabel, { color: textMuted }]}>
+                {editType === 'transfer' ? 'Desde' : 'Cuenta'}
+              </ThemedText>
               <ThemedText style={[styles.fieldValue, { color: textMain }]}>
-                {editAccount?.name || accounts.find(a => a.id === movement?.account_id)?.name || 'Seleccionar'}
+                {editAccount?.name ||
+                  accounts.find((a) => a.id === movement?.account_id)?.name ||
+                  'Seleccionar'}
               </ThemedText>
             </View>
           </View>
@@ -531,7 +644,10 @@ export function MovementDetailScreen() {
 
         {/* To Account (transfer) */}
         {editType === 'transfer' && (
-          <TouchableOpacity style={[styles.editField, { backgroundColor: surfaceColor, borderColor }]} onPress={() => setShowToAccountModal(true)}>
+          <TouchableOpacity
+            style={[styles.editField, { backgroundColor: surfaceColor, borderColor }]}
+            onPress={() => setShowToAccountModal(true)}
+          >
             <View style={styles.fieldLeft}>
               <View style={[styles.fieldIcon, { backgroundColor: borderColor }]}>
                 <IconSymbol size={20} name="creditcard.fill" color={textMuted} />
@@ -539,7 +655,9 @@ export function MovementDetailScreen() {
               <View>
                 <ThemedText style={[styles.fieldLabel, { color: textMuted }]}>Hacia</ThemedText>
                 <ThemedText style={[styles.fieldValue, { color: textMain }]}>
-                  {editToAccount?.name || accounts.find(a => a.id === movement?.to_account_id)?.name || 'Seleccionar'}
+                  {editToAccount?.name ||
+                    accounts.find((a) => a.id === movement?.to_account_id)?.name ||
+                    'Seleccionar'}
                 </ThemedText>
               </View>
             </View>
@@ -549,7 +667,10 @@ export function MovementDetailScreen() {
 
         {/* Date & Time */}
         <View style={styles.dateTimeRow}>
-          <TouchableOpacity style={[styles.dateBtn, { backgroundColor: surfaceColor, borderColor }]} onPress={() => setShowDatePicker(true)}>
+          <TouchableOpacity
+            style={[styles.dateBtn, { backgroundColor: surfaceColor, borderColor }]}
+            onPress={() => setShowDatePicker(true)}
+          >
             <IconSymbol size={18} name="calendar" color={textMuted} />
             <View>
               <ThemedText style={[styles.fieldLabel, { color: textMuted }]}>Fecha</ThemedText>
@@ -558,7 +679,10 @@ export function MovementDetailScreen() {
               </ThemedText>
             </View>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.dateBtn, { backgroundColor: surfaceColor, borderColor }]} onPress={() => setShowTimePicker(true)}>
+          <TouchableOpacity
+            style={[styles.dateBtn, { backgroundColor: surfaceColor, borderColor }]}
+            onPress={() => setShowTimePicker(true)}
+          >
             <IconSymbol size={18} name="clock" color={textMuted} />
             <View>
               <ThemedText style={[styles.fieldLabel, { color: textMuted }]}>Hora</ThemedText>
@@ -608,16 +732,40 @@ export function MovementDetailScreen() {
 
       {/* Date Picker */}
       {showDatePicker && (
-        <DateTimePicker value={editDate} mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(e, d) => { setShowDatePicker(false); if (d) setEditDate(d); }} />
+        <DateTimePicker
+          value={editDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={(e, d) => {
+            setShowDatePicker(false);
+            if (d) setEditDate(d);
+          }}
+        />
       )}
       {showTimePicker && (
-        <DateTimePicker value={editDate} mode="time" display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(e, d) => { setShowTimePicker(false); if (d) { const nd = new Date(editDate); nd.setHours(d.getHours()); nd.setMinutes(d.getMinutes()); setEditDate(nd); } }} />
+        <DateTimePicker
+          value={editDate}
+          mode="time"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={(e, d) => {
+            setShowTimePicker(false);
+            if (d) {
+              const nd = new Date(editDate);
+              nd.setHours(d.getHours());
+              nd.setMinutes(d.getMinutes());
+              setEditDate(nd);
+            }
+          }}
+        />
       )}
 
       {/* Category Modal */}
-      <Modal visible={showCategoryModal} animationType="slide" transparent onRequestClose={() => setShowCategoryModal(false)}>
+      <Modal
+        visible={showCategoryModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowCategoryModal(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
             <View style={styles.modalHeader}>
@@ -628,8 +776,14 @@ export function MovementDetailScreen() {
             </View>
             <ScrollView contentContainerStyle={styles.categoriesGrid} showsVerticalScrollIndicator={false}>
               {CATEGORIES.map((cat) => (
-                <TouchableOpacity key={cat.id} style={styles.categoryItem}
-                  onPress={() => { setEditCategory(cat); setShowCategoryModal(false); }}>
+                <TouchableOpacity
+                  key={cat.id}
+                  style={styles.categoryItem}
+                  onPress={() => {
+                    setEditCategory(cat);
+                    setShowCategoryModal(false);
+                  }}
+                >
                   <View style={[styles.categoryIcon, { backgroundColor: cat.bg }]}>
                     <IconSymbol size={28} name={cat.icon as IconSymbolName} color={cat.color} />
                   </View>
@@ -642,7 +796,12 @@ export function MovementDetailScreen() {
       </Modal>
 
       {/* Account Modal */}
-      <Modal visible={showAccountModal} animationType="slide" transparent onRequestClose={() => setShowAccountModal(false)}>
+      <Modal
+        visible={showAccountModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowAccountModal(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
             <View style={styles.modalHeader}>
@@ -653,12 +812,17 @@ export function MovementDetailScreen() {
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
               {accounts.map((acc) => {
-                const displayBal = acc.type === 'credit'
-                  ? (acc.credit_limit || 0) - (acc.current_balance || 0)
-                  : acc.balance;
+                const displayBal =
+                  acc.type === 'credit' ? (acc.credit_limit || 0) - (acc.current_balance || 0) : acc.balance;
                 return (
-                  <TouchableOpacity key={acc.id} style={[styles.accountItem, { borderBottomColor: borderColor }]}
-                    onPress={() => { setEditAccount(acc); setShowAccountModal(false); }}>
+                  <TouchableOpacity
+                    key={acc.id}
+                    style={[styles.accountItem, { borderBottomColor: borderColor }]}
+                    onPress={() => {
+                      setEditAccount(acc);
+                      setShowAccountModal(false);
+                    }}
+                  >
                     <ThemedText style={[styles.accountName, { color: textMain }]}>{acc.name}</ThemedText>
                     <ThemedText style={[styles.accountBalance, { color: textMuted }]}>
                       {acc.type === 'credit' ? 'Disponible: ' : ''}${displayBal.toFixed(2)}
@@ -672,7 +836,12 @@ export function MovementDetailScreen() {
       </Modal>
 
       {/* To Account Modal */}
-      <Modal visible={showToAccountModal} animationType="slide" transparent onRequestClose={() => setShowToAccountModal(false)}>
+      <Modal
+        visible={showToAccountModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowToAccountModal(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
             <View style={styles.modalHeader}>
@@ -682,20 +851,29 @@ export function MovementDetailScreen() {
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
-              {accounts.filter(a => a.id !== (editAccount?.id || movement?.account_id)).map((acc) => {
-                const displayBal = acc.type === 'credit'
-                  ? (acc.credit_limit || 0) - (acc.current_balance || 0)
-                  : acc.balance;
-                return (
-                  <TouchableOpacity key={acc.id} style={[styles.accountItem, { borderBottomColor: borderColor }]}
-                    onPress={() => { setEditToAccount(acc); setShowToAccountModal(false); }}>
-                    <ThemedText style={[styles.accountName, { color: textMain }]}>{acc.name}</ThemedText>
-                    <ThemedText style={[styles.accountBalance, { color: textMuted }]}>
-                      {acc.type === 'credit' ? 'Disponible: ' : ''}${displayBal.toFixed(2)}
-                    </ThemedText>
-                  </TouchableOpacity>
-                );
-              })}
+              {accounts
+                .filter((a) => a.id !== (editAccount?.id || movement?.account_id))
+                .map((acc) => {
+                  const displayBal =
+                    acc.type === 'credit'
+                      ? (acc.credit_limit || 0) - (acc.current_balance || 0)
+                      : acc.balance;
+                  return (
+                    <TouchableOpacity
+                      key={acc.id}
+                      style={[styles.accountItem, { borderBottomColor: borderColor }]}
+                      onPress={() => {
+                        setEditToAccount(acc);
+                        setShowToAccountModal(false);
+                      }}
+                    >
+                      <ThemedText style={[styles.accountName, { color: textMain }]}>{acc.name}</ThemedText>
+                      <ThemedText style={[styles.accountBalance, { color: textMuted }]}>
+                        {acc.type === 'credit' ? 'Disponible: ' : ''}${displayBal.toFixed(2)}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  );
+                })}
             </ScrollView>
           </View>
         </View>
@@ -714,10 +892,23 @@ const styles = StyleSheet.create({
   amountHero: { alignItems: 'center', paddingVertical: 32, gap: 12 },
   heroIcon: { width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   heroAmount: { fontSize: 40, fontWeight: '800', letterSpacing: -1.5 },
-  typeBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
+  typeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
   typeBadgeText: { fontSize: 14, fontWeight: '600' },
   infoCard: { borderRadius: 20, borderWidth: 1, overflow: 'hidden', marginBottom: 16 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1 },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+  },
   infoRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   infoLabel: { fontSize: 14, fontWeight: '500' },
   infoValue: { fontSize: 14, fontWeight: '600', maxWidth: 200, textAlign: 'right' },
@@ -728,45 +919,111 @@ const styles = StyleSheet.create({
   metaCard: { borderRadius: 16, borderWidth: 1, overflow: 'hidden', marginBottom: 24 },
   metaLabel: { fontSize: 13 },
   metaValue: { fontSize: 13 },
-  editButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16, borderRadius: 14, marginBottom: 12 },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 16,
+    borderRadius: 14,
+    marginBottom: 12,
+  },
   editButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  deleteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16, borderRadius: 14, borderWidth: 2 },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 2,
+  },
   deleteButtonText: { fontSize: 16, fontWeight: '600' },
   // Edit View
   editContent: { padding: 16 },
   typeSelector: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  typeButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12 },
+  typeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
   typeButtonText: { fontSize: 13, fontWeight: '600' },
   editAmountSection: { padding: 24, borderRadius: 16, marginBottom: 16, alignItems: 'center' },
   editLabel: { fontSize: 14, fontWeight: '500', marginBottom: 8 },
   amountRow: { flexDirection: 'row', alignItems: 'center' },
   currencySign: { fontSize: 36, fontWeight: '700', marginRight: 4 },
   amountInput: { fontSize: 44, fontWeight: '700', minWidth: 80, textAlign: 'center' },
-  editField: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderRadius: 12, marginBottom: 12, borderWidth: 1 },
+  editField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+  },
   fieldLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   fieldIcon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   fieldLabel: { fontSize: 12, fontWeight: '500', marginBottom: 2 },
   fieldValue: { fontSize: 15, fontWeight: '600' },
   fieldInput: { fontSize: 15, fontWeight: '600', padding: 0, marginTop: 2 },
   dateTimeRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  dateBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 12, borderWidth: 1 },
+  dateBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
   notesSection: { padding: 16, borderRadius: 12, marginBottom: 16, borderWidth: 1 },
   notesHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   notesInput: { fontSize: 14, minHeight: 60, textAlignVertical: 'top' },
-  warningBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 16, borderRadius: 12, backgroundColor: 'rgba(245,158,11,0.08)', marginBottom: 20 },
+  warningBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(245,158,11,0.08)',
+    marginBottom: 20,
+  },
   warningText: { fontSize: 13, lineHeight: 20, color: '#92400e', flex: 1 },
   saveButton: { padding: 16, borderRadius: 14, alignItems: 'center' },
   saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   // Modals
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 20, paddingBottom: 40, maxHeight: '80%' },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 20 },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
   modalTitle: { fontSize: 20, fontWeight: '700' },
   categoriesGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, gap: 16 },
   categoryItem: { width: '22%', alignItems: 'center', gap: 8 },
   categoryIcon: { width: 64, height: 64, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   categoryName: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
-  accountItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
+  accountItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+  },
   accountName: { fontSize: 16, fontWeight: '600' },
   accountBalance: { fontSize: 14, fontWeight: '500' },
 });

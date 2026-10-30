@@ -18,6 +18,10 @@ export const recurringPayments = sqliteTable('recurring_payments', {
   next_date: text('next_date'),
   auto_register: integer('auto_register').notNull().default(0),
   notify_before_days: integer('notify_before_days').notNull().default(1),
-  created_at: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updated_at: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  created_at: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updated_at: text('updated_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
 });

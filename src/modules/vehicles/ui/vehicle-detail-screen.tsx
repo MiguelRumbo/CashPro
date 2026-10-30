@@ -1,5 +1,14 @@
 import { useState, useCallback } from 'react';
-import { ScrollView, View, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, Platform } from 'react-native';
+import {
+  ScrollView,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  TextInput,
+  Platform,
+} from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect, Stack } from 'expo-router';
 import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
@@ -7,12 +16,18 @@ import { useThemeColor } from '@/core/ui-kit/use-theme-color';
 import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
 import { useCurrency } from '@/core/preferences/use-currency';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { accountsQueryKey, type AccountRecord, type VehicleRecord, type MaintenanceRecord, type VehicleStats } from '@/core/contracts/finance';
+import {
+  accountsQueryKey,
+  type AccountRecord,
+  type VehicleRecord,
+  type MaintenanceRecord,
+  type VehicleStats,
+} from '@/core/contracts/finance';
 import { ok } from '@/core/contracts/result';
-import { useCapability } from '@/core/registry/react';
+import { useCapability, useErrorReporter } from '@/core/registry/react';
 import type { FuelLoad as FuelLoadRow } from '../data/vehicles-repository';
 import { getVehiclesRuntime } from '../runtime';
-import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 
 type Vehicle = VehicleRecord;
 
@@ -30,7 +45,7 @@ export function VehicleDetailScreen() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [fuelLoads, setFuelLoads] = useState<FuelLoad[]>([]);
   const [maintenance, setMaintenance] = useState<Maintenance[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<VehicleStats | null>(null);
   const [activeTab, setActiveTab] = useState<'fuel' | 'maintenance'>('fuel');
   const [showFuelModal, setShowFuelModal] = useState(false);
   const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
@@ -68,7 +83,7 @@ export function VehicleDetailScreen() {
   const inputBg = useThemeColor({ light: '#f9fafb', dark: '#1f2937' }, 'surface');
   const primary = '#20df60';
 
-  const fetchData = async () => {
+  const fetchData = useStableCallback(async () => {
     try {
       // Cargar vehículo
       const vehicleData = vehiclesService.getVehicleById(Number(id));
@@ -115,12 +130,12 @@ export function VehicleDetailScreen() {
       reportError('Error fetching data:', error);
       Alert.alert('Error', 'No se pudieron cargar los datos del vehículo');
     }
-  };
+  });
 
   useFocusEffect(
     useCallback(() => {
       fetchData();
-    }, [id])
+    }, [fetchData]),
   );
 
   // Track cuales campos el usuario edito manualmente
@@ -187,7 +202,7 @@ export function VehicleDetailScreen() {
     const hasLiters = fuelLiters && parseFloat(fuelLiters) > 0;
     const hasPrice = fuelPrice && parseFloat(fuelPrice) > 0;
     const hasTotal = fuelTotal && parseFloat(fuelTotal) > 0;
-    
+
     const count = [hasLiters, hasPrice, hasTotal].filter(Boolean).length;
     if (count < 2) {
       Alert.alert('Error', 'Ingresa al menos 2 valores: litros, precio por litro o total');
@@ -274,29 +289,25 @@ export function VehicleDetailScreen() {
   };
 
   const handleDeleteFuel = (loadId: number) => {
-    Alert.alert(
-      'Eliminar carga',
-      '¿Estás seguro de que deseas eliminar esta carga de gasolina?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const result = vehiclesService.deleteFuelLoad(loadId);
-              if (result.success) {
-                fetchData();
-              } else {
-                Alert.alert('Error', result.error);
-              }
-            } catch {
-              Alert.alert('Error', 'No se pudo eliminar la carga');
+    Alert.alert('Eliminar carga', '¿Estás seguro de que deseas eliminar esta carga de gasolina?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const result = vehiclesService.deleteFuelLoad(loadId);
+            if (result.success) {
+              fetchData();
+            } else {
+              Alert.alert('Error', result.error);
             }
-          },
+          } catch {
+            Alert.alert('Error', 'No se pudo eliminar la carga');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleAddMaintenance = async () => {
@@ -342,18 +353,20 @@ export function VehicleDetailScreen() {
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
-      <Stack.Screen options={{ 
-        title: vehicle.name, 
-        headerShown: true,
-        headerRight: () => (
-          <TouchableOpacity
-            onPress={() => router.push(`/vehicles/edit-vehicle?id=${id}`)}
-            style={{ marginRight: 8 }}
-          >
-            <IconSymbol name="pencil" size={20} color={primary} />
-          </TouchableOpacity>
-        ),
-      }} />
+      <Stack.Screen
+        options={{
+          title: vehicle.name,
+          headerShown: true,
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => router.push(`/vehicles/edit-vehicle?id=${id}`)}
+              style={{ marginRight: 8 }}
+            >
+              <IconSymbol name="pencil" size={20} color={primary} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
 
       <ScrollView style={styles.scrollView}>
         {/* Header Card */}
@@ -374,17 +387,13 @@ export function VehicleDetailScreen() {
           <View style={[styles.statsCard, { backgroundColor: surfaceColor, borderColor }]}>
             <View style={styles.statRow}>
               <View style={styles.statBox}>
-                <ThemedText style={[styles.statLabel, { color: textMuted }]}>
-                  Rendimiento
-                </ThemedText>
+                <ThemedText style={[styles.statLabel, { color: textMuted }]}>Rendimiento</ThemedText>
                 <ThemedText style={[styles.statValue, { color: textMain }]}>
                   {stats.avg_efficiency > 0 ? `${stats.avg_efficiency.toFixed(1)} km/L` : 'N/A'}
                 </ThemedText>
               </View>
               <View style={styles.statBox}>
-                <ThemedText style={[styles.statLabel, { color: textMuted }]}>
-                  Gasto Total
-                </ThemedText>
+                <ThemedText style={[styles.statLabel, { color: textMuted }]}>Gasto Total</ThemedText>
                 <ThemedText style={[styles.statValue, { color: textMain }]}>
                   {formatCurrency(stats.total_cost)}
                 </ThemedText>
@@ -392,17 +401,13 @@ export function VehicleDetailScreen() {
             </View>
             <View style={styles.statRow}>
               <View style={styles.statBox}>
-                <ThemedText style={[styles.statLabel, { color: textMuted }]}>
-                  Gasolina
-                </ThemedText>
+                <ThemedText style={[styles.statLabel, { color: textMuted }]}>Gasolina</ThemedText>
                 <ThemedText style={[styles.statValue, { color: '#ef4444' }]}>
                   {formatCurrency(stats.total_fuel_cost)}
                 </ThemedText>
               </View>
               <View style={styles.statBox}>
-                <ThemedText style={[styles.statLabel, { color: textMuted }]}>
-                  Mantenimiento
-                </ThemedText>
+                <ThemedText style={[styles.statLabel, { color: textMuted }]}>Mantenimiento</ThemedText>
                 <ThemedText style={[styles.statValue, { color: '#f59e0b' }]}>
                   {formatCurrency(stats.total_maintenance_cost)}
                 </ThemedText>
@@ -427,7 +432,9 @@ export function VehicleDetailScreen() {
             onPress={() => setActiveTab('maintenance')}
           >
             <IconSymbol name="wrench" size={18} color={activeTab === 'maintenance' ? primary : textMuted} />
-            <ThemedText style={[styles.tabText, { color: activeTab === 'maintenance' ? primary : textMuted }]}>
+            <ThemedText
+              style={[styles.tabText, { color: activeTab === 'maintenance' ? primary : textMuted }]}
+            >
               Mantenimiento
             </ThemedText>
           </TouchableOpacity>
@@ -450,7 +457,8 @@ export function VehicleDetailScreen() {
                         {load.liters}L @ {formatCurrency(load.price_per_liter)}/L
                       </ThemedText>
                       <ThemedText style={[styles.itemSubtitle, { color: textMuted }]}>
-                        {new Date(load.date).toLocaleDateString('es-MX')} · {load.odometer.toLocaleString()} km
+                        {new Date(load.date).toLocaleDateString('es-MX')} · {load.odometer.toLocaleString()}{' '}
+                        km
                       </ThemedText>
                     </View>
                     <ThemedText style={[styles.itemAmount, { color: '#ef4444' }]}>
@@ -472,38 +480,37 @@ export function VehicleDetailScreen() {
                 </ThemedText>
               </View>
             )
-          ) : (
-            maintenance.length > 0 ? (
-              maintenance.map((maint) => (
-                <View key={maint.id} style={[styles.itemCard, { backgroundColor: surfaceColor, borderColor }]}>
-                  <View style={styles.itemHeader}>
-                    <View style={{ flex: 1 }}>
-                      <ThemedText style={[styles.itemTitle, { color: textMain }]}>
-                        {maint.description}
-                      </ThemedText>
-                      <ThemedText style={[styles.itemSubtitle, { color: textMuted }]}>
-                        {new Date(maint.date).toLocaleDateString('es-MX')} · {maint.odometer.toLocaleString()} km
-                      </ThemedText>
-                    </View>
-                    <ThemedText style={[styles.itemAmount, { color: '#f59e0b' }]}>
-                      {formatCurrency(maint.cost)}
+          ) : maintenance.length > 0 ? (
+            maintenance.map((maint) => (
+              <View key={maint.id} style={[styles.itemCard, { backgroundColor: surfaceColor, borderColor }]}>
+                <View style={styles.itemHeader}>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={[styles.itemTitle, { color: textMain }]}>
+                      {maint.description}
+                    </ThemedText>
+                    <ThemedText style={[styles.itemSubtitle, { color: textMuted }]}>
+                      {new Date(maint.date).toLocaleDateString('es-MX')} · {maint.odometer.toLocaleString()}{' '}
+                      km
                     </ThemedText>
                   </View>
-                  {maint.workshop_name && (
-                    <ThemedText style={[styles.itemNotes, { color: textMuted }]}>
-                      {maint.workshop_name}
-                    </ThemedText>
-                  )}
+                  <ThemedText style={[styles.itemAmount, { color: '#f59e0b' }]}>
+                    {formatCurrency(maint.cost)}
+                  </ThemedText>
                 </View>
-              ))
-            ) : (
-              <View style={styles.emptyState}>
-                <IconSymbol name="wrench" size={48} color={textMuted} />
-                <ThemedText style={[styles.emptyText, { color: textMuted }]}>
-                  No hay mantenimientos registrados
-                </ThemedText>
+                {maint.workshop_name && (
+                  <ThemedText style={[styles.itemNotes, { color: textMuted }]}>
+                    {maint.workshop_name}
+                  </ThemedText>
+                )}
               </View>
-            )
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <IconSymbol name="wrench" size={48} color={textMuted} />
+              <ThemedText style={[styles.emptyText, { color: textMuted }]}>
+                No hay mantenimientos registrados
+              </ThemedText>
+            </View>
           )}
         </View>
 
@@ -541,14 +548,16 @@ export function VehicleDetailScreen() {
               <ThemedText style={[styles.modalTitle, { color: textMain }]}>
                 {editingFuelId ? 'Editar Carga de Gasolina' : 'Registrar Carga de Gasolina'}
               </ThemedText>
-              <TouchableOpacity onPress={() => {
-                setShowFuelModal(false);
-                setEditingFuelId(null);
-              }}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowFuelModal(false);
+                  setEditingFuelId(null);
+                }}
+              >
                 <IconSymbol name="xmark" size={24} color={textMuted} />
               </TouchableOpacity>
             </View>
-            
+
             <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
               {/* Litros */}
               <ThemedText style={[styles.modalLabel, { color: textMain }]}>Litros</ThemedText>
@@ -560,7 +569,7 @@ export function VehicleDetailScreen() {
                 placeholderTextColor={textMuted}
                 keyboardType="decimal-pad"
               />
-              
+
               {/* Precio por litro */}
               <ThemedText style={[styles.modalLabel, { color: textMain }]}>Precio por litro</ThemedText>
               <TextInput
@@ -571,7 +580,7 @@ export function VehicleDetailScreen() {
                 placeholderTextColor={textMuted}
                 keyboardType="decimal-pad"
               />
-              
+
               {/* Total */}
               <ThemedText style={[styles.modalLabel, { color: textMain }]}>Total</ThemedText>
               <TextInput
@@ -582,14 +591,16 @@ export function VehicleDetailScreen() {
                 placeholderTextColor={textMuted}
                 keyboardType="decimal-pad"
               />
-              
-              <View style={[styles.infoBox, { backgroundColor: '#3b82f6' + '15', borderColor: '#3b82f6' + '30' }]}>
+
+              <View
+                style={[styles.infoBox, { backgroundColor: '#3b82f6' + '15', borderColor: '#3b82f6' + '30' }]}
+              >
                 <IconSymbol name="info.circle" size={16} color="#3b82f6" />
                 <ThemedText style={[styles.infoText, { color: '#3b82f6' }]}>
                   Ingresa al menos 2 valores y el tercero se calculará automáticamente
                 </ThemedText>
               </View>
-              
+
               {/* Kilometraje */}
               <ThemedText style={[styles.modalLabel, { color: textMain }]}>Kilometraje actual</ThemedText>
               <TextInput
@@ -600,7 +611,7 @@ export function VehicleDetailScreen() {
                 placeholderTextColor={textMuted}
                 keyboardType="decimal-pad"
               />
-              
+
               {/* Gasolinera */}
               <ThemedText style={[styles.modalLabel, { color: textMain }]}>Gasolinera (opcional)</ThemedText>
               <TextInput
@@ -620,7 +631,11 @@ export function VehicleDetailScreen() {
                 >
                   <IconSymbol name="calendar" size={16} color={textMuted} />
                   <ThemedText style={[styles.dateTimeText, { color: textMain }]}>
-                    {fuelDate.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    {fuelDate.toLocaleDateString('es-MX', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
                   </ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -637,20 +652,37 @@ export function VehicleDetailScreen() {
               {/* Selector de cuenta */}
               <ThemedText style={[styles.modalLabel, { color: textMain }]}>Cuenta de pago</ThemedText>
               <TouchableOpacity
-                style={[styles.input, { backgroundColor: inputBg, borderColor, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: inputBg,
+                    borderColor,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  },
+                ]}
                 onPress={() => setShowAccountDropdown(!showAccountDropdown)}
               >
                 <ThemedText style={{ color: fuelAccount ? textMain : textMuted, fontSize: 16 }}>
-                  {fuelAccount ? accounts.find(a => a.id === fuelAccount)?.name || 'Seleccionar' : 'Seleccionar cuenta'}
+                  {fuelAccount
+                    ? accounts.find((a) => a.id === fuelAccount)?.name || 'Seleccionar'
+                    : 'Seleccionar cuenta'}
                 </ThemedText>
                 <IconSymbol name="chevron.down" size={16} color={textMuted} />
               </TouchableOpacity>
               {showAccountDropdown && (
-                <View style={[styles.accountsList, { borderColor, borderWidth: 1, borderRadius: 12, marginTop: -8 }]}>
+                <View
+                  style={[
+                    styles.accountsList,
+                    { borderColor, borderWidth: 1, borderRadius: 12, marginTop: -8 },
+                  ]}
+                >
                   {accounts.map((account) => {
-                    const displayBal = account.type === 'credit'
-                      ? (account.credit_limit || 0) - (account.current_balance || 0)
-                      : account.balance;
+                    const displayBal =
+                      account.type === 'credit'
+                        ? (account.credit_limit || 0) - (account.current_balance || 0)
+                        : account.balance;
                     return (
                       <TouchableOpacity
                         key={account.id}
@@ -661,16 +693,21 @@ export function VehicleDetailScreen() {
                             borderColor: fuelAccount === account.id ? primary : borderColor,
                           },
                         ]}
-                        onPress={() => { setFuelAccount(account.id); setShowAccountDropdown(false); }}
+                        onPress={() => {
+                          setFuelAccount(account.id);
+                          setShowAccountDropdown(false);
+                        }}
                       >
                         <View style={styles.accountOptionLeft}>
-                          <View style={[
-                            styles.accountRadio,
-                            {
-                              borderColor: fuelAccount === account.id ? primary : borderColor,
-                              backgroundColor: fuelAccount === account.id ? primary : 'transparent',
-                            },
-                          ]}>
+                          <View
+                            style={[
+                              styles.accountRadio,
+                              {
+                                borderColor: fuelAccount === account.id ? primary : borderColor,
+                                backgroundColor: fuelAccount === account.id ? primary : 'transparent',
+                              },
+                            ]}
+                          >
                             {fuelAccount === account.id && (
                               <IconSymbol name="checkmark" size={12} color="#ffffff" />
                             )}
@@ -680,7 +717,8 @@ export function VehicleDetailScreen() {
                               {account.name}
                             </ThemedText>
                             <ThemedText style={[styles.accountBalance, { color: textMuted }]}>
-                              {account.type === 'credit' ? 'Disponible: ' : ''}{formatCurrency(displayBal)}
+                              {account.type === 'credit' ? 'Disponible: ' : ''}
+                              {formatCurrency(displayBal)}
                             </ThemedText>
                           </View>
                         </View>
@@ -693,7 +731,11 @@ export function VehicleDetailScreen() {
               {/* Notas */}
               <ThemedText style={[styles.modalLabel, { color: textMain }]}>Notas (opcional)</ThemedText>
               <TextInput
-                style={[styles.input, styles.textArea, { backgroundColor: inputBg, borderColor, color: textMain }]}
+                style={[
+                  styles.input,
+                  styles.textArea,
+                  { backgroundColor: inputBg, borderColor, color: textMain },
+                ]}
                 value={fuelNotes}
                 onChangeText={setFuelNotes}
                 placeholder="Notas adicionales..."
@@ -702,7 +744,7 @@ export function VehicleDetailScreen() {
                 numberOfLines={3}
               />
             </ScrollView>
-            
+
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton, { backgroundColor: borderColor }]}
@@ -731,12 +773,14 @@ export function VehicleDetailScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
             <View style={styles.modalHeader}>
-              <ThemedText style={[styles.modalTitle, { color: textMain }]}>Registrar Mantenimiento</ThemedText>
+              <ThemedText style={[styles.modalTitle, { color: textMain }]}>
+                Registrar Mantenimiento
+              </ThemedText>
               <TouchableOpacity onPress={() => setShowMaintenanceModal(false)}>
                 <IconSymbol name="xmark" size={24} color={textMuted} />
               </TouchableOpacity>
             </View>
-            
+
             <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
               {/* Tipo */}
               <ThemedText style={[styles.modalLabel, { color: textMain }]}>Tipo de mantenimiento</ThemedText>
@@ -766,17 +810,14 @@ export function VehicleDetailScreen() {
                       color={maintType === t.value ? '#f59e0b' : textMuted}
                     />
                     <ThemedText
-                      style={[
-                        styles.typeChipText,
-                        { color: maintType === t.value ? '#f59e0b' : textMuted },
-                      ]}
+                      style={[styles.typeChipText, { color: maintType === t.value ? '#f59e0b' : textMuted }]}
                     >
                       {t.label}
                     </ThemedText>
                   </TouchableOpacity>
                 ))}
               </View>
-              
+
               {/* Descripción */}
               <ThemedText style={[styles.modalLabel, { color: textMain }]}>Descripción</ThemedText>
               <TextInput
@@ -786,7 +827,7 @@ export function VehicleDetailScreen() {
                 placeholder="Ej: Cambio de aceite y filtro"
                 placeholderTextColor={textMuted}
               />
-              
+
               {/* Costo */}
               <ThemedText style={[styles.modalLabel, { color: textMain }]}>Costo</ThemedText>
               <TextInput
@@ -797,7 +838,7 @@ export function VehicleDetailScreen() {
                 placeholderTextColor={textMuted}
                 keyboardType="decimal-pad"
               />
-              
+
               {/* Kilometraje */}
               <ThemedText style={[styles.modalLabel, { color: textMain }]}>Kilometraje actual</ThemedText>
               <TextInput
@@ -808,9 +849,11 @@ export function VehicleDetailScreen() {
                 placeholderTextColor={textMuted}
                 keyboardType="decimal-pad"
               />
-              
+
               {/* Taller */}
-              <ThemedText style={[styles.modalLabel, { color: textMain }]}>Taller/Mecánico (opcional)</ThemedText>
+              <ThemedText style={[styles.modalLabel, { color: textMain }]}>
+                Taller/Mecánico (opcional)
+              </ThemedText>
               <TextInput
                 style={[styles.input, { backgroundColor: inputBg, borderColor, color: textMain }]}
                 value={maintWorkshop}
@@ -818,14 +861,15 @@ export function VehicleDetailScreen() {
                 placeholder="Nombre del taller"
                 placeholderTextColor={textMuted}
               />
-              
+
               {/* Selector de cuenta */}
               <ThemedText style={[styles.modalLabel, { color: textMain }]}>Cuenta de pago</ThemedText>
               <View style={styles.accountsList}>
                 {accounts.map((account) => {
-                  const displayBal = account.type === 'credit'
-                    ? (account.credit_limit || 0) - (account.current_balance || 0)
-                    : account.balance;
+                  const displayBal =
+                    account.type === 'credit'
+                      ? (account.credit_limit || 0) - (account.current_balance || 0)
+                      : account.balance;
                   return (
                     <TouchableOpacity
                       key={account.id}
@@ -839,13 +883,15 @@ export function VehicleDetailScreen() {
                       onPress={() => setMaintAccount(account.id)}
                     >
                       <View style={styles.accountOptionLeft}>
-                        <View style={[
-                          styles.accountRadio,
-                          {
-                            borderColor: maintAccount === account.id ? primary : borderColor,
-                            backgroundColor: maintAccount === account.id ? primary : 'transparent',
-                          },
-                        ]}>
+                        <View
+                          style={[
+                            styles.accountRadio,
+                            {
+                              borderColor: maintAccount === account.id ? primary : borderColor,
+                              backgroundColor: maintAccount === account.id ? primary : 'transparent',
+                            },
+                          ]}
+                        >
                           {maintAccount === account.id && (
                             <IconSymbol name="checkmark" size={12} color="#ffffff" />
                           )}
@@ -855,7 +901,8 @@ export function VehicleDetailScreen() {
                             {account.name}
                           </ThemedText>
                           <ThemedText style={[styles.accountBalance, { color: textMuted }]}>
-                            {account.type === 'credit' ? 'Disponible: ' : ''}{formatCurrency(displayBal)}
+                            {account.type === 'credit' ? 'Disponible: ' : ''}
+                            {formatCurrency(displayBal)}
                           </ThemedText>
                         </View>
                       </View>
@@ -863,11 +910,15 @@ export function VehicleDetailScreen() {
                   );
                 })}
               </View>
-              
+
               {/* Notas */}
               <ThemedText style={[styles.modalLabel, { color: textMain }]}>Notas (opcional)</ThemedText>
               <TextInput
-                style={[styles.input, styles.textArea, { backgroundColor: inputBg, borderColor, color: textMain }]}
+                style={[
+                  styles.input,
+                  styles.textArea,
+                  { backgroundColor: inputBg, borderColor, color: textMain },
+                ]}
                 value={maintNotes}
                 onChangeText={setMaintNotes}
                 placeholder="Notas adicionales..."
@@ -876,7 +927,7 @@ export function VehicleDetailScreen() {
                 numberOfLines={3}
               />
             </ScrollView>
-            
+
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton, { backgroundColor: borderColor }]}
@@ -931,7 +982,14 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
   headerCard: { margin: 16, padding: 20, borderRadius: 16, borderWidth: 1, alignItems: 'center' },
-  vehicleIconBig: { width: 72, height: 72, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  vehicleIconBig: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   vehicleName: { fontSize: 20, fontWeight: '700', marginBottom: 4 },
   odometer: { fontSize: 16 },
   statsCard: { marginHorizontal: 16, marginBottom: 16, padding: 16, borderRadius: 16, borderWidth: 1 },
@@ -940,7 +998,16 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, marginBottom: 4 },
   statValue: { fontSize: 16, fontWeight: '700' },
   tabs: { flexDirection: 'row', marginHorizontal: 16, borderRadius: 12, borderWidth: 1, overflow: 'hidden' },
-  tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
   tabText: { fontSize: 14, fontWeight: '600' },
   content: { padding: 16 },
   itemCard: { padding: 14, borderRadius: 12, borderWidth: 1, marginBottom: 12 },
@@ -951,30 +1018,87 @@ const styles = StyleSheet.create({
   itemNotes: { fontSize: 12, marginTop: 8 },
   emptyState: { alignItems: 'center', paddingVertical: 40 },
   emptyText: { fontSize: 14, marginTop: 12 },
-  fab: { position: 'absolute', right: 20, bottom: 20, width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '90%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   modalTitle: { fontSize: 20, fontWeight: '700' },
   modalScroll: { maxHeight: 500 },
   modalLabel: { fontSize: 14, fontWeight: '600', marginBottom: 8, marginTop: 4 },
   input: { borderWidth: 1, borderRadius: 12, padding: 14, fontSize: 16, marginBottom: 12 },
   textArea: { height: 80, textAlignVertical: 'top' },
-  totalBox: { padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  totalBox: {
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   totalLabel: { fontSize: 14 },
   totalValue: { fontSize: 20, fontWeight: '700' },
-  infoBox: { padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  infoBox: {
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   infoText: { fontSize: 12, flex: 1 },
   typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-  typeChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  typeChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   typeChipText: { fontSize: 13, fontWeight: '600' },
   dateTimeRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  dateTimeButton: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 14, borderRadius: 12, borderWidth: 1 },
+  dateTimeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
   dateTimeText: { fontSize: 15, fontWeight: '500' },
   accountsList: { marginBottom: 16 },
   accountOption: { padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 8 },
   accountOptionLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  accountRadio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
+  accountRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   accountName: { fontSize: 15, fontWeight: '600' },
   accountBalance: { fontSize: 13, marginTop: 2 },
   modalButtons: { flexDirection: 'row', gap: 12, marginTop: 20 },

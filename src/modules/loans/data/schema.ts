@@ -11,8 +11,12 @@ export const loans = sqliteTable('loans', {
   notes: text('notes'),
   account_id: integer('account_id'),
   status: text('status').notNull().default('active'),
-  created_at: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updated_at: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  created_at: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updated_at: text('updated_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
 });
 
 export const loanPayments = sqliteTable('loan_payments', {
@@ -23,5 +27,7 @@ export const loanPayments = sqliteTable('loan_payments', {
   amount: real('amount').notNull(),
   date: text('date').notNull(),
   notes: text('notes'),
-  created_at: text('created_at').notNull().default(sql`(datetime('now'))`),
+  created_at: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
 });

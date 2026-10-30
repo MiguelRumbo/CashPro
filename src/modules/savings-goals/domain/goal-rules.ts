@@ -3,7 +3,10 @@ import type { SavingsGoalRecord, SavingsGoalsStats } from '@/core/contracts/fina
 const PERCENT = 100;
 
 /** Una meta se completa al alcanzar su objetivo. */
-export function statusAfterSaving(goal: Pick<SavingsGoalRecord, 'status' | 'target_amount'>, newAmount: number): string {
+export function statusAfterSaving(
+  goal: Pick<SavingsGoalRecord, 'status' | 'target_amount'>,
+  newAmount: number,
+): string {
   return newAmount >= goal.target_amount && goal.status !== 'completed' ? 'completed' : goal.status;
 }
 

@@ -9,6 +9,7 @@ import { useCurrency } from '@/core/preferences/use-currency';
 import type { RecurringPaymentRecord } from '@/core/contracts/finance';
 import { getSubscriptionsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 
 type RecurringPayment = RecurringPaymentRecord;
 
@@ -26,7 +27,7 @@ export function SubscriptionsListScreen() {
   const borderColor = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'border');
   const primary = '#20df60';
 
-  const fetchPayments = async () => {
+  const fetchPayments = useStableCallback(async () => {
     try {
       const result = recurringService.getRecurringPayments();
 
@@ -36,7 +37,7 @@ export function SubscriptionsListScreen() {
     } catch (error) {
       reportError('Error al cargar pagos recurrentes:', error);
     }
-  };
+  });
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -47,30 +48,26 @@ export function SubscriptionsListScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchPayments();
-    }, [])
+    }, [fetchPayments]),
   );
 
   const handleDelete = (id: number, name: string) => {
-    Alert.alert(
-      'Eliminar',
-      `¿Eliminar "${name}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const result = recurringService.deleteRecurringPayment(id);
-              if (result.success) fetchPayments();
-              else Alert.alert('Error', result.error);
-            } catch {
-              Alert.alert('Error', 'No se pudo eliminar');
-            }
-          },
+    Alert.alert('Eliminar', `¿Eliminar "${name}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const result = recurringService.deleteRecurringPayment(id);
+            if (result.success) fetchPayments();
+            else Alert.alert('Error', result.error);
+          } catch {
+            Alert.alert('Error', 'No se pudo eliminar');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleRegister = async (payment: RecurringPayment) => {
@@ -95,27 +92,37 @@ export function SubscriptionsListScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case 'subscription': return 'Suscripción';
-      case 'salary': return 'Salario';
-      case 'recurring_expense': return 'Gasto Recurrente';
-      case 'recurring_income': return 'Ingreso Recurrente';
-      default: return 'Recurrente';
+      case 'subscription':
+        return 'Suscripción';
+      case 'salary':
+        return 'Salario';
+      case 'recurring_expense':
+        return 'Gasto Recurrente';
+      case 'recurring_income':
+        return 'Ingreso Recurrente';
+      default:
+        return 'Recurrente';
     }
   };
 
   const getFrequencyLabel = (frequency: string) => {
     switch (frequency) {
-      case 'weekly': return 'Semanal';
-      case 'biweekly': return 'Quincenal';
-      case 'monthly': return 'Mensual';
-      case 'yearly': return 'Anual';
-      default: return frequency;
+      case 'weekly':
+        return 'Semanal';
+      case 'biweekly':
+        return 'Quincenal';
+      case 'monthly':
+        return 'Mensual';
+      case 'yearly':
+        return 'Anual';
+      default:
+        return frequency;
     }
   };
 
@@ -142,12 +149,12 @@ export function SubscriptionsListScreen() {
 
   const isIncome = (type: string) => type === 'salary' || type === 'recurring_income';
 
-  const activePayments = payments.filter(p => p.is_active);
-  const inactivePayments = payments.filter(p => !p.is_active);
+  const activePayments = payments.filter((p) => p.is_active);
+  const inactivePayments = payments.filter((p) => !p.is_active);
 
-  const subscriptions = activePayments.filter(p => p.type === 'subscription');
-  const salaries = activePayments.filter(p => isIncome(p.type));
-  const recurringExpenses = activePayments.filter(p => p.type === 'recurring_expense');
+  const subscriptions = activePayments.filter((p) => p.type === 'subscription');
+  const salaries = activePayments.filter((p) => isIncome(p.type));
+  const recurringExpenses = activePayments.filter((p) => p.type === 'recurring_expense');
 
   const monthlySubTotal = subscriptions.reduce((sum, p) => sum + p.amount, 0);
   const monthlyExpenseTotal = [...subscriptions, ...recurringExpenses].reduce((sum, p) => {
@@ -180,32 +187,37 @@ export function SubscriptionsListScreen() {
               <IconSymbol name={payment.icon as IconSymbolName} size={22} color={payment.color} />
             </View>
             <View style={styles.paymentDetails}>
-              <ThemedText style={[styles.paymentName, { color: textMain }]}>
-                {payment.name}
-              </ThemedText>
+              <ThemedText style={[styles.paymentName, { color: textMain }]}>{payment.name}</ThemedText>
               <ThemedText style={[styles.paymentType, { color: textMuted }]}>
                 {getTypeLabel(payment.type)} · {getFrequencyLabel(payment.frequency)}
               </ThemedText>
             </View>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <ThemedText style={[styles.paymentAmount, { color: isIncomeType ? '#10b981' : textMain }]} numberOfLines={1}>
-              {isIncomeType ? '+' : '-'}{formatCurrency(payment.amount)}
+            <ThemedText
+              style={[styles.paymentAmount, { color: isIncomeType ? '#10b981' : textMain }]}
+              numberOfLines={1}
+            >
+              {isIncomeType ? '+' : '-'}
+              {formatCurrency(payment.amount)}
             </ThemedText>
-            <View style={[
-              styles.nextDateBadge,
-              {
-                backgroundColor: days <= 1 ? '#ef4444' + '20' :
-                  days <= 3 ? '#f59e0b' + '20' : primary + '20'
-              }
-            ]}>
-              <ThemedText style={[
-                styles.nextDateText,
+            <View
+              style={[
+                styles.nextDateBadge,
                 {
-                  color: days <= 1 ? '#ef4444' :
-                    days <= 3 ? '#f59e0b' : primary
-                }
-              ]}>
+                  backgroundColor:
+                    days <= 1 ? '#ef4444' + '20' : days <= 3 ? '#f59e0b' + '20' : primary + '20',
+                },
+              ]}
+            >
+              <ThemedText
+                style={[
+                  styles.nextDateText,
+                  {
+                    color: days <= 1 ? '#ef4444' : days <= 3 ? '#f59e0b' : primary,
+                  },
+                ]}
+              >
                 {nextLabel}
               </ThemedText>
             </View>
@@ -215,18 +227,14 @@ export function SubscriptionsListScreen() {
         {payment.auto_register ? (
           <View style={[styles.autoBadge, { backgroundColor: primary + '15' }]}>
             <IconSymbol name="checkmark.circle.fill" size={14} color={primary} />
-            <ThemedText style={[styles.autoBadgeText, { color: primary }]}>
-              Registro automático
-            </ThemedText>
+            <ThemedText style={[styles.autoBadgeText, { color: primary }]}>Registro automático</ThemedText>
           </View>
         ) : (
           <TouchableOpacity
             style={[styles.registerButton, { borderColor: primary }]}
             onPress={() => handleRegister(payment)}
           >
-            <ThemedText style={[styles.registerButtonText, { color: primary }]}>
-              Registrar Cobro
-            </ThemedText>
+            <ThemedText style={[styles.registerButtonText, { color: primary }]}>Registrar Cobro</ThemedText>
           </TouchableOpacity>
         )}
       </TouchableOpacity>
@@ -244,18 +252,18 @@ export function SubscriptionsListScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}
       >
         {/* Resumen */}
         <View style={[styles.summaryCard, { backgroundColor: surfaceColor, borderColor }]}>
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
-              <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>
-                Suscripciones /mes
-              </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: '#ef4444' }]} numberOfLines={1} adjustsFontSizeToFit>
+              <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>Suscripciones /mes</ThemedText>
+              <ThemedText
+                style={[styles.summaryValue, { color: '#ef4444' }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
                 -{formatCurrency(monthlySubTotal)}
               </ThemedText>
             </View>
@@ -263,7 +271,11 @@ export function SubscriptionsListScreen() {
               <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>
                 Gastos Recurrentes /mes
               </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
+              <ThemedText
+                style={[styles.summaryValue, { color: textMain }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
                 -{formatCurrency(monthlyExpenseTotal)}
               </ThemedText>
             </View>
@@ -273,32 +285,45 @@ export function SubscriptionsListScreen() {
               <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>
                 Ingresos Recurrentes /mes
               </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: '#10b981' }]} numberOfLines={1} adjustsFontSizeToFit>
+              <ThemedText
+                style={[styles.summaryValue, { color: '#10b981' }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
                 +{formatCurrency(monthlyIncomeTotal)}
               </ThemedText>
             </View>
             <View style={styles.summaryItem}>
-              <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>
-                Activos
-              </ThemedText>
+              <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>Activos</ThemedText>
               <ThemedText style={[styles.summaryValue, { color: textMain }]}>
                 {activePayments.length}
               </ThemedText>
             </View>
           </View>
           {monthlyIncomeTotal > 0 && (
-            <View style={[styles.alertBanner, {
-              backgroundColor: monthlyExpenseTotal / monthlyIncomeTotal > 0.3 ? '#fef2f2' : '#f0fdf4'
-            }]}>
+            <View
+              style={[
+                styles.alertBanner,
+                {
+                  backgroundColor: monthlyExpenseTotal / monthlyIncomeTotal > 0.3 ? '#fef2f2' : '#f0fdf4',
+                },
+              ]}
+            >
               <IconSymbol
                 name="lightbulb"
                 size={16}
                 color={monthlyExpenseTotal / monthlyIncomeTotal > 0.3 ? '#ef4444' : '#10b981'}
               />
-              <ThemedText style={[styles.alertText, {
-                color: monthlyExpenseTotal / monthlyIncomeTotal > 0.3 ? '#ef4444' : '#10b981'
-              }]}>
-                Tus gastos recurrentes representan el {((monthlyExpenseTotal / monthlyIncomeTotal) * 100).toFixed(0)}% de tus ingresos recurrentes
+              <ThemedText
+                style={[
+                  styles.alertText,
+                  {
+                    color: monthlyExpenseTotal / monthlyIncomeTotal > 0.3 ? '#ef4444' : '#10b981',
+                  },
+                ]}
+              >
+                Tus gastos recurrentes representan el{' '}
+                {((monthlyExpenseTotal / monthlyIncomeTotal) * 100).toFixed(0)}% de tus ingresos recurrentes
               </ThemedText>
             </View>
           )}
@@ -307,9 +332,7 @@ export function SubscriptionsListScreen() {
         {/* Suscripciones */}
         {subscriptions.length > 0 && (
           <View style={styles.section}>
-            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-              Suscripciones
-            </ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Suscripciones</ThemedText>
             {subscriptions.map(renderPaymentCard)}
           </View>
         )}
@@ -317,9 +340,7 @@ export function SubscriptionsListScreen() {
         {/* Salarios / Ingresos */}
         {salaries.length > 0 && (
           <View style={styles.section}>
-            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-              Ingresos Recurrentes
-            </ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Ingresos Recurrentes</ThemedText>
             {salaries.map(renderPaymentCard)}
           </View>
         )}
@@ -327,9 +348,7 @@ export function SubscriptionsListScreen() {
         {/* Gastos Recurrentes */}
         {recurringExpenses.length > 0 && (
           <View style={styles.section}>
-            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-              Gastos Recurrentes
-            </ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Gastos Recurrentes</ThemedText>
             {recurringExpenses.map(renderPaymentCard)}
           </View>
         )}
@@ -337,9 +356,7 @@ export function SubscriptionsListScreen() {
         {/* Inactivos */}
         {inactivePayments.length > 0 && (
           <View style={styles.section}>
-            <ThemedText style={[styles.sectionTitle, { color: textMuted }]}>
-              Inactivos
-            </ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: textMuted }]}>Inactivos</ThemedText>
             {inactivePayments.map((p) => (
               <TouchableOpacity
                 key={p.id}
@@ -353,12 +370,8 @@ export function SubscriptionsListScreen() {
                       <IconSymbol name={p.icon as IconSymbolName} size={22} color="#9ca3af" />
                     </View>
                     <View style={styles.paymentDetails}>
-                      <ThemedText style={[styles.paymentName, { color: textMuted }]}>
-                        {p.name}
-                      </ThemedText>
-                      <ThemedText style={[styles.paymentType, { color: textMuted }]}>
-                        Inactivo
-                      </ThemedText>
+                      <ThemedText style={[styles.paymentName, { color: textMuted }]}>{p.name}</ThemedText>
+                      <ThemedText style={[styles.paymentType, { color: textMuted }]}>Inactivo</ThemedText>
                     </View>
                   </View>
                   <ThemedText style={[styles.paymentAmount, { color: textMuted }]}>
@@ -373,9 +386,7 @@ export function SubscriptionsListScreen() {
         {payments.length === 0 && (
           <View style={styles.emptyState}>
             <IconSymbol name="repeat" size={64} color={textMuted} />
-            <ThemedText style={[styles.emptyText, { color: textMuted }]}>
-              No hay pagos recurrentes
-            </ThemedText>
+            <ThemedText style={[styles.emptyText, { color: textMuted }]}>No hay pagos recurrentes</ThemedText>
             <ThemedText style={[styles.emptySubtext, { color: textMuted }]}>
               Toca + para agregar suscripciones, salarios o gastos fijos
             </ThemedText>

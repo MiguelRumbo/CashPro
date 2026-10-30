@@ -83,8 +83,6 @@ export class ModuleRegistry {
   }
 
   dataPorts(): { moduleId: ModuleId; port: DataPort }[] {
-    return this.activeModules().flatMap((m) =>
-      m.dataPort ? [{ moduleId: m.id, port: m.dataPort() }] : [],
-    );
+    return this.activeModules().flatMap((m) => (m.dataPort ? [{ moduleId: m.id, port: m.dataPort() }] : []));
   }
 }

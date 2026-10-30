@@ -9,6 +9,7 @@ import { useCurrency } from '@/core/preferences/use-currency';
 import type { SavingsGoalRecord } from '@/core/contracts/finance';
 import { getSavingsGoalsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 
 type SavingsGoal = SavingsGoalRecord;
 
@@ -18,7 +19,7 @@ export function SavingsGoalsListScreen() {
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const { formatCurrency } = useCurrency();
-  
+
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
@@ -26,7 +27,7 @@ export function SavingsGoalsListScreen() {
   const borderColor = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'border');
   const primary = '#20df60';
 
-  const fetchGoals = async () => {
+  const fetchGoals = useStableCallback(async () => {
     try {
       const result = goalsService.getSavingsGoals();
 
@@ -37,7 +38,7 @@ export function SavingsGoalsListScreen() {
       reportError('Error al cargar objetivos:', error);
       Alert.alert('Error', 'No se pudieron cargar los objetivos');
     }
-  };
+  });
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -48,34 +49,30 @@ export function SavingsGoalsListScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchGoals();
-    }, [])
+    }, [fetchGoals]),
   );
 
   const handleDeleteGoal = (id: number, name: string) => {
-    Alert.alert(
-      'Eliminar Objetivo',
-      `¿Estás seguro de eliminar "${name}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const result = goalsService.deleteSavingsGoal(id);
+    Alert.alert('Eliminar Objetivo', `¿Estás seguro de eliminar "${name}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const result = goalsService.deleteSavingsGoal(id);
 
-              if (result.success) {
-                fetchGoals();
-              } else {
-                Alert.alert('Error', result.error);
-              }
-            } catch (error) {
-              Alert.alert('Error', 'No se pudo eliminar el objetivo');
+            if (result.success) {
+              fetchGoals();
+            } else {
+              Alert.alert('Error', result.error);
             }
-          },
+          } catch {
+            Alert.alert('Error', 'No se pudo eliminar el objetivo');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const getProgress = (goal: SavingsGoal) => {
@@ -96,15 +93,15 @@ export function SavingsGoalsListScreen() {
     if (!goal.deadline || goal.status === 'completed') return 0;
     const remaining = goal.target_amount - goal.current_amount;
     if (remaining <= 0) return 0;
-    
+
     const daysRemaining = getDaysRemaining(goal.deadline);
     if (!daysRemaining || daysRemaining <= 0) return remaining;
-    
+
     return remaining / daysRemaining;
   };
 
-  const activeGoals = goals.filter(g => g.status === 'active');
-  const completedGoals = goals.filter(g => g.status === 'completed');
+  const activeGoals = goals.filter((g) => g.status === 'active');
+  const completedGoals = goals.filter((g) => g.status === 'completed');
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
@@ -120,9 +117,7 @@ export function SavingsGoalsListScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}
       >
         {/* Header Info */}
         <View style={[styles.headerCard, { backgroundColor: surfaceColor }]}>
@@ -138,13 +133,9 @@ export function SavingsGoalsListScreen() {
         {activeGoals.length > 0 && (
           <>
             <View style={styles.sectionHeader}>
-              <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-                Objetivos Activos
-              </ThemedText>
+              <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Objetivos Activos</ThemedText>
               <View style={[styles.badge, { backgroundColor: primary + '20' }]}>
-                <ThemedText style={[styles.badgeText, { color: primary }]}>
-                  {activeGoals.length}
-                </ThemedText>
+                <ThemedText style={[styles.badgeText, { color: primary }]}>{activeGoals.length}</ThemedText>
               </View>
             </View>
 
@@ -153,7 +144,7 @@ export function SavingsGoalsListScreen() {
                 const progress = getProgress(goal);
                 const daysRemaining = getDaysRemaining(goal.deadline);
                 const dailyRequired = getDailyRequired(goal);
-                
+
                 return (
                   <TouchableOpacity
                     key={goal.id}
@@ -173,10 +164,10 @@ export function SavingsGoalsListScreen() {
                           </ThemedText>
                           {daysRemaining !== null && (
                             <ThemedText style={[styles.goalDeadline, { color: textMuted }]}>
-                              {daysRemaining > 0 
-                                ? `${daysRemaining} días restantes` 
-                                : daysRemaining === 0 
-                                  ? 'Vence hoy' 
+                              {daysRemaining > 0
+                                ? `${daysRemaining} días restantes`
+                                : daysRemaining === 0
+                                  ? 'Vence hoy'
                                   : `Venció hace ${Math.abs(daysRemaining)} días`}
                             </ThemedText>
                           )}
@@ -191,29 +182,30 @@ export function SavingsGoalsListScreen() {
 
                     {/* Progress Bar */}
                     <View style={[styles.progressBar, { backgroundColor: borderColor }]}>
-                      <View 
-                        style={[
-                          styles.progressFill, 
-                          { width: `${progress}%`, backgroundColor: goal.color }
-                        ]} 
+                      <View
+                        style={[styles.progressFill, { width: `${progress}%`, backgroundColor: goal.color }]}
                       />
                     </View>
 
                     {/* Amounts */}
                     <View style={styles.goalAmounts}>
                       <View style={{ flex: 1 }}>
-                        <ThemedText style={[styles.amountLabel, { color: textMuted }]}>
-                          Ahorrado
-                        </ThemedText>
-                        <ThemedText style={[styles.amountValue, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
+                        <ThemedText style={[styles.amountLabel, { color: textMuted }]}>Ahorrado</ThemedText>
+                        <ThemedText
+                          style={[styles.amountValue, { color: textMain }]}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                        >
                           {formatCurrency(goal.current_amount)}
                         </ThemedText>
                       </View>
                       <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                        <ThemedText style={[styles.amountLabel, { color: textMuted }]}>
-                          Meta
-                        </ThemedText>
-                        <ThemedText style={[styles.amountValue, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
+                        <ThemedText style={[styles.amountLabel, { color: textMuted }]}>Meta</ThemedText>
+                        <ThemedText
+                          style={[styles.amountValue, { color: textMain }]}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                        >
                           {formatCurrency(goal.target_amount)}
                         </ThemedText>
                       </View>
@@ -230,14 +222,22 @@ export function SavingsGoalsListScreen() {
                     )}
 
                     {/* Auto Deduct Info */}
-                    {Boolean(goal.auto_deduct) && goal.auto_deduct_amount && goal.auto_deduct_amount > 0 && goal.auto_deduct_period && (
-                      <View style={[styles.autoDeductInfo, { backgroundColor: borderColor }]}>
-                        <IconSymbol size={14} name="arrow.clockwise" color={textMuted} />
-                        <ThemedText style={[styles.autoDeductText, { color: textMuted }]}>
-                          Descuento automático: {formatCurrency(goal.auto_deduct_amount)} {goal.auto_deduct_period === 'weekly' ? 'semanal' : goal.auto_deduct_period === 'biweekly' ? 'quincenal' : 'mensual'}
-                        </ThemedText>
-                      </View>
-                    )}
+                    {Boolean(goal.auto_deduct) &&
+                      goal.auto_deduct_amount &&
+                      goal.auto_deduct_amount > 0 &&
+                      goal.auto_deduct_period && (
+                        <View style={[styles.autoDeductInfo, { backgroundColor: borderColor }]}>
+                          <IconSymbol size={14} name="arrow.clockwise" color={textMuted} />
+                          <ThemedText style={[styles.autoDeductText, { color: textMuted }]}>
+                            Descuento automático: {formatCurrency(goal.auto_deduct_amount)}{' '}
+                            {goal.auto_deduct_period === 'weekly'
+                              ? 'semanal'
+                              : goal.auto_deduct_period === 'biweekly'
+                                ? 'quincenal'
+                                : 'mensual'}
+                          </ThemedText>
+                        </View>
+                      )}
                   </TouchableOpacity>
                 );
               })}
@@ -263,7 +263,11 @@ export function SavingsGoalsListScreen() {
               {completedGoals.map((goal) => (
                 <TouchableOpacity
                   key={goal.id}
-                  style={[styles.goalCard, styles.completedGoalCard, { backgroundColor: surfaceColor, borderColor: '#10b981' }]}
+                  style={[
+                    styles.goalCard,
+                    styles.completedGoalCard,
+                    { backgroundColor: surfaceColor, borderColor: '#10b981' },
+                  ]}
                   onPress={() => router.push(`/savings-goals/goal-detail?id=${goal.id}`)}
                 >
                   <View style={styles.goalHeader}>
@@ -272,16 +276,18 @@ export function SavingsGoalsListScreen() {
                         <IconSymbol size={24} name="checkmark.circle.fill" color="#10b981" />
                       </View>
                       <View style={styles.goalInfo}>
-                        <ThemedText style={[styles.goalName, { color: textMain }]}>
-                          {goal.name}
-                        </ThemedText>
+                        <ThemedText style={[styles.goalName, { color: textMain }]}>{goal.name}</ThemedText>
                         <ThemedText style={[styles.goalDeadline, { color: '#10b981' }]}>
                           ¡Meta alcanzada!
                         </ThemedText>
                       </View>
                     </View>
                   </View>
-                  <ThemedText style={[styles.completedAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
+                  <ThemedText
+                    style={[styles.completedAmount, { color: textMain }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
                     {formatCurrency(goal.target_amount)}
                   </ThemedText>
                 </TouchableOpacity>
@@ -309,13 +315,9 @@ export function SavingsGoalsListScreen() {
       </ScrollView>
 
       {/* FAB */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/savings-goals/add-goal')}
-      >
+      <TouchableOpacity style={styles.fab} onPress={() => router.push('/savings-goals/add-goal')}>
         <IconSymbol size={28} name="plus" color="white" />
       </TouchableOpacity>
-
     </ThemedView>
   );
 }

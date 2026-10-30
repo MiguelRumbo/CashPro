@@ -6,13 +6,12 @@ import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
 import { useThemeColor } from '@/core/ui-kit/use-theme-color';
 import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
-import type { BudgetRecord } from '@/core/contracts/finance';
 import { budgetIcons as BUDGET_ICONS } from '../domain/budget-icons';
 import { getBudgetsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
+import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 type BudgetPeriod = 'daily' | 'weekly' | 'monthly';
-
 
 export function AddBudgetScreen() {
   const { budgets: budgetsService } = getBudgetsRuntime();
@@ -62,7 +61,7 @@ export function AddBudgetScreen() {
 
       if (result.success) {
         Alert.alert('Éxito', 'Presupuesto creado correctamente', [
-          { text: 'OK', onPress: () => router.back() }
+          { text: 'OK', onPress: () => router.back() },
         ]);
       } else {
         Alert.alert('Error', result.error || 'No se pudo crear el presupuesto');
@@ -75,7 +74,7 @@ export function AddBudgetScreen() {
     }
   };
 
-  const onStartDateChange = (event: any, selectedDate?: Date) => {
+  const onStartDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowStartDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
       setStartDate(selectedDate);
@@ -86,7 +85,7 @@ export function AddBudgetScreen() {
     }
   };
 
-  const onEndDateChange = (event: any, selectedDate?: Date) => {
+  const onEndDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowEndDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
       setEndDate(selectedDate);
@@ -95,7 +94,7 @@ export function AddBudgetScreen() {
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
-      <Stack.Screen 
+      <Stack.Screen
         options={{
           title: 'Nuevo Presupuesto',
           headerShown: true,
@@ -114,9 +113,7 @@ export function AddBudgetScreen() {
 
           {/* Nombre */}
           <View style={styles.field}>
-            <ThemedText style={[styles.label, { color: textMain }]}>
-              Nombre del presupuesto *
-            </ThemedText>
+            <ThemedText style={[styles.label, { color: textMain }]}>Nombre del presupuesto *</ThemedText>
             <TextInput
               style={[styles.input, { backgroundColor: inputBg, color: textMain, borderColor }]}
               value={name}
@@ -128,9 +125,7 @@ export function AddBudgetScreen() {
 
           {/* Monto límite */}
           <View style={styles.field}>
-            <ThemedText style={[styles.label, { color: textMain }]}>
-              Límite de gasto *
-            </ThemedText>
+            <ThemedText style={[styles.label, { color: textMain }]}>Límite de gasto *</ThemedText>
             <TextInput
               style={[styles.input, { backgroundColor: inputBg, color: textMain, borderColor }]}
               value={amount}
@@ -143,30 +138,21 @@ export function AddBudgetScreen() {
 
           {/* Periodo */}
           <View style={styles.field}>
-            <ThemedText style={[styles.label, { color: textMain }]}>
-              Periodo *
-            </ThemedText>
+            <ThemedText style={[styles.label, { color: textMain }]}>Periodo *</ThemedText>
             <View style={styles.periodGrid}>
               <TouchableOpacity
                 style={[
                   styles.periodChip,
-                  { 
+                  {
                     backgroundColor: period === 'daily' ? primary + '20' : inputBg,
                     borderColor: period === 'daily' ? primary : borderColor,
-                  }
+                  },
                 ]}
                 onPress={() => setPeriod('daily')}
               >
-                <IconSymbol 
-                  name="sun.max.fill" 
-                  size={20} 
-                  color={period === 'daily' ? primary : textMuted} 
-                />
-                <ThemedText 
-                  style={[
-                    styles.periodChipText, 
-                    { color: period === 'daily' ? primary : textMain }
-                  ]}
+                <IconSymbol name="sun.max.fill" size={20} color={period === 'daily' ? primary : textMuted} />
+                <ThemedText
+                  style={[styles.periodChipText, { color: period === 'daily' ? primary : textMain }]}
                 >
                   Diario
                 </ThemedText>
@@ -175,23 +161,16 @@ export function AddBudgetScreen() {
               <TouchableOpacity
                 style={[
                   styles.periodChip,
-                  { 
+                  {
                     backgroundColor: period === 'weekly' ? primary + '20' : inputBg,
                     borderColor: period === 'weekly' ? primary : borderColor,
-                  }
+                  },
                 ]}
                 onPress={() => setPeriod('weekly')}
               >
-                <IconSymbol 
-                  name="calendar" 
-                  size={20} 
-                  color={period === 'weekly' ? primary : textMuted} 
-                />
-                <ThemedText 
-                  style={[
-                    styles.periodChipText, 
-                    { color: period === 'weekly' ? primary : textMain }
-                  ]}
+                <IconSymbol name="calendar" size={20} color={period === 'weekly' ? primary : textMuted} />
+                <ThemedText
+                  style={[styles.periodChipText, { color: period === 'weekly' ? primary : textMain }]}
                 >
                   Semanal
                 </ThemedText>
@@ -200,23 +179,20 @@ export function AddBudgetScreen() {
               <TouchableOpacity
                 style={[
                   styles.periodChip,
-                  { 
+                  {
                     backgroundColor: period === 'monthly' ? primary + '20' : inputBg,
                     borderColor: period === 'monthly' ? primary : borderColor,
-                  }
+                  },
                 ]}
                 onPress={() => setPeriod('monthly')}
               >
-                <IconSymbol 
-                  name="calendar.badge.clock" 
-                  size={20} 
-                  color={period === 'monthly' ? primary : textMuted} 
+                <IconSymbol
+                  name="calendar.badge.clock"
+                  size={20}
+                  color={period === 'monthly' ? primary : textMuted}
                 />
-                <ThemedText 
-                  style={[
-                    styles.periodChipText, 
-                    { color: period === 'monthly' ? primary : textMain }
-                  ]}
+                <ThemedText
+                  style={[styles.periodChipText, { color: period === 'monthly' ? primary : textMain }]}
                 >
                   Mensual
                 </ThemedText>
@@ -226,19 +202,17 @@ export function AddBudgetScreen() {
 
           {/* Fecha de inicio */}
           <View style={styles.field}>
-            <ThemedText style={[styles.label, { color: textMain }]}>
-              Fecha de inicio *
-            </ThemedText>
+            <ThemedText style={[styles.label, { color: textMain }]}>Fecha de inicio *</ThemedText>
             <TouchableOpacity
               style={[styles.dateButton, { backgroundColor: inputBg, borderColor }]}
               onPress={() => setShowStartDatePicker(true)}
             >
               <IconSymbol name="calendar" size={20} color={textMuted} />
               <ThemedText style={[styles.dateButtonText, { color: textMain }]}>
-                {startDate.toLocaleDateString('es-MX', { 
-                  day: 'numeric', 
-                  month: 'long', 
-                  year: 'numeric' 
+                {startDate.toLocaleDateString('es-MX', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
                 })}
               </ThemedText>
             </TouchableOpacity>
@@ -254,23 +228,20 @@ export function AddBudgetScreen() {
 
           {/* Fecha de fin (opcional) */}
           <View style={styles.field}>
-            <ThemedText style={[styles.label, { color: textMain }]}>
-              Fecha de fin (opcional)
-            </ThemedText>
+            <ThemedText style={[styles.label, { color: textMain }]}>Fecha de fin (opcional)</ThemedText>
             <TouchableOpacity
               style={[styles.dateButton, { backgroundColor: inputBg, borderColor }]}
               onPress={() => setShowEndDatePicker(true)}
             >
               <IconSymbol name="calendar" size={20} color={textMuted} />
               <ThemedText style={[styles.dateButtonText, { color: endDate ? textMain : textMuted }]}>
-                {endDate 
-                  ? endDate.toLocaleDateString('es-MX', { 
-                      day: 'numeric', 
-                      month: 'long', 
-                      year: 'numeric' 
+                {endDate
+                  ? endDate.toLocaleDateString('es-MX', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
                     })
-                  : 'Sin fecha de fin'
-                }
+                  : 'Sin fecha de fin'}
               </ThemedText>
               {endDate && (
                 <TouchableOpacity onPress={() => setEndDate(null)}>
@@ -294,27 +265,25 @@ export function AddBudgetScreen() {
 
           {/* Icono */}
           <View style={styles.field}>
-            <ThemedText style={[styles.label, { color: textMain }]}>
-              Icono
-            </ThemedText>
+            <ThemedText style={[styles.label, { color: textMain }]}>Icono</ThemedText>
             <View style={styles.iconsGrid}>
               {BUDGET_ICONS.map((item) => (
                 <TouchableOpacity
                   key={item.icon}
                   style={[
                     styles.iconOption,
-                    { 
+                    {
                       backgroundColor: selectedIcon.icon === item.icon ? item.color + '20' : inputBg,
                       borderColor: selectedIcon.icon === item.icon ? item.color : borderColor,
-                    }
+                    },
                   ]}
                   onPress={() => setSelectedIcon(item)}
                 >
                   <IconSymbol name={item.icon as IconSymbolName} size={24} color={item.color} />
-                  <ThemedText 
+                  <ThemedText
                     style={[
-                      styles.iconLabel, 
-                      { color: selectedIcon.icon === item.icon ? item.color : textMuted }
+                      styles.iconLabel,
+                      { color: selectedIcon.icon === item.icon ? item.color : textMuted },
                     ]}
                   >
                     {item.label}
@@ -335,9 +304,7 @@ export function AddBudgetScreen() {
           onPress={handleSubmit}
           disabled={loading}
         >
-          <ThemedText style={styles.buttonText}>
-            {loading ? 'Guardando...' : 'Crear Presupuesto'}
-          </ThemedText>
+          <ThemedText style={styles.buttonText}>{loading ? 'Guardando...' : 'Crear Presupuesto'}</ThemedText>
         </TouchableOpacity>
       </View>
     </ThemedView>

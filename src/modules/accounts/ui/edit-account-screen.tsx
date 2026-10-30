@@ -4,16 +4,17 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
 import { useThemeColor } from '@/core/ui-kit/use-theme-color';
-import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
 import { formatCardNumber, formatCurrencyInput, getNumericValue } from '@/core/units/format';
 import type { AccountRecord } from '@/core/contracts/finance';
 import { getAccountsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
+import type { AccountInput } from '../services/accounts-service';
 
 type Account = AccountRecord;
 
 export function EditAccountScreen() {
-  const { accounts: accountsService, msi: msiService } = getAccountsRuntime();
+  const { accounts: accountsService } = getAccountsRuntime();
   const reportError = useErrorReporter();
   const params = useLocalSearchParams();
   const accountId = params.id as string;
@@ -39,11 +40,7 @@ export function EditAccountScreen() {
   const primary = '#20df60';
   const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#374151' }, 'border');
 
-  useEffect(() => {
-    fetchAccount();
-  }, [accountId]);
-
-  const fetchAccount = () => {
+  const fetchAccount = useStableCallback(() => {
     try {
       const result = accountsService.getAccountById(Number(accountId));
 
@@ -74,7 +71,11 @@ export function EditAccountScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  });
+
+  useEffect(() => {
+    fetchAccount();
+  }, [accountId, fetchAccount]);
 
   const handleCardNumberChange = (text: string) => {
     setCardNumber(formatCardNumber(text));
@@ -98,7 +99,7 @@ export function EditAccountScreen() {
       return;
     }
 
-    const updateData: any = {
+    const updateData: AccountInput = {
       name: name.trim(),
     };
 
@@ -139,7 +140,7 @@ export function EditAccountScreen() {
 
       if (result.success) {
         Alert.alert('Éxito', 'Cuenta actualizada exitosamente', [
-          { text: 'OK', onPress: () => router.back() }
+          { text: 'OK', onPress: () => router.back() },
         ]);
       } else {
         Alert.alert('Error', result.error || 'No se pudo actualizar la cuenta');

@@ -1,10 +1,19 @@
 import type { FrozenAppConfig } from '@/config/schema';
-import type { MovementsLedger, RecurringPaymentRecord, RecurringPaymentsStats } from '@/core/contracts/finance';
+import type {
+  MovementsLedger,
+  RecurringPaymentRecord,
+  RecurringPaymentsStats,
+} from '@/core/contracts/finance';
 import { fail, failFromError, ok, type Result } from '@/core/contracts/result';
 import { nowIso, type DbHandle } from '@/core/db/handle';
 
 import type { RecurringRepository, RecurringUpdate } from '../data/recurring-repository';
-import { calculateNextDate, categoryNameFor, computeRecurringStats, isIncomeType } from '../domain/recurring-rules';
+import {
+  calculateNextDate,
+  categoryNameFor,
+  computeRecurringStats,
+  isIncomeType,
+} from '../domain/recurring-rules';
 import { subscriptionsTexts } from '../texts';
 
 export interface RecurringInput {
@@ -106,7 +115,8 @@ export function createRecurringService(deps: {
         color: input.color ?? payment.color,
         is_active: input.is_active !== undefined ? toFlag(input.is_active) : payment.is_active,
         next_date: input.next_date !== undefined ? input.next_date : payment.next_date,
-        auto_register: input.auto_register !== undefined ? toFlag(input.auto_register) : payment.auto_register,
+        auto_register:
+          input.auto_register !== undefined ? toFlag(input.auto_register) : payment.auto_register,
         notify_before_days: input.notify_before_days ?? payment.notify_before_days,
       };
       try {

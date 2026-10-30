@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react';
-import { ScrollView, View, StyleSheet, TouchableOpacity, Alert, Switch, Modal, TextInput } from 'react-native';
+import {
+  ScrollView,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  Switch,
+  Modal,
+  TextInput,
+} from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
@@ -10,6 +19,8 @@ import { useCurrency } from '@/core/preferences/use-currency';
 import type { AccountRecord } from '@/core/contracts/finance';
 import { getAccountsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
+import type { MsiPurchase } from '../data/msi-repository';
 
 type Account = AccountRecord;
 
@@ -18,12 +29,12 @@ export function AccountDetailScreen() {
   const reportError = useErrorReporter();
   const params = useLocalSearchParams();
   const accountId = params.id as string;
-  
+
   const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
   const [includeInBalance, setIncludeInBalance] = useState(true);
   const [isPrimary, setIsPrimary] = useState(false);
-  const [msiPurchases, setMsiPurchases] = useState<any[]>([]);
+  const [msiPurchases, setMsiPurchases] = useState<MsiPurchase[]>([]);
   const [showMsiModal, setShowMsiModal] = useState(false);
   const [msiDescription, setMsiDescription] = useState('');
   const [msiAmount, setMsiAmount] = useState('');
@@ -38,17 +49,15 @@ export function AccountDetailScreen() {
   const primary = '#20df60';
   const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#374151' }, 'border');
 
-  useEffect(() => {
-    fetchAccount();
-  }, [accountId]);
-
-  const fetchAccount = () => {
+  const fetchAccount = useStableCallback(() => {
     try {
       const result = accountsService.getAccountById(Number(accountId));
 
       if (result.success) {
         setAccount(result.data);
-        setIncludeInBalance(result.data.include_in_balance === 1 || result.data.include_in_balance === undefined);
+        setIncludeInBalance(
+          result.data.include_in_balance === 1 || result.data.include_in_balance === undefined,
+        );
         setIsPrimary(result.data.is_primary === 1);
       } else {
         Alert.alert('Error', 'No se pudo cargar la cuenta');
@@ -61,9 +70,13 @@ export function AccountDetailScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  });
 
-  const fetchMsiPurchases = () => {
+  useEffect(() => {
+    fetchAccount();
+  }, [accountId, fetchAccount]);
+
+  const fetchMsiPurchases = useStableCallback(() => {
     try {
       const result = msiService.getMsiPurchases(Number(accountId));
       if (result.success) {
@@ -72,13 +85,13 @@ export function AccountDetailScreen() {
     } catch (error) {
       reportError('Error al cargar MSI:', error);
     }
-  };
+  });
 
   useEffect(() => {
     if (account?.type === 'credit') {
       fetchMsiPurchases();
     }
-  }, [account?.type]);
+  }, [account?.type, fetchMsiPurchases]);
 
   const handleAddMsi = () => {
     if (!msiDescription.trim() || !msiAmount || !msiInstallments) {
@@ -113,7 +126,7 @@ export function AccountDetailScreen() {
       } else {
         Alert.alert('Error', result.error || 'No se pudo registrar');
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'No se pudo registrar la compra MSI');
     }
   };
@@ -141,7 +154,7 @@ export function AccountDetailScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -168,27 +181,37 @@ export function AccountDetailScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
   const getAccountIcon = (type: string) => {
     switch (type) {
-      case 'cash': return { name: 'banknote', color: '#16a34a', bg: '#f0fdf4' };
-      case 'bank': return { name: 'building.columns.fill', color: '#2563eb', bg: '#eff6ff' };
-      case 'debit': return { name: 'creditcard', color: '#7c3aed', bg: '#faf5ff' };
-      case 'credit': return { name: 'creditcard.fill', color: '#dc2626', bg: '#fef2f2' };
-      default: return { name: 'banknote', color: '#64748b', bg: '#f1f5f9' };
+      case 'cash':
+        return { name: 'banknote', color: '#16a34a', bg: '#f0fdf4' };
+      case 'bank':
+        return { name: 'building.columns.fill', color: '#2563eb', bg: '#eff6ff' };
+      case 'debit':
+        return { name: 'creditcard', color: '#7c3aed', bg: '#faf5ff' };
+      case 'credit':
+        return { name: 'creditcard.fill', color: '#dc2626', bg: '#fef2f2' };
+      default:
+        return { name: 'banknote', color: '#64748b', bg: '#f1f5f9' };
     }
   };
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case 'cash': return 'Efectivo';
-      case 'bank': return 'Banco';
-      case 'debit': return 'Débito';
-      case 'credit': return 'Crédito';
-      default: return type;
+      case 'cash':
+        return 'Efectivo';
+      case 'bank':
+        return 'Banco';
+      case 'debit':
+        return 'Débito';
+      case 'credit':
+        return 'Crédito';
+      default:
+        return type;
     }
   };
 
@@ -207,7 +230,7 @@ export function AccountDetailScreen() {
           'Actualizado',
           value
             ? 'Esta cuenta ahora se incluye en el balance general'
-            : 'Esta cuenta ya no se incluye en el balance general'
+            : 'Esta cuenta ya no se incluye en el balance general',
         );
       } else {
         Alert.alert('Error', result.error);
@@ -236,9 +259,9 @@ export function AccountDetailScreen() {
                 onPress: () => {
                   // Forzar recarga del dashboard al regresar
                   router.back();
-                }
-              }
-            ]
+                },
+              },
+            ],
           );
         } else {
           Alert.alert('Error', result.error);
@@ -262,30 +285,26 @@ export function AccountDetailScreen() {
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      'Eliminar Cuenta',
-      `¿Estás seguro de eliminar "${account?.name}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () => {
-            try {
-              const result = accountsService.deleteAccount(Number(accountId));
+    Alert.alert('Eliminar Cuenta', `¿Estás seguro de eliminar "${account?.name}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () => {
+          try {
+            const result = accountsService.deleteAccount(Number(accountId));
 
-              if (result.success) {
-                router.back();
-              } else {
-                Alert.alert('Error', result.error);
-              }
-            } catch (error) {
-              Alert.alert('Error', 'No se pudo eliminar la cuenta');
+            if (result.success) {
+              router.back();
+            } else {
+              Alert.alert('Error', result.error);
             }
-          },
+          } catch {
+            Alert.alert('Error', 'No se pudo eliminar la cuenta');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   if (loading || !account) {
@@ -344,19 +363,15 @@ export function AccountDetailScreen() {
 
         {/* Información General */}
         <View style={[styles.section, { backgroundColor: surfaceColor }]}>
-          <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-            Información General
-          </ThemedText>
+          <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Información General</ThemedText>
 
           {/* Toggle Cuenta Principal */}
           <View style={styles.toggleRow}>
             <View style={styles.toggleInfo}>
-              <ThemedText style={[styles.toggleTitle, { color: textMain }]}>
-                Cuenta Principal
-              </ThemedText>
+              <ThemedText style={[styles.toggleTitle, { color: textMain }]}>Cuenta Principal</ThemedText>
               <ThemedText style={[styles.toggleDescription, { color: textSub }]}>
-                {isPrimary 
-                  ? 'Esta es tu cuenta principal para transacciones' 
+                {isPrimary
+                  ? 'Esta es tu cuenta principal para transacciones'
                   : 'Marca como principal para usar por defecto'}
               </ThemedText>
             </View>
@@ -381,9 +396,7 @@ export function AccountDetailScreen() {
 
           <View style={styles.infoRow}>
             <ThemedText style={[styles.infoLabel, { color: textSub }]}>Moneda</ThemedText>
-            <ThemedText style={[styles.infoValue, { color: textMain }]}>
-              {account.currency}
-            </ThemedText>
+            <ThemedText style={[styles.infoValue, { color: textMain }]}>{account.currency}</ThemedText>
           </View>
 
           {account.bank_name && (
@@ -391,9 +404,7 @@ export function AccountDetailScreen() {
               <View style={[styles.divider, { backgroundColor: borderColor }]} />
               <View style={styles.infoRow}>
                 <ThemedText style={[styles.infoLabel, { color: textSub }]}>Banco</ThemedText>
-                <ThemedText style={[styles.infoValue, { color: textMain }]}>
-                  {account.bank_name}
-                </ThemedText>
+                <ThemedText style={[styles.infoValue, { color: textMain }]}>{account.bank_name}</ThemedText>
               </View>
             </>
           )}
@@ -415,9 +426,7 @@ export function AccountDetailScreen() {
               <View style={[styles.divider, { backgroundColor: borderColor }]} />
               <View style={styles.infoRow}>
                 <ThemedText style={[styles.infoLabel, { color: textSub }]}>CLABE</ThemedText>
-                <ThemedText style={[styles.infoValue, { color: textMain }]}>
-                  {account.clabe}
-                </ThemedText>
+                <ThemedText style={[styles.infoValue, { color: textMain }]}>{account.clabe}</ThemedText>
               </View>
             </>
           )}
@@ -426,15 +435,11 @@ export function AccountDetailScreen() {
         {/* Información de Interés */}
         {account.generates_interest === 1 && (
           <View style={[styles.section, { backgroundColor: surfaceColor }]}>
-            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-              Información de Interés
-            </ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Información de Interés</ThemedText>
 
             <View style={styles.infoRow}>
               <ThemedText style={[styles.infoLabel, { color: textSub }]}>Tasa de Interés</ThemedText>
-              <ThemedText style={[styles.infoValue, { color: primary }]}>
-                {account.interest_rate}%
-              </ThemedText>
+              <ThemedText style={[styles.infoValue, { color: primary }]}>{account.interest_rate}%</ThemedText>
             </View>
           </View>
         )}
@@ -476,9 +481,7 @@ export function AccountDetailScreen() {
 
               <View style={styles.infoRow}>
                 <ThemedText style={[styles.infoLabel, { color: textSub }]}>Día de Corte</ThemedText>
-                <ThemedText style={[styles.infoValue, { color: textMain }]}>
-                  {account.cut_off_day}
-                </ThemedText>
+                <ThemedText style={[styles.infoValue, { color: textMain }]}>{account.cut_off_day}</ThemedText>
               </View>
 
               <View style={[styles.divider, { backgroundColor: borderColor }]} />
@@ -499,8 +502,8 @@ export function AccountDetailScreen() {
                     Incluir en Balance General
                   </ThemedText>
                   <ThemedText style={[styles.toggleDescription, { color: textSub }]}>
-                    {includeInBalance 
-                      ? 'El crédito disponible se suma al balance total' 
+                    {includeInBalance
+                      ? 'El crédito disponible se suma al balance total'
                       : 'El crédito disponible no afecta el balance total'}
                   </ThemedText>
                 </View>
@@ -519,9 +522,7 @@ export function AccountDetailScreen() {
         {isCredit && (
           <View style={[styles.section, { backgroundColor: surfaceColor }]}>
             <View style={styles.msiHeader}>
-              <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-                Compras a MSI
-              </ThemedText>
+              <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Compras a MSI</ThemedText>
               <TouchableOpacity
                 style={[styles.msiAddButton, { backgroundColor: primary }]}
                 onPress={() => setShowMsiModal(true)}
@@ -540,9 +541,7 @@ export function AccountDetailScreen() {
               </View>
             ) : (
               msiPurchases.map((msi) => {
-                const progress = msi.installments > 0
-                  ? ((msi.paid_installments) / msi.installments) * 100
-                  : 0;
+                const progress = msi.installments > 0 ? (msi.paid_installments / msi.installments) * 100 : 0;
                 const isComplete = msi.status === 'completed' || msi.paid_installments >= msi.installments;
                 return (
                   <View
@@ -576,7 +575,10 @@ export function AccountDetailScreen() {
                       <View
                         style={[
                           styles.msiProgressFill,
-                          { width: `${Math.min(progress, 100)}%`, backgroundColor: isComplete ? primary : '#3b82f6' }
+                          {
+                            width: `${Math.min(progress, 100)}%`,
+                            backgroundColor: isComplete ? primary : '#3b82f6',
+                          },
                         ]}
                       />
                     </View>
@@ -587,21 +589,27 @@ export function AccountDetailScreen() {
                         </ThemedText>
                         <TouchableOpacity
                           style={[styles.msiPayButton, { backgroundColor: '#3b82f6' }]}
-                          onPress={() => handlePayMsi(msi.id, msi.description, msi.monthly_payment, msi.paid_installments + 1, msi.installments)}
+                          onPress={() =>
+                            handlePayMsi(
+                              msi.id,
+                              msi.description,
+                              msi.monthly_payment,
+                              msi.paid_installments + 1,
+                              msi.installments,
+                            )
+                          }
                         >
-                          <ThemedText style={styles.msiPayButtonText}>
-                            Registrar Pago
-                          </ThemedText>
+                          <ThemedText style={styles.msiPayButtonText}>Registrar Pago</ThemedText>
                         </TouchableOpacity>
                       </View>
                     ) : (
-                      <ThemedText style={[styles.msiRemaining, { color: primary }]}>
-                        Completado
-                      </ThemedText>
+                      <ThemedText style={[styles.msiRemaining, { color: primary }]}>Completado</ThemedText>
                     )}
                     {!isComplete && (
                       <TouchableOpacity onPress={() => handleDeleteMsi(msi.id, msi.description)}>
-                        <ThemedText style={{ fontSize: 12, color: '#dc2626', marginTop: 8, textAlign: 'right' }}>
+                        <ThemedText
+                          style={{ fontSize: 12, color: '#dc2626', marginTop: 8, textAlign: 'right' }}
+                        >
                           Eliminar
                         </ThemedText>
                       </TouchableOpacity>
@@ -614,10 +622,7 @@ export function AccountDetailScreen() {
         )}
 
         {/* Botón Eliminar */}
-        <TouchableOpacity
-          style={[styles.deleteButton, { borderColor: '#dc2626' }]}
-          onPress={handleDelete}
-        >
+        <TouchableOpacity style={[styles.deleteButton, { borderColor: '#dc2626' }]} onPress={handleDelete}>
           <IconSymbol size={20} name="trash" color="#dc2626" />
           <ThemedText style={styles.deleteButtonText}>Eliminar Cuenta</ThemedText>
         </TouchableOpacity>
@@ -630,9 +635,7 @@ export function AccountDetailScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
             <View style={styles.modalHeader}>
-              <ThemedText style={[styles.modalTitle, { color: textMain }]}>
-                Nueva Compra MSI
-              </ThemedText>
+              <ThemedText style={[styles.modalTitle, { color: textMain }]}>Nueva Compra MSI</ThemedText>
               <TouchableOpacity onPress={() => setShowMsiModal(false)}>
                 <IconSymbol name="xmark" size={24} color={textSub} />
               </TouchableOpacity>
@@ -684,7 +687,9 @@ export function AccountDetailScreen() {
             </View>
 
             {msiAmount && msiInstallments ? (
-              <View style={[styles.msiPreview, { backgroundColor: primary + '10', borderColor: primary + '30' }]}>
+              <View
+                style={[styles.msiPreview, { backgroundColor: primary + '10', borderColor: primary + '30' }]}
+              >
                 <ThemedText style={[styles.msiPreviewText, { color: primary }]}>
                   Mensualidad: {formatCurrency(parseFloat(msiAmount) / parseInt(msiInstallments))}
                 </ThemedText>

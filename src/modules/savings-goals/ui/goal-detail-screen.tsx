@@ -1,6 +1,15 @@
 import { useState, useCallback } from 'react';
-import { ScrollView, View, StyleSheet, TouchableOpacity, TextInput, Modal, Alert, RefreshControl } from 'react-native';
-import { Stack, router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import {
+  ScrollView,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Modal,
+  Alert,
+  RefreshControl,
+} from 'react-native';
+import { Stack, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
 import { useThemeColor } from '@/core/ui-kit/use-theme-color';
@@ -9,9 +18,9 @@ import { useCurrency } from '@/core/preferences/use-currency';
 import { formatCurrencyInput, getNumericValue } from '@/core/units/format';
 import { accountsQueryKey, type AccountRecord, type SavingsGoalRecord } from '@/core/contracts/finance';
 import { ok } from '@/core/contracts/result';
-import { useCapability } from '@/core/registry/react';
+import { useCapability, useErrorReporter } from '@/core/registry/react';
 import { getSavingsGoalsRuntime } from '../runtime';
-import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 
 type SavingsGoal = SavingsGoalRecord;
 
@@ -48,7 +57,7 @@ export function GoalDetailScreen() {
   const borderColor = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'border');
   const primary = '#20df60';
 
-  const fetchGoalData = async () => {
+  const fetchGoalData = useStableCallback(async () => {
     try {
       const goalResult = goalsService.getSavingsGoalById(Number(id));
       const contributionsResult = goalsService.getGoalContributions(Number(id));
@@ -75,7 +84,7 @@ export function GoalDetailScreen() {
       reportError('Error al cargar datos:', error);
       Alert.alert('Error', 'No se pudieron cargar los datos');
     }
-  };
+  });
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -86,7 +95,7 @@ export function GoalDetailScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchGoalData();
-    }, [id])
+    }, [fetchGoalData]),
   );
 
   const handleContribute = async () => {
@@ -127,9 +136,7 @@ export function GoalDetailScreen() {
       <ThemedView style={[styles.container, { backgroundColor }]}>
         <Stack.Screen options={{ title: 'Cargando...' }} />
         <View style={styles.loadingContainer}>
-          <ThemedText style={[styles.loadingText, { color: textMuted }]}>
-            Cargando objetivo...
-          </ThemedText>
+          <ThemedText style={[styles.loadingText, { color: textMuted }]}>Cargando objetivo...</ThemedText>
         </View>
       </ThemedView>
     );
@@ -164,18 +171,14 @@ export function GoalDetailScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}
       >
         {/* Goal Header */}
         <View style={[styles.goalHeader, { backgroundColor: goal.color + '10' }]}>
           <View style={[styles.goalIconLarge, { backgroundColor: goal.color + '20' }]}>
             <IconSymbol size={48} name={goal.icon as IconSymbolName} color={goal.color} />
           </View>
-          <ThemedText style={[styles.goalName, { color: textMain }]}>
-            {goal.name}
-          </ThemedText>
+          <ThemedText style={[styles.goalName, { color: textMain }]}>{goal.name}</ThemedText>
           {isCompleted && (
             <View style={[styles.completedBadge, { backgroundColor: '#10b981' }]}>
               <IconSymbol size={16} name="checkmark.circle.fill" color="#ffffff" />
@@ -194,11 +197,11 @@ export function GoalDetailScreen() {
           </View>
 
           <View style={[styles.progressBar, { backgroundColor: borderColor }]}>
-            <View 
+            <View
               style={[
-                styles.progressFill, 
-                { width: `${Math.min(progress, 100)}%`, backgroundColor: goal.color }
-              ]} 
+                styles.progressFill,
+                { width: `${Math.min(progress, 100)}%`, backgroundColor: goal.color },
+              ]}
             />
           </View>
 
@@ -219,9 +222,7 @@ export function GoalDetailScreen() {
 
           {!isCompleted && remaining > 0 && (
             <View style={[styles.remainingCard, { backgroundColor: goal.color + '10' }]}>
-              <ThemedText style={[styles.remainingLabel, { color: textMuted }]}>
-                Falta por ahorrar
-              </ThemedText>
+              <ThemedText style={[styles.remainingLabel, { color: textMuted }]}>Falta por ahorrar</ThemedText>
               <ThemedText style={[styles.remainingAmount, { color: goal.color }]}>
                 {formatCurrency(remaining)}
               </ThemedText>
@@ -234,14 +235,12 @@ export function GoalDetailScreen() {
           <View style={[styles.deadlineCard, { backgroundColor: surfaceColor }]}>
             <IconSymbol size={24} name="calendar" color={goal.color} />
             <View style={styles.deadlineInfo}>
-              <ThemedText style={[styles.deadlineLabel, { color: textMuted }]}>
-                Fecha límite
-              </ThemedText>
+              <ThemedText style={[styles.deadlineLabel, { color: textMuted }]}>Fecha límite</ThemedText>
               <ThemedText style={[styles.deadlineValue, { color: textMain }]}>
-                {daysRemaining > 0 
-                  ? `${daysRemaining} días restantes` 
-                  : daysRemaining === 0 
-                    ? 'Vence hoy' 
+                {daysRemaining > 0
+                  ? `${daysRemaining} días restantes`
+                  : daysRemaining === 0
+                    ? 'Vence hoy'
                     : `Venció hace ${Math.abs(daysRemaining)} días`}
               </ThemedText>
             </View>
@@ -271,8 +270,8 @@ export function GoalDetailScreen() {
           ) : (
             <View style={styles.contributionsList}>
               {contributions.map((contribution) => (
-                <View 
-                  key={contribution.id} 
+                <View
+                  key={contribution.id}
                   style={[styles.contributionItem, { backgroundColor: surfaceColor }]}
                 >
                   <View style={[styles.contributionIcon, { backgroundColor: goal.color + '20' }]}>
@@ -306,7 +305,7 @@ export function GoalDetailScreen() {
 
       {/* Contribute Button */}
       {!isCompleted && (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.contributeButton, { backgroundColor: goal.color }]}
           onPress={() => setShowContributeModal(true)}
         >
@@ -325,9 +324,7 @@ export function GoalDetailScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
             <View style={styles.modalHeader}>
-              <ThemedText style={[styles.modalTitle, { color: textMain }]}>
-                Agregar Contribución
-              </ThemedText>
+              <ThemedText style={[styles.modalTitle, { color: textMain }]}>Agregar Contribución</ThemedText>
               <TouchableOpacity onPress={() => setShowContributeModal(false)}>
                 <IconSymbol size={24} name="xmark" color={textMuted} />
               </TouchableOpacity>
@@ -351,9 +348,7 @@ export function GoalDetailScreen() {
 
             {/* Account Selector */}
             <View style={[styles.modalAccountSection, { borderColor }]}>
-              <ThemedText style={[styles.modalAccountLabel, { color: textMuted }]}>
-                Cuenta *
-              </ThemedText>
+              <ThemedText style={[styles.modalAccountLabel, { color: textMuted }]}>Cuenta *</ThemedText>
               <TouchableOpacity
                 style={[styles.accountSelector, { backgroundColor: goal.color + '10', borderColor }]}
                 onPress={() => setShowAccountPicker(true)}
@@ -379,9 +374,7 @@ export function GoalDetailScreen() {
             </View>
 
             <View style={[styles.modalNotesSection, { borderColor }]}>
-              <ThemedText style={[styles.modalNotesLabel, { color: textMuted }]}>
-                Notas (Opcional)
-              </ThemedText>
+              <ThemedText style={[styles.modalNotesLabel, { color: textMuted }]}>Notas (Opcional)</ThemedText>
               <TextInput
                 style={[styles.modalNotesInput, { color: textMain }]}
                 placeholder="Ej: Ahorro del mes"
@@ -393,7 +386,7 @@ export function GoalDetailScreen() {
               />
             </View>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.modalSaveButton, { backgroundColor: goal.color }]}
               onPress={handleContribute}
             >
@@ -413,9 +406,7 @@ export function GoalDetailScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.pickerModalContent, { backgroundColor: surfaceColor }]}>
             <View style={styles.modalHeader}>
-              <ThemedText style={[styles.modalTitle, { color: textMain }]}>
-                Seleccionar Cuenta
-              </ThemedText>
+              <ThemedText style={[styles.modalTitle, { color: textMain }]}>Seleccionar Cuenta</ThemedText>
               <TouchableOpacity onPress={() => setShowAccountPicker(false)}>
                 <IconSymbol size={24} name="xmark" color={textMuted} />
               </TouchableOpacity>
@@ -427,10 +418,10 @@ export function GoalDetailScreen() {
                   key={account.id}
                   style={[
                     styles.accountItem,
-                    { 
+                    {
                       backgroundColor: selectedAccount?.id === account.id ? goal.color + '10' : 'transparent',
-                      borderColor 
-                    }
+                      borderColor,
+                    },
                   ]}
                   onPress={() => {
                     setSelectedAccount(account);

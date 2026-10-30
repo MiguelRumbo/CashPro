@@ -2,10 +2,7 @@ import type { AccountType, MovementRecord } from '../contracts/finance';
 
 /** Instantánea mínima de un movimiento para efectos en otros módulos. */
 export type MovementSnapshot = Readonly<
-  Pick<
-    MovementRecord,
-    'id' | 'type' | 'amount' | 'account_id' | 'to_account_id' | 'category_id' | 'date'
-  >
+  Pick<MovementRecord, 'id' | 'type' | 'amount' | 'account_id' | 'to_account_id' | 'category_id' | 'date'>
 >;
 
 /**

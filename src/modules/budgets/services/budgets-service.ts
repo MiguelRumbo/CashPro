@@ -38,7 +38,9 @@ export function createBudgetsService(deps: { repo: BudgetsRepository; config: Fr
     const categoryId = movement.category_id;
     for (const budget of repo.listByType('expense')) {
       if (!budgetCoversCategory(budget, categoryId)) continue;
-      repo.update(budget.id, { current_amount: nextBudgetAmount(budget.current_amount, movement.amount, operation) });
+      repo.update(budget.id, {
+        current_amount: nextBudgetAmount(budget.current_amount, movement.amount, operation),
+      });
     }
   };
 

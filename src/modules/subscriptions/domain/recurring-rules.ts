@@ -8,7 +8,10 @@ type MonthlyFactors = FrozenAppConfig['subscriptions']['monthlyFactor'];
 
 const PERCENT = 100;
 
-export function monthlyAmount(payment: Pick<RecurringPaymentRecord, 'amount' | 'frequency'>, factors: MonthlyFactors): number {
+export function monthlyAmount(
+  payment: Pick<RecurringPaymentRecord, 'amount' | 'frequency'>,
+  factors: MonthlyFactors,
+): number {
   const factor = factors[payment.frequency as keyof MonthlyFactors];
   return factor === undefined ? payment.amount : payment.amount * factor;
 }

@@ -1,18 +1,27 @@
 import { useState, useEffect } from 'react';
-import { ScrollView, View, StyleSheet, TouchableOpacity, TextInput, Platform, Alert, ActivityIndicator } from 'react-native';
+import {
+  ScrollView,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Platform,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
 import { useThemeColor } from '@/core/ui-kit/use-theme-color';
 import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
-import type { BudgetRecord } from '@/core/contracts/finance';
 import { budgetIcons as BUDGET_ICONS } from '../domain/budget-icons';
 import { getBudgetsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
+import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 type BudgetPeriod = 'daily' | 'weekly' | 'monthly';
-
 
 export function EditBudgetScreen() {
   const { budgets: budgetsService } = getBudgetsRuntime();
@@ -37,11 +46,7 @@ export function EditBudgetScreen() {
   const primary = '#20df60';
   const inputBg = useThemeColor({ light: '#f9fafb', dark: '#1f2937' }, 'inputBackground');
 
-  useEffect(() => {
-    fetchBudget();
-  }, [id]);
-
-  const fetchBudget = () => {
+  const fetchBudget = useStableCallback(() => {
     try {
       const result = budgetsService.getBudgetById(Number(id));
 
@@ -53,7 +58,7 @@ export function EditBudgetScreen() {
         setStartDate(budget.start_date ? new Date(budget.start_date) : new Date());
 
         // Buscar el icono seleccionado
-        const icon = BUDGET_ICONS.find(i => i.icon === budget.icon);
+        const icon = BUDGET_ICONS.find((i) => i.icon === budget.icon);
         if (icon) {
           setSelectedIcon(icon);
         }
@@ -68,7 +73,11 @@ export function EditBudgetScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  });
+
+  useEffect(() => {
+    fetchBudget();
+  }, [id, fetchBudget]);
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -96,7 +105,7 @@ export function EditBudgetScreen() {
 
       if (result.success) {
         Alert.alert('Éxito', 'Presupuesto actualizado correctamente', [
-          { text: 'OK', onPress: () => router.back() }
+          { text: 'OK', onPress: () => router.back() },
         ]);
       } else {
         Alert.alert('Error', result.error || 'No se pudo actualizar el presupuesto');
@@ -109,7 +118,7 @@ export function EditBudgetScreen() {
     }
   };
 
-  const onStartDateChange = (event: any, selectedDate?: Date) => {
+  const onStartDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowStartDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
       setStartDate(selectedDate);
@@ -119,7 +128,7 @@ export function EditBudgetScreen() {
     }
   };
 
-  const onEndDateChange = (event: any, selectedDate?: Date) => {
+  const onEndDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowEndDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
       setEndDate(selectedDate);
@@ -139,7 +148,7 @@ export function EditBudgetScreen() {
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
-      <Stack.Screen 
+      <Stack.Screen
         options={{
           title: 'Editar Presupuesto',
           headerShown: true,
@@ -150,9 +159,7 @@ export function EditBudgetScreen() {
         <View style={[styles.card, { backgroundColor: surfaceColor }]}>
           {/* Nombre */}
           <View style={styles.field}>
-            <ThemedText style={[styles.label, { color: textMain }]}>
-              Nombre del presupuesto *
-            </ThemedText>
+            <ThemedText style={[styles.label, { color: textMain }]}>Nombre del presupuesto *</ThemedText>
             <TextInput
               style={[styles.input, { backgroundColor: inputBg, color: textMain, borderColor }]}
               value={name}
@@ -164,9 +171,7 @@ export function EditBudgetScreen() {
 
           {/* Monto límite */}
           <View style={styles.field}>
-            <ThemedText style={[styles.label, { color: textMain }]}>
-              Límite de gasto *
-            </ThemedText>
+            <ThemedText style={[styles.label, { color: textMain }]}>Límite de gasto *</ThemedText>
             <TextInput
               style={[styles.input, { backgroundColor: inputBg, color: textMain, borderColor }]}
               value={amount}
@@ -179,30 +184,21 @@ export function EditBudgetScreen() {
 
           {/* Periodo */}
           <View style={styles.field}>
-            <ThemedText style={[styles.label, { color: textMain }]}>
-              Periodo *
-            </ThemedText>
+            <ThemedText style={[styles.label, { color: textMain }]}>Periodo *</ThemedText>
             <View style={styles.periodGrid}>
               <TouchableOpacity
                 style={[
                   styles.periodChip,
-                  { 
+                  {
                     backgroundColor: period === 'daily' ? primary + '20' : inputBg,
                     borderColor: period === 'daily' ? primary : borderColor,
-                  }
+                  },
                 ]}
                 onPress={() => setPeriod('daily')}
               >
-                <IconSymbol 
-                  name="sun.max.fill" 
-                  size={20} 
-                  color={period === 'daily' ? primary : textMuted} 
-                />
-                <ThemedText 
-                  style={[
-                    styles.periodChipText, 
-                    { color: period === 'daily' ? primary : textMain }
-                  ]}
+                <IconSymbol name="sun.max.fill" size={20} color={period === 'daily' ? primary : textMuted} />
+                <ThemedText
+                  style={[styles.periodChipText, { color: period === 'daily' ? primary : textMain }]}
                 >
                   Diario
                 </ThemedText>
@@ -211,23 +207,16 @@ export function EditBudgetScreen() {
               <TouchableOpacity
                 style={[
                   styles.periodChip,
-                  { 
+                  {
                     backgroundColor: period === 'weekly' ? primary + '20' : inputBg,
                     borderColor: period === 'weekly' ? primary : borderColor,
-                  }
+                  },
                 ]}
                 onPress={() => setPeriod('weekly')}
               >
-                <IconSymbol 
-                  name="calendar" 
-                  size={20} 
-                  color={period === 'weekly' ? primary : textMuted} 
-                />
-                <ThemedText 
-                  style={[
-                    styles.periodChipText, 
-                    { color: period === 'weekly' ? primary : textMain }
-                  ]}
+                <IconSymbol name="calendar" size={20} color={period === 'weekly' ? primary : textMuted} />
+                <ThemedText
+                  style={[styles.periodChipText, { color: period === 'weekly' ? primary : textMain }]}
                 >
                   Semanal
                 </ThemedText>
@@ -236,23 +225,20 @@ export function EditBudgetScreen() {
               <TouchableOpacity
                 style={[
                   styles.periodChip,
-                  { 
+                  {
                     backgroundColor: period === 'monthly' ? primary + '20' : inputBg,
                     borderColor: period === 'monthly' ? primary : borderColor,
-                  }
+                  },
                 ]}
                 onPress={() => setPeriod('monthly')}
               >
-                <IconSymbol 
-                  name="calendar.badge.clock" 
-                  size={20} 
-                  color={period === 'monthly' ? primary : textMuted} 
+                <IconSymbol
+                  name="calendar.badge.clock"
+                  size={20}
+                  color={period === 'monthly' ? primary : textMuted}
                 />
-                <ThemedText 
-                  style={[
-                    styles.periodChipText, 
-                    { color: period === 'monthly' ? primary : textMain }
-                  ]}
+                <ThemedText
+                  style={[styles.periodChipText, { color: period === 'monthly' ? primary : textMain }]}
                 >
                   Mensual
                 </ThemedText>
@@ -262,19 +248,17 @@ export function EditBudgetScreen() {
 
           {/* Fecha de inicio */}
           <View style={styles.field}>
-            <ThemedText style={[styles.label, { color: textMain }]}>
-              Fecha de inicio *
-            </ThemedText>
+            <ThemedText style={[styles.label, { color: textMain }]}>Fecha de inicio *</ThemedText>
             <TouchableOpacity
               style={[styles.dateButton, { backgroundColor: inputBg, borderColor }]}
               onPress={() => setShowStartDatePicker(true)}
             >
               <IconSymbol name="calendar" size={20} color={textMuted} />
               <ThemedText style={[styles.dateButtonText, { color: textMain }]}>
-                {startDate.toLocaleDateString('es-MX', { 
-                  day: 'numeric', 
-                  month: 'long', 
-                  year: 'numeric' 
+                {startDate.toLocaleDateString('es-MX', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
                 })}
               </ThemedText>
             </TouchableOpacity>
@@ -290,23 +274,20 @@ export function EditBudgetScreen() {
 
           {/* Fecha de fin (opcional) */}
           <View style={styles.field}>
-            <ThemedText style={[styles.label, { color: textMain }]}>
-              Fecha de fin (opcional)
-            </ThemedText>
+            <ThemedText style={[styles.label, { color: textMain }]}>Fecha de fin (opcional)</ThemedText>
             <TouchableOpacity
               style={[styles.dateButton, { backgroundColor: inputBg, borderColor }]}
               onPress={() => setShowEndDatePicker(true)}
             >
               <IconSymbol name="calendar" size={20} color={textMuted} />
               <ThemedText style={[styles.dateButtonText, { color: endDate ? textMain : textMuted }]}>
-                {endDate 
-                  ? endDate.toLocaleDateString('es-MX', { 
-                      day: 'numeric', 
-                      month: 'long', 
-                      year: 'numeric' 
+                {endDate
+                  ? endDate.toLocaleDateString('es-MX', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
                     })
-                  : 'Sin fecha de fin'
-                }
+                  : 'Sin fecha de fin'}
               </ThemedText>
               {endDate && (
                 <TouchableOpacity onPress={() => setEndDate(null)}>
@@ -330,27 +311,25 @@ export function EditBudgetScreen() {
 
           {/* Icono */}
           <View style={styles.field}>
-            <ThemedText style={[styles.label, { color: textMain }]}>
-              Icono
-            </ThemedText>
+            <ThemedText style={[styles.label, { color: textMain }]}>Icono</ThemedText>
             <View style={styles.iconsGrid}>
               {BUDGET_ICONS.map((item) => (
                 <TouchableOpacity
                   key={item.icon}
                   style={[
                     styles.iconOption,
-                    { 
+                    {
                       backgroundColor: selectedIcon.icon === item.icon ? item.color + '20' : inputBg,
                       borderColor: selectedIcon.icon === item.icon ? item.color : borderColor,
-                    }
+                    },
                   ]}
                   onPress={() => setSelectedIcon(item)}
                 >
                   <IconSymbol name={item.icon as IconSymbolName} size={24} color={item.color} />
-                  <ThemedText 
+                  <ThemedText
                     style={[
-                      styles.iconLabel, 
-                      { color: selectedIcon.icon === item.icon ? item.color : textMuted }
+                      styles.iconLabel,
+                      { color: selectedIcon.icon === item.icon ? item.color : textMuted },
                     ]}
                   >
                     {item.label}
@@ -371,9 +350,7 @@ export function EditBudgetScreen() {
           onPress={handleSubmit}
           disabled={saving}
         >
-          <ThemedText style={styles.buttonText}>
-            {saving ? 'Guardando...' : 'Guardar Cambios'}
-          </ThemedText>
+          <ThemedText style={styles.buttonText}>{saving ? 'Guardando...' : 'Guardar Cambios'}</ThemedText>
         </TouchableOpacity>
       </View>
     </ThemedView>

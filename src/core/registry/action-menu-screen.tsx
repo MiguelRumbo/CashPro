@@ -22,7 +22,18 @@ type MenuItemProps = {
   isLast?: boolean;
 };
 
-function MenuItem({ icon, iconColor, iconBg, title, subtitle, onPress, textMain, textMuted, borderColor, isLast }: MenuItemProps) {
+function MenuItem({
+  icon,
+  iconColor,
+  iconBg,
+  title,
+  subtitle,
+  onPress,
+  textMain,
+  textMuted,
+  borderColor,
+  isLast,
+}: MenuItemProps) {
   return (
     <TouchableOpacity
       style={[styles.menuItem, !isLast && { borderBottomWidth: 1, borderBottomColor: borderColor }]}
@@ -61,11 +72,17 @@ export function ActionMenuScreen({ slot }: { slot: ActionSlot }) {
           {coreTexts.moreTitle}
         </ThemedText>
       </View>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <ThemedText style={styles.sectionLabel}>{coreTexts.moreSectionFinance}</ThemedText>
         <View style={[styles.sectionCard, { backgroundColor: surfaceColor }]}>
           {actions.length === 0 ? (
-            <ThemedText style={[styles.menuSubtitle, styles.empty, { color: textMuted }]}>{coreTexts.moreEmpty}</ThemedText>
+            <ThemedText style={[styles.menuSubtitle, styles.empty, { color: textMuted }]}>
+              {coreTexts.moreEmpty}
+            </ThemedText>
           ) : (
             actions.map((action, index) => (
               <MenuItem

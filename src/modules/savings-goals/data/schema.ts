@@ -14,8 +14,12 @@ export const savingsGoals = sqliteTable('savings_goals', {
   auto_deduct_amount: real('auto_deduct_amount').notNull().default(0),
   auto_deduct_period: text('auto_deduct_period'),
   status: text('status').notNull().default('active'),
-  created_at: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updated_at: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  created_at: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updated_at: text('updated_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
 });
 
 export const goalContributions = sqliteTable('goal_contributions', {
@@ -26,5 +30,7 @@ export const goalContributions = sqliteTable('goal_contributions', {
   amount: real('amount').notNull(),
   date: text('date').notNull(),
   notes: text('notes'),
-  created_at: text('created_at').notNull().default(sql`(datetime('now'))`),
+  created_at: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
 });

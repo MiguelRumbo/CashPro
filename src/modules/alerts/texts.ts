@@ -25,7 +25,8 @@ export const alertsTexts = {
       `El préstamo a ${person} vence en ${days} días. Monto pendiente: ${pending}`,
   },
   subscriptionDue: {
-    title: (days: number) => (days === 1 ? 'Suscripción mañana' : days === 0 ? 'Suscripción hoy' : `Suscripción en ${days} días`),
+    title: (days: number) =>
+      days === 1 ? 'Suscripción mañana' : days === 0 ? 'Suscripción hoy' : `Suscripción en ${days} días`,
     message: (name: string, days: number, amount: string) =>
       `Tu suscripción de ${name} se cobra ${days === 1 ? 'mañana' : days === 0 ? 'hoy' : `en ${days} días`}: ${amount}`,
   },

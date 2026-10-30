@@ -35,7 +35,9 @@ describe('DbHandle', () => {
     const db = await createTestDb();
     expect(() =>
       db.transaction(() => {
-        db.orm.run(sql`INSERT INTO budgets (name, type, amount, period) VALUES ('a', 'expense', 1, 'monthly')`);
+        db.orm.run(
+          sql`INSERT INTO budgets (name, type, amount, period) VALUES ('a', 'expense', 1, 'monthly')`,
+        );
         db.transaction(() => {
           throw new Error('boom');
         });
@@ -46,7 +48,9 @@ describe('DbHandle', () => {
     db.transaction(() => {
       db.orm.run(sql`INSERT INTO budgets (name, type, amount, period) VALUES ('a', 'expense', 1, 'monthly')`);
       db.transaction(() => {
-        db.orm.run(sql`INSERT INTO budgets (name, type, amount, period) VALUES ('b', 'expense', 1, 'monthly')`);
+        db.orm.run(
+          sql`INSERT INTO budgets (name, type, amount, period) VALUES ('b', 'expense', 1, 'monthly')`,
+        );
       });
     });
     expect(db.orm.all(sql`SELECT * FROM budgets`)).toHaveLength(2);

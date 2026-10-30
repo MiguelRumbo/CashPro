@@ -3,7 +3,10 @@ import type { LoanRecord, LoansStats } from '@/core/contracts/finance';
 const PERCENT = 100;
 
 /** Estado tras un abono (regla v1): pagado si llega a 0, parcial si bajó del total. */
-export function statusAfterPayment(loan: Pick<LoanRecord, 'amount' | 'status'>, newRemaining: number): string {
+export function statusAfterPayment(
+  loan: Pick<LoanRecord, 'amount' | 'status'>,
+  newRemaining: number,
+): string {
   if (newRemaining === 0) return 'paid';
   if (newRemaining < loan.amount) return 'partial';
   return loan.status;

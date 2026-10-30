@@ -1,4 +1,12 @@
-import { ScrollView, View, StyleSheet, TouchableOpacity, TextInput, RefreshControl, Alert } from 'react-native';
+import {
+  ScrollView,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  RefreshControl,
+  Alert,
+} from 'react-native';
 import { useState, useCallback, useEffect } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { ThemedText } from '@/core/ui-kit/themed-text';
@@ -9,6 +17,7 @@ import { useCurrency } from '@/core/preferences/use-currency';
 import type { MovementWithAccount } from '@/core/contracts/finance';
 import { getMovementsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 
 const FILTERS = ['Mes', 'Hoy', 'Semana', 'Año', 'Personalizado'];
 
@@ -28,26 +37,16 @@ export function MovementsListScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { formatCurrency } = useCurrency();
-  
+
   const backgroundColor = useThemeColor({ light: '#ffffff', dark: '#112116' }, 'background');
-  const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#112116' }, 'surface');
+  const filterTextColor = useThemeColor({ light: '#4b5563', dark: '#d1d5db' }, 'text');
   const textMain = useThemeColor({ light: '#1F2937', dark: '#ffffff' }, 'text');
   const borderColor = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'border');
   const searchBg = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'surface');
   const textMuted = '#9CA3AF';
   const primary = '#20df60';
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchMovements();
-    }, [])
-  );
-
-  useEffect(() => {
-    applyFilters();
-  }, [movements, activeFilter, searchQuery]);
-
-  const fetchMovements = () => {
+  const fetchMovements = useStableCallback(() => {
     try {
       const result = movementsService.getMovements();
 
@@ -58,66 +57,81 @@ export function MovementsListScreen() {
       reportError('Error al cargar movimientos:', error);
       Alert.alert('Error', 'No se pudieron cargar los movimientos');
     }
-  };
+  });
 
-  const applyFilters = () => {
+  useFocusEffect(
+    useCallback(() => {
+      fetchMovements();
+    }, [fetchMovements]),
+  );
+
+  const applyFilters = useStableCallback(() => {
     let filtered = [...movements];
 
     // Filtrar por búsqueda
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(m => 
-        (m.title ?? '').toLowerCase().includes(query) ||
-        (m.category_name && m.category_name.toLowerCase().includes(query)) ||
-        (m.notes && m.notes.toLowerCase().includes(query))
+      filtered = filtered.filter(
+        (m) =>
+          (m.title ?? '').toLowerCase().includes(query) ||
+          (m.category_name && m.category_name.toLowerCase().includes(query)) ||
+          (m.notes && m.notes.toLowerCase().includes(query)),
       );
     }
 
     // Filtrar por fecha
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
+
     switch (activeFilter) {
       case 'Hoy':
-        filtered = filtered.filter(m => {
+        filtered = filtered.filter((m) => {
           const movementDate = new Date(m.date);
-          const movementDay = new Date(movementDate.getFullYear(), movementDate.getMonth(), movementDate.getDate());
+          const movementDay = new Date(
+            movementDate.getFullYear(),
+            movementDate.getMonth(),
+            movementDate.getDate(),
+          );
           return movementDay.getTime() === today.getTime();
         });
         break;
-      
+
       case 'Semana':
         const weekAgo = new Date(today);
         weekAgo.setDate(weekAgo.getDate() - 7);
-        filtered = filtered.filter(m => {
+        filtered = filtered.filter((m) => {
           const movementDate = new Date(m.date);
           return movementDate >= weekAgo && movementDate <= now;
         });
         break;
-      
+
       case 'Mes':
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        filtered = filtered.filter(m => {
+        filtered = filtered.filter((m) => {
           const movementDate = new Date(m.date);
           return movementDate >= monthStart && movementDate <= now;
         });
         break;
-      
+
       case 'Año':
         const yearStart = new Date(now.getFullYear(), 0, 1);
-        filtered = filtered.filter(m => {
+        filtered = filtered.filter((m) => {
           const movementDate = new Date(m.date);
           return movementDate >= yearStart && movementDate <= now;
         });
         break;
-      
+
       case 'Personalizado':
         // Por ahora mostrar todos, después se puede agregar un date picker
         break;
     }
 
     setFilteredMovements(filtered);
-  };
+  });
+
+  useEffect(() => {
+    applyFilters();
+  }, [movements, activeFilter, searchQuery, applyFilters]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -146,9 +160,9 @@ export function MovementsListScreen() {
       (groups[dateKey] ??= []).push(movement);
     });
 
-    return Object.keys(groups).map(key => ({
+    return Object.keys(groups).map((key) => ({
       title: key,
-      data: groups[key] ?? []
+      data: groups[key] ?? [],
     }));
   };
 
@@ -156,7 +170,7 @@ export function MovementsListScreen() {
     if (movement.type === 'transfer') {
       return { name: 'arrow.left.arrow.right', color: '#3b82f6', bg: '#dbeafe' };
     }
-    
+
     if (movement.category_icon && movement.category_color) {
       const bgColor = movement.category_color + '20';
       return { name: movement.category_icon, color: movement.category_color, bg: bgColor };
@@ -213,18 +227,14 @@ export function MovementsListScreen() {
               key={filter}
               style={[
                 styles.filterChip,
-                activeFilter === filter
-                  ? styles.filterChipActive
-                  : { backgroundColor: searchBg },
+                activeFilter === filter ? styles.filterChipActive : { backgroundColor: searchBg },
               ]}
               onPress={() => setActiveFilter(filter)}
             >
               <ThemedText
                 style={[
                   styles.filterText,
-                  activeFilter === filter
-                    ? styles.filterTextActive
-                    : { color: useThemeColor({ light: '#4b5563', dark: '#d1d5db' }, 'text') },
+                  activeFilter === filter ? styles.filterTextActive : { color: filterTextColor },
                 ]}
               >
                 {filter}
@@ -239,16 +249,12 @@ export function MovementsListScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}
       >
         {sections.length === 0 ? (
           <View style={styles.emptyState}>
             <IconSymbol size={64} name="tray" color={textMuted} />
-            <ThemedText style={[styles.emptyText, { color: textMuted }]}>
-              No hay movimientos
-            </ThemedText>
+            <ThemedText style={[styles.emptyText, { color: textMuted }]}>No hay movimientos</ThemedText>
             <ThemedText style={[styles.emptySubtext, { color: textMuted }]}>
               Agrega tu primer movimiento
             </ThemedText>
@@ -258,9 +264,7 @@ export function MovementsListScreen() {
             <View key={section.title}>
               {/* Date Header */}
               <View style={[styles.dateHeader, { backgroundColor }]}>
-                <ThemedText style={styles.dateHeaderText}>
-                  {section.title}
-                </ThemedText>
+                <ThemedText style={styles.dateHeaderText}>{section.title}</ThemedText>
               </View>
 
               {/* Transactions */}
@@ -269,17 +273,27 @@ export function MovementsListScreen() {
                 const isIncome = item.type === 'income';
                 const isTransfer = item.type === 'transfer';
                 const isCreditCard = item.account_type === 'credit';
-                
+
                 return (
                   <View key={item.id}>
-                    <TouchableOpacity style={styles.transactionItem} onPress={() => router.push(`/movements/movement-detail?id=${item.id}`)}>
+                    <TouchableOpacity
+                      style={styles.transactionItem}
+                      onPress={() => router.push(`/movements/movement-detail?id=${item.id}`)}
+                    >
                       <View style={styles.transactionLeft}>
                         <View style={[styles.transactionIcon, { backgroundColor: iconData.bg }]}>
-                          <IconSymbol size={24} name={iconData.name as IconSymbolName} color={iconData.color} />
+                          <IconSymbol
+                            size={24}
+                            name={iconData.name as IconSymbolName}
+                            color={iconData.color}
+                          />
                         </View>
                         <View style={styles.transactionInfo}>
                           <View style={styles.transactionTitleRow}>
-                            <ThemedText style={[styles.transactionName, { color: textMain }]} numberOfLines={1}>
+                            <ThemedText
+                              style={[styles.transactionName, { color: textMain }]}
+                              numberOfLines={1}
+                            >
                               {item.title}
                             </ThemedText>
                             {isCreditCard && (
@@ -289,7 +303,8 @@ export function MovementsListScreen() {
                             )}
                           </View>
                           <ThemedText style={[styles.transactionMeta, { color: textMuted }]}>
-                            {formatTime(item.date)} • {item.category_name || (isTransfer ? 'Transferencia' : 'Sin categoría')}
+                            {formatTime(item.date)} •{' '}
+                            {item.category_name || (isTransfer ? 'Transferencia' : 'Sin categoría')}
                             {item.account_name && ` • ${item.account_name}`}
                           </ThemedText>
                         </View>
@@ -301,7 +316,8 @@ export function MovementsListScreen() {
                         ]}
                         numberOfLines={1}
                       >
-                        {isIncome ? '+' : isTransfer ? '' : '-'}{formatCurrency(item.amount)}
+                        {isIncome ? '+' : isTransfer ? '' : '-'}
+                        {formatCurrency(item.amount)}
                       </ThemedText>
                     </TouchableOpacity>
                     {/* Separator */}
@@ -318,10 +334,7 @@ export function MovementsListScreen() {
       </ScrollView>
 
       {/* FAB */}
-      <TouchableOpacity 
-        style={styles.fab}
-        onPress={() => router.push('/movements/add-movement')}
-      >
+      <TouchableOpacity style={styles.fab} onPress={() => router.push('/movements/add-movement')}>
         <IconSymbol size={28} name="plus" color="white" />
       </TouchableOpacity>
     </ThemedView>

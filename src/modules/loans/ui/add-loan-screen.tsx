@@ -1,17 +1,28 @@
 import { useState, useEffect } from 'react';
-import { ScrollView, View, StyleSheet, TextInput, TouchableOpacity, Alert, Switch, Platform, Modal } from 'react-native';
+import {
+  ScrollView,
+  View,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  Switch,
+  Platform,
+  Modal,
+} from 'react-native';
 import { router, Stack } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
 import { useThemeColor } from '@/core/ui-kit/use-theme-color';
-import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
+import { IconSymbol } from '@/core/ui-kit/icon-symbol';
 import { useCurrency } from '@/core/preferences/use-currency';
-import { accountsQueryKey, type AccountRecord, type LoanRecord } from '@/core/contracts/finance';
+import { accountsQueryKey, type AccountRecord } from '@/core/contracts/finance';
 import { ok } from '@/core/contracts/result';
-import { useCapability } from '@/core/registry/react';
+import { useCapability, useErrorReporter } from '@/core/registry/react';
 import { getLoansRuntime } from '../runtime';
-import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
+import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 type Account = AccountRecord;
 
@@ -41,11 +52,7 @@ export function AddLoanScreen() {
   const primary = '#20df60';
   const inputBg = useThemeColor({ light: '#f9fafb', dark: '#1f2937' }, 'inputBackground');
 
-  useEffect(() => {
-    fetchAccounts();
-  }, []);
-
-  const fetchAccounts = async () => {
+  const fetchAccounts = useStableCallback(async () => {
     try {
       const result = ok(accountsQuery?.list() ?? []);
 
@@ -62,7 +69,11 @@ export function AddLoanScreen() {
     } catch (error) {
       reportError('Error al cargar cuentas:', error);
     }
-  };
+  });
+
+  useEffect(() => {
+    fetchAccounts();
+  }, [fetchAccounts]);
 
   const handleSubmit = async () => {
     if (!personName.trim()) {
@@ -95,7 +106,7 @@ export function AddLoanScreen() {
 
       if (result.success) {
         Alert.alert('Éxito', 'Préstamo registrado correctamente', [
-          { text: 'OK', onPress: () => router.back() }
+          { text: 'OK', onPress: () => router.back() },
         ]);
       } else {
         Alert.alert('Error', result.error || 'No se pudo crear el préstamo');
@@ -108,14 +119,14 @@ export function AddLoanScreen() {
     }
   };
 
-  const onDateChange = (event: any, selectedDate?: Date) => {
+  const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
       setDate(selectedDate);
     }
   };
 
-  const onDueDateChange = (event: any, selectedDate?: Date) => {
+  const onDueDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowDueDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
       setDueDate(selectedDate);
@@ -124,7 +135,7 @@ export function AddLoanScreen() {
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
-      <Stack.Screen 
+      <Stack.Screen
         options={{
           title: 'Nuevo Préstamo',
           headerShown: true,
@@ -135,9 +146,7 @@ export function AddLoanScreen() {
         <View style={[styles.card, { backgroundColor: surfaceColor }]}>
           {/* Nombre de la persona */}
           <View style={styles.field}>
-            <ThemedText style={[styles.label, { color: textMain }]}>
-              Nombre de la persona *
-            </ThemedText>
+            <ThemedText style={[styles.label, { color: textMain }]}>Nombre de la persona *</ThemedText>
             <TextInput
               style={[styles.input, { backgroundColor: inputBg, color: textMain, borderColor }]}
               value={personName}
@@ -149,9 +158,7 @@ export function AddLoanScreen() {
 
           {/* Monto */}
           <View style={styles.field}>
-            <ThemedText style={[styles.label, { color: textMain }]}>
-              Monto prestado *
-            </ThemedText>
+            <ThemedText style={[styles.label, { color: textMain }]}>Monto prestado *</ThemedText>
             <TextInput
               style={[styles.input, { backgroundColor: inputBg, color: textMain, borderColor }]}
               value={amount}
@@ -164,19 +171,17 @@ export function AddLoanScreen() {
 
           {/* Fecha del préstamo */}
           <View style={styles.field}>
-            <ThemedText style={[styles.label, { color: textMain }]}>
-              Fecha del préstamo *
-            </ThemedText>
+            <ThemedText style={[styles.label, { color: textMain }]}>Fecha del préstamo *</ThemedText>
             <TouchableOpacity
               style={[styles.dateButton, { backgroundColor: inputBg, borderColor }]}
               onPress={() => setShowDatePicker(true)}
             >
               <IconSymbol name="calendar" size={20} color={textMuted} />
               <ThemedText style={[styles.dateButtonText, { color: textMain }]}>
-                {date.toLocaleDateString('es-MX', { 
-                  day: 'numeric', 
-                  month: 'long', 
-                  year: 'numeric' 
+                {date.toLocaleDateString('es-MX', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
                 })}
               </ThemedText>
             </TouchableOpacity>
@@ -202,14 +207,13 @@ export function AddLoanScreen() {
             >
               <IconSymbol name="calendar" size={20} color={textMuted} />
               <ThemedText style={[styles.dateButtonText, { color: dueDate ? textMain : textMuted }]}>
-                {dueDate 
-                  ? dueDate.toLocaleDateString('es-MX', { 
-                      day: 'numeric', 
-                      month: 'long', 
-                      year: 'numeric' 
+                {dueDate
+                  ? dueDate.toLocaleDateString('es-MX', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
                     })
-                  : 'Seleccionar fecha (opcional)'
-                }
+                  : 'Seleccionar fecha (opcional)'}
               </ThemedText>
               {dueDate && (
                 <TouchableOpacity onPress={() => setDueDate(null)}>
@@ -230,9 +234,7 @@ export function AddLoanScreen() {
 
           {/* Cuenta */}
           <View style={styles.field}>
-            <ThemedText style={[styles.label, { color: textMain }]}>
-              Cuenta de origen *
-            </ThemedText>
+            <ThemedText style={[styles.label, { color: textMain }]}>Cuenta de origen *</ThemedText>
             <TouchableOpacity
               style={[styles.accountSelector, { backgroundColor: inputBg, borderColor }]}
               onPress={() => setShowAccountPicker(true)}
@@ -261,9 +263,7 @@ export function AddLoanScreen() {
           <View style={styles.field}>
             <View style={styles.switchRow}>
               <View style={styles.switchLabel}>
-                <ThemedText style={[styles.label, { color: textMain }]}>
-                  Descontar de la cuenta
-                </ThemedText>
+                <ThemedText style={[styles.label, { color: textMain }]}>Descontar de la cuenta</ThemedText>
                 <ThemedText style={[styles.hint, { color: textMuted }]}>
                   Registra automáticamente un movimiento de gasto
                 </ThemedText>
@@ -279,9 +279,7 @@ export function AddLoanScreen() {
 
           {/* Notas */}
           <View style={styles.field}>
-            <ThemedText style={[styles.label, { color: textMain }]}>
-              Notas (opcional)
-            </ThemedText>
+            <ThemedText style={[styles.label, { color: textMain }]}>Notas (opcional)</ThemedText>
             <TextInput
               style={[styles.textArea, { backgroundColor: inputBg, color: textMain, borderColor }]}
               value={notes}
@@ -305,9 +303,7 @@ export function AddLoanScreen() {
           onPress={handleSubmit}
           disabled={loading}
         >
-          <ThemedText style={styles.buttonText}>
-            {loading ? 'Guardando...' : 'Guardar Préstamo'}
-          </ThemedText>
+          <ThemedText style={styles.buttonText}>{loading ? 'Guardando...' : 'Guardar Préstamo'}</ThemedText>
         </TouchableOpacity>
       </View>
 
@@ -321,9 +317,7 @@ export function AddLoanScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.pickerModalContent, { backgroundColor: surfaceColor }]}>
             <View style={styles.modalHeader}>
-              <ThemedText style={[styles.modalTitle, { color: textMain }]}>
-                Seleccionar Cuenta
-              </ThemedText>
+              <ThemedText style={[styles.modalTitle, { color: textMain }]}>Seleccionar Cuenta</ThemedText>
               <TouchableOpacity onPress={() => setShowAccountPicker(false)}>
                 <IconSymbol size={24} name="xmark" color={textMuted} />
               </TouchableOpacity>
@@ -335,10 +329,10 @@ export function AddLoanScreen() {
                   key={account.id}
                   style={[
                     styles.accountItem,
-                    { 
+                    {
                       backgroundColor: selectedAccount?.id === account.id ? primary + '10' : 'transparent',
-                      borderColor 
-                    }
+                      borderColor,
+                    },
                   ]}
                   onPress={() => {
                     setSelectedAccount(account);

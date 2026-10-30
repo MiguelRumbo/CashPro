@@ -11,7 +11,9 @@ export const vehicles = sqliteTable('vehicles', {
   odometer: real('odometer').notNull(),
   fuel_type: text('fuel_type').notNull(),
   tank_capacity: real('tank_capacity'),
-  created_at: text('created_at').notNull().default(sql`(datetime('now'))`),
+  created_at: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
 });
 
 export const fuelLoads = sqliteTable('fuel_loads', {
@@ -28,7 +30,9 @@ export const fuelLoads = sqliteTable('fuel_loads', {
   date: text('date').notNull(),
   account_id: integer('account_id').notNull(),
   notes: text('notes'),
-  created_at: text('created_at').notNull().default(sql`(datetime('now'))`),
+  created_at: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
 });
 
 export const maintenance = sqliteTable('maintenance', {
@@ -46,5 +50,7 @@ export const maintenance = sqliteTable('maintenance', {
   next_odometer: real('next_odometer'),
   account_id: integer('account_id').notNull(),
   notes: text('notes'),
-  created_at: text('created_at').notNull().default(sql`(datetime('now'))`),
+  created_at: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
 });

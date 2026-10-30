@@ -28,7 +28,12 @@ export async function shareFile(path: string, mimeType: string, dialogTitle: str
 }
 
 /** Escribe un archivo temporal en documentos y abre el diálogo de compartir. */
-export async function writeAndShare(fileName: string, content: string, mimeType: string, dialogTitle: string): Promise<void> {
+export async function writeAndShare(
+  fileName: string,
+  content: string,
+  mimeType: string,
+  dialogTitle: string,
+): Promise<void> {
   const uri = `${FileSystem.documentDirectory ?? ''}${fileName}`;
   await FileSystem.writeAsStringAsync(uri, content, { encoding: FileSystem.EncodingType.UTF8 });
   if (!(await Sharing.isAvailableAsync())) throw new SharingUnavailableError(uri);

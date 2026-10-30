@@ -93,7 +93,12 @@ export function createMsiService(deps: {
       try {
         const next = payInstallment(msi);
         const updated = db.transaction(() => {
-          const row = repo.updateProgress(id, next.paid, next.remaining, next.completed ? 'completed' : 'active');
+          const row = repo.updateProgress(
+            id,
+            next.paid,
+            next.remaining,
+            next.completed ? 'completed' : 'active',
+          );
           accounts.adjust(msi.account_id, 'current_balance', -msi.monthly_payment);
           const ts = nowIso();
           ledger()?.record(

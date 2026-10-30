@@ -3,10 +3,9 @@
 import journal from './meta/_journal.json';
 import m0000 from './0000_baseline_v1.sql';
 
-  export default {
-    journal,
-    migrations: {
-      m0000
-    }
-  }
-  
+export default {
+  journal,
+  migrations: {
+    m0000,
+  },
+};

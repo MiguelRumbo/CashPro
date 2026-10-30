@@ -23,7 +23,11 @@ export function createMovementsRepository(db: DbHandle) {
       return orm.insert(movements).values(row).returning().get();
     },
     update(id: number, patch: MovementPatch): MovementRecord | undefined {
-      orm.update(movements).set({ ...patch, updated_at: nowIso() }).where(eq(movements.id, id)).run();
+      orm
+        .update(movements)
+        .set({ ...patch, updated_at: nowIso() })
+        .where(eq(movements.id, id))
+        .run();
       return this.getById(id);
     },
     delete(id: number): void {

@@ -5,10 +5,8 @@ import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
 import { useThemeColor } from '@/core/ui-kit/use-theme-color';
 import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
-import { accountsQueryKey, type AccountRecord, type VehicleRecord, type MaintenanceRecord, type VehicleStats } from '@/core/contracts/finance';
-import { ok } from '@/core/contracts/result';
-import { useCapability } from '@/core/registry/react';
 import { getVehiclesRuntime } from '../runtime';
+import type { VehicleInput } from '../services/vehicles-service';
 
 const FUEL_TYPES = [
   { value: 'gasoline', label: 'Gasolina', icon: 'drop.fill', color: '#ef4444' },
@@ -19,7 +17,6 @@ const FUEL_TYPES = [
 
 export function AddVehicleScreen() {
   const { vehicles: vehiclesService } = getVehiclesRuntime();
-  const accountsQuery = useCapability(accountsQueryKey);
   const [name, setName] = useState('');
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
@@ -63,7 +60,7 @@ export function AddVehicleScreen() {
     setSaving(true);
 
     try {
-      const body: any = {
+      const body: VehicleInput = {
         name: name.trim(),
         brand: brand.trim(),
         model: model.trim(),
@@ -87,7 +84,7 @@ export function AddVehicleScreen() {
       } else {
         Alert.alert('Error', result.error);
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'No se pudo guardar el vehículo');
     } finally {
       setSaving(false);
@@ -189,10 +186,7 @@ export function AddVehicleScreen() {
                 color={fuelType === type.value ? type.color : textMuted}
               />
               <ThemedText
-                style={[
-                  styles.fuelTypeText,
-                  { color: fuelType === type.value ? type.color : textMuted },
-                ]}
+                style={[styles.fuelTypeText, { color: fuelType === type.value ? type.color : textMuted }]}
               >
                 {type.label}
               </ThemedText>

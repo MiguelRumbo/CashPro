@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react';
-import { ScrollView, View, StyleSheet, TouchableOpacity, Switch, Alert } from 'react-native';
-import { router, Stack, useFocusEffect } from 'expo-router';
+import { ScrollView, View, StyleSheet, Switch, Alert } from 'react-native';
+import { Stack, useFocusEffect } from 'expo-router';
 import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
 import { useThemeColor } from '@/core/ui-kit/use-theme-color';
-import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
+import { IconSymbol } from '@/core/ui-kit/icon-symbol';
 import { getAlertsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 
 type NotificationSettings = {
   id: number;
@@ -36,7 +37,7 @@ export function AlertSettingsScreen() {
   const borderColor = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'border');
   const primary = '#20df60';
 
-  const fetchSettings = () => {
+  const fetchSettings = useStableCallback(() => {
     try {
       const result = alertsService.getNotificationSettings();
 
@@ -49,15 +50,15 @@ export function AlertSettingsScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  });
 
   useFocusEffect(
     useCallback(() => {
       fetchSettings();
-    }, [])
+    }, [fetchSettings]),
   );
 
-  const updateSetting = (field: keyof NotificationSettings, value: any) => {
+  const updateSetting = (field: keyof NotificationSettings, value: boolean) => {
     if (!settings) return;
 
     const updatedSettings = { ...settings, [field]: value ? 1 : 0 };
@@ -97,11 +98,9 @@ export function AlertSettingsScreen() {
         <View style={[styles.section, { backgroundColor: surfaceColor, borderColor }]}>
           <View style={styles.sectionHeader}>
             <IconSymbol name="bell.fill" size={20} color={primary} />
-            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-              Recordatorio Diario
-            </ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Recordatorio Diario</ThemedText>
           </View>
-          
+
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
               <ThemedText style={[styles.settingTitle, { color: textMain }]}>
@@ -124,16 +123,12 @@ export function AlertSettingsScreen() {
         <View style={[styles.section, { backgroundColor: surfaceColor, borderColor }]}>
           <View style={styles.sectionHeader}>
             <IconSymbol name="creditcard.fill" size={20} color="#3b82f6" />
-            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-              Alertas Financieras
-            </ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Alertas Financieras</ThemedText>
           </View>
-          
+
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <ThemedText style={[styles.settingTitle, { color: textMain }]}>
-                Tarjetas de crédito
-              </ThemedText>
+              <ThemedText style={[styles.settingTitle, { color: textMain }]}>Tarjetas de crédito</ThemedText>
               <ThemedText style={[styles.settingSubtitle, { color: textMuted }]}>
                 Fechas de corte y pago
               </ThemedText>
@@ -148,9 +143,7 @@ export function AlertSettingsScreen() {
 
           <View style={[styles.settingRow, styles.settingRowLast]}>
             <View style={styles.settingLeft}>
-              <ThemedText style={[styles.settingTitle, { color: textMain }]}>
-                Presupuestos
-              </ThemedText>
+              <ThemedText style={[styles.settingTitle, { color: textMain }]}>Presupuestos</ThemedText>
               <ThemedText style={[styles.settingSubtitle, { color: textMuted }]}>
                 Cuando alcances el 80% o excedas el límite
               </ThemedText>
@@ -168,16 +161,12 @@ export function AlertSettingsScreen() {
         <View style={[styles.section, { backgroundColor: surfaceColor, borderColor }]}>
           <View style={styles.sectionHeader}>
             <IconSymbol name="clock.fill" size={20} color="#f59e0b" />
-            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-              Recordatorios
-            </ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Recordatorios</ThemedText>
           </View>
-          
+
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <ThemedText style={[styles.settingTitle, { color: textMain }]}>
-                Préstamos
-              </ThemedText>
+              <ThemedText style={[styles.settingTitle, { color: textMain }]}>Préstamos</ThemedText>
               <ThemedText style={[styles.settingSubtitle, { color: textMuted }]}>
                 Cuando se acerque la fecha de vencimiento
               </ThemedText>
@@ -192,9 +181,7 @@ export function AlertSettingsScreen() {
 
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <ThemedText style={[styles.settingTitle, { color: textMain }]}>
-                Suscripciones
-              </ThemedText>
+              <ThemedText style={[styles.settingTitle, { color: textMain }]}>Suscripciones</ThemedText>
               <ThemedText style={[styles.settingSubtitle, { color: textMuted }]}>
                 Un día antes del cobro
               </ThemedText>
@@ -209,9 +196,7 @@ export function AlertSettingsScreen() {
 
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
-              <ThemedText style={[styles.settingTitle, { color: textMain }]}>
-                Objetivos de ahorro
-              </ThemedText>
+              <ThemedText style={[styles.settingTitle, { color: textMain }]}>Objetivos de ahorro</ThemedText>
               <ThemedText style={[styles.settingSubtitle, { color: textMuted }]}>
                 Cuando estés atrasado en tu meta
               </ThemedText>
@@ -226,9 +211,7 @@ export function AlertSettingsScreen() {
 
           <View style={[styles.settingRow, styles.settingRowLast]}>
             <View style={styles.settingLeft}>
-              <ThemedText style={[styles.settingTitle, { color: textMain }]}>
-                Salarios e ingresos
-              </ThemedText>
+              <ThemedText style={[styles.settingTitle, { color: textMain }]}>Salarios e ingresos</ThemedText>
               <ThemedText style={[styles.settingSubtitle, { color: textMuted }]}>
                 Recordatorio de ingresos programados
               </ThemedText>
@@ -246,11 +229,9 @@ export function AlertSettingsScreen() {
         <View style={[styles.section, { backgroundColor: surfaceColor, borderColor }]}>
           <View style={styles.sectionHeader}>
             <IconSymbol name="airplane" size={20} color="#8b5cf6" />
-            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-              Modo Vacaciones
-            </ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Modo Vacaciones</ThemedText>
           </View>
-          
+
           <View style={[styles.settingRow, styles.settingRowLast]}>
             <View style={styles.settingLeft}>
               <ThemedText style={[styles.settingTitle, { color: textMain }]}>
@@ -273,7 +254,8 @@ export function AlertSettingsScreen() {
         <View style={styles.infoBox}>
           <IconSymbol name="info.circle" size={16} color={textMuted} />
           <ThemedText style={[styles.infoText, { color: textMuted }]}>
-            Las notificaciones push requieren permisos del sistema. Asegúrate de tenerlos activados en la configuración de tu dispositivo.
+            Las notificaciones push requieren permisos del sistema. Asegúrate de tenerlos activados en la
+            configuración de tu dispositivo.
           </ThemedText>
         </View>
 
@@ -290,11 +272,26 @@ const styles = StyleSheet.create({
   section: { margin: 16, padding: 16, borderRadius: 16, borderWidth: 1, marginBottom: 0 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
   sectionTitle: { fontSize: 16, fontWeight: '700' },
-  settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
   settingRowLast: { borderBottomWidth: 0 },
   settingLeft: { flex: 1, marginRight: 12 },
   settingTitle: { fontSize: 15, fontWeight: '600', marginBottom: 4 },
   settingSubtitle: { fontSize: 13 },
-  infoBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, margin: 16, padding: 12, backgroundColor: '#f9fafb', borderRadius: 12 },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    margin: 16,
+    padding: 12,
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+  },
   infoText: { flex: 1, fontSize: 12, lineHeight: 18 },
 });

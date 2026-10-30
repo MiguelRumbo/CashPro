@@ -1,6 +1,11 @@
 import type { ModuleManifest } from '@/core/contracts/module';
 
-import { disposeSettingsRuntime, getSettingsRuntime, initSettingsRuntime, startSettingsRuntime } from './runtime';
+import {
+  disposeSettingsRuntime,
+  getSettingsRuntime,
+  initSettingsRuntime,
+  startSettingsRuntime,
+} from './runtime';
 import { settingsTexts } from './texts';
 import { EditProfileScreen } from './ui/edit-profile-screen';
 import { SettingsScreen } from './ui/settings-screen';

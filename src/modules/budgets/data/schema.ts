@@ -14,8 +14,12 @@ export const budgets = sqliteTable(
     color: text('color'),
     current_amount: real('current_amount').notNull().default(0),
     category_ids: text('category_ids'),
-    created_at: text('created_at').notNull().default(sql`(datetime('now'))`),
-    updated_at: text('updated_at').notNull().default(sql`(datetime('now'))`),
+    created_at: text('created_at')
+      .notNull()
+      .default(sql`(datetime('now'))`),
+    updated_at: text('updated_at')
+      .notNull()
+      .default(sql`(datetime('now'))`),
   },
   (t) => [
     check('budgets_type_check', sql`${t.type} IN ('saving', 'expense')`),

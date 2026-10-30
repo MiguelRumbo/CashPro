@@ -6,13 +6,31 @@ import { ThemedView } from '@/core/ui-kit/themed-view';
 import { useThemeColor } from '@/core/ui-kit/use-theme-color';
 import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
 import { useCurrency } from '@/core/preferences/use-currency';
-import type { AccountRecord, BudgetRecord, LoansStats, MovementWithAccount, RecurringPaymentsStats, SavingsGoalsStats, VehicleRecord, VehicleStats } from '@/core/contracts/finance';
-import { accountsQueryKey, budgetsQueryKey, loansQueryKey, movementsLedgerKey, profileQueryKey, savingsGoalsQueryKey, subscriptionsQueryKey, vehiclesQueryKey } from '@/core/contracts/finance';
+import type {
+  AccountRecord,
+  BudgetRecord,
+  LoansStats,
+  MovementWithAccount,
+  RecurringPaymentsStats,
+  SavingsGoalsStats,
+  VehicleRecord,
+  VehicleStats,
+} from '@/core/contracts/finance';
+import {
+  accountsQueryKey,
+  budgetsQueryKey,
+  loansQueryKey,
+  movementsLedgerKey,
+  profileQueryKey,
+  savingsGoalsQueryKey,
+  subscriptionsQueryKey,
+  vehiclesQueryKey,
+} from '@/core/contracts/finance';
 import { fromOptional } from '@/core/contracts/result';
-import { useCapability } from '@/core/registry/react';
+import { useCapability, useErrorReporter } from '@/core/registry/react';
 import { getInitials } from '@/core/units/initials';
 import { summarizeMonth } from '../domain/month-summary';
-import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 
 type RecentMovement = MovementWithAccount;
 
@@ -54,7 +72,11 @@ export function DashboardScreen() {
   const [loansSummary, setLoansSummary] = useState<LoansSummary | null>(null);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [subscriptionsSummary, setSubscriptionsSummary] = useState<SubscriptionsSummary | null>(null);
-  const [vehiclesSummary, setVehiclesSummary] = useState<{ vehicle: VehicleRecord; stats: VehicleStats; total_vehicles: number } | null>(null);
+  const [vehiclesSummary, setVehiclesSummary] = useState<{
+    vehicle: VehicleRecord;
+    stats: VehicleStats;
+    total_vehicles: number;
+  } | null>(null);
   const [recentMovements, setRecentMovements] = useState<RecentMovement[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [profileName, setProfileName] = useState('Usuario');
@@ -77,7 +99,7 @@ export function DashboardScreen() {
   const progressBarBg = useThemeColor({ light: '#f3f4f6', dark: '#1f2937' }, 'surface');
   const addAccountBorderColor = useThemeColor({ light: '#d1d5db', dark: '#374151' }, 'border');
 
-  const fetchData = async () => {
+  const fetchData = useStableCallback(async () => {
     try {
       // Obtener perfil
       const profileResult = fromOptional(profileQuery?.get());
@@ -160,14 +182,14 @@ export function DashboardScreen() {
     } catch (error) {
       reportError('Error al cargar datos:', error);
     }
-  };
+  });
 
   const calculateCategoryStats = (movements: MovementWithAccount[]) => {
     const categoryMap = new Map<string, CategoryStat>();
-    
+
     movements
-      .filter(m => m.type === 'expense' && m.category_name)
-      .forEach(movement => {
+      .filter((m) => m.type === 'expense' && m.category_name)
+      .forEach((movement) => {
         const categoryName = movement.category_name ?? '';
         const existing = categoryMap.get(categoryName);
         if (existing) {
@@ -187,7 +209,7 @@ export function DashboardScreen() {
     const stats = Array.from(categoryMap.values())
       .sort((a, b) => b.total - a.total)
       .slice(0, 3);
-    
+
     setCategoryStats(stats);
   };
 
@@ -200,16 +222,21 @@ export function DashboardScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchData();
-    }, [])
+    }, [fetchData]),
   );
 
   const getAccountIcon = (type: string) => {
     switch (type) {
-      case 'cash': return 'banknote';
-      case 'bank': return 'building.columns.fill';
-      case 'debit': return 'creditcard';
-      case 'credit': return 'creditcard.fill';
-      default: return 'banknote';
+      case 'cash':
+        return 'banknote';
+      case 'bank':
+        return 'building.columns.fill';
+      case 'debit':
+        return 'creditcard';
+      case 'credit':
+        return 'creditcard.fill';
+      default:
+        return 'banknote';
     }
   };
 
@@ -246,9 +273,7 @@ export function DashboardScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}
       >
         {/* Grid: Balance + Income/Expense */}
         <View style={styles.cardsGrid}>
@@ -257,16 +282,30 @@ export function DashboardScreen() {
             {/* Decorative glow */}
             <View style={styles.balanceGlow} />
             <View style={styles.balanceContent}>
-              <ThemedText style={[styles.cardLabel, { color: textMuted }]}>
-                Balance Total
-              </ThemedText>
-              <ThemedText style={[styles.balanceAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
+              <ThemedText style={[styles.cardLabel, { color: textMuted }]}>Balance Total</ThemedText>
+              <ThemedText
+                style={[styles.balanceAmount, { color: textMain }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
                 {formatCurrency(totalBalance)}
               </ThemedText>
-              <View style={[styles.badge, { backgroundColor: expenseChange <= 0 ? 'rgba(32, 223, 96, 0.1)' : 'rgba(239, 68, 68, 0.1)' }]}>
-                <IconSymbol size={14} name={expenseChange <= 0 ? "arrow.down.right" : "arrow.up.right"} color={expenseChange <= 0 ? primary : '#ef4444'} />
+              <View
+                style={[
+                  styles.badge,
+                  {
+                    backgroundColor: expenseChange <= 0 ? 'rgba(32, 223, 96, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                  },
+                ]}
+              >
+                <IconSymbol
+                  size={14}
+                  name={expenseChange <= 0 ? 'arrow.down.right' : 'arrow.up.right'}
+                  color={expenseChange <= 0 ? primary : '#ef4444'}
+                />
                 <ThemedText style={[styles.badgeText, { color: expenseChange <= 0 ? primary : '#ef4444' }]}>
-                  {expenseChange > 0 ? '+' : ''}{changePercentage}% este mes
+                  {expenseChange > 0 ? '+' : ''}
+                  {changePercentage}% este mes
                 </ThemedText>
               </View>
             </View>
@@ -280,10 +319,12 @@ export function DashboardScreen() {
                 <IconSymbol size={18} name="arrow.down" color={primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <ThemedText style={[styles.smallCardLabel, { color: textMuted }]}>
-                  Ingresos
-                </ThemedText>
-                <ThemedText style={[styles.smallCardAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
+                <ThemedText style={[styles.smallCardLabel, { color: textMuted }]}>Ingresos</ThemedText>
+                <ThemedText
+                  style={[styles.smallCardAmount, { color: textMain }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   +{formatCurrency(totalIncome)}
                 </ThemedText>
               </View>
@@ -295,10 +336,12 @@ export function DashboardScreen() {
                 <IconSymbol size={18} name="arrow.up" color="#ef4444" />
               </View>
               <View style={{ flex: 1 }}>
-                <ThemedText style={[styles.smallCardLabel, { color: textMuted }]}>
-                  Gastos
-                </ThemedText>
-                <ThemedText style={[styles.smallCardAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
+                <ThemedText style={[styles.smallCardLabel, { color: textMuted }]}>Gastos</ThemedText>
+                <ThemedText
+                  style={[styles.smallCardAmount, { color: textMain }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   -{formatCurrency(totalExpense)}
                 </ThemedText>
               </View>
@@ -309,18 +352,36 @@ export function DashboardScreen() {
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           {[
-            { icon: 'plus.circle.fill' as const, label: 'Agregar', color: primary, onPress: () => router.push('/movements/add-movement') },
-            { icon: 'arrow.left.arrow.right' as const, label: 'Transferir', color: '#3b82f6', onPress: () => router.push('/movements/add-movement') },
-            { icon: 'chart.pie.fill' as const, label: 'Presupuestos', color: '#9333ea', onPress: () => router.push('/budgets') },
-            { icon: 'target' as const, label: 'Objetivos', color: '#f59e0b', onPress: () => router.push('/savings-goals') },
+            {
+              icon: 'plus.circle.fill' as const,
+              label: 'Agregar',
+              color: primary,
+              onPress: () => router.push('/movements/add-movement'),
+            },
+            {
+              icon: 'arrow.left.arrow.right' as const,
+              label: 'Transferir',
+              color: '#3b82f6',
+              onPress: () => router.push('/movements/add-movement'),
+            },
+            {
+              icon: 'chart.pie.fill' as const,
+              label: 'Presupuestos',
+              color: '#9333ea',
+              onPress: () => router.push('/budgets'),
+            },
+            {
+              icon: 'target' as const,
+              label: 'Objetivos',
+              color: '#f59e0b',
+              onPress: () => router.push('/savings-goals'),
+            },
           ].map((action, i) => (
             <TouchableOpacity key={i} style={styles.quickActionItem} onPress={action.onPress}>
               <View style={[styles.quickActionIcon, { backgroundColor: action.color + '18' }]}>
                 <IconSymbol size={22} name={action.icon} color={action.color} />
               </View>
-              <ThemedText style={[styles.quickActionLabel, { color: textMuted }]}>
-                {action.label}
-              </ThemedText>
+              <ThemedText style={[styles.quickActionLabel, { color: textMuted }]}>{action.label}</ThemedText>
             </TouchableOpacity>
           ))}
         </View>
@@ -328,9 +389,7 @@ export function DashboardScreen() {
         {/* Accounts Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-              Mis Cuentas
-            </ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Mis Cuentas</ThemedText>
             <TouchableOpacity onPress={() => router.push('/(tabs)/accounts')}>
               <ThemedText style={[styles.linkText, { color: primary }]}>Ver todo</ThemedText>
             </TouchableOpacity>
@@ -347,29 +406,32 @@ export function DashboardScreen() {
                   <IconSymbol size={22} name="tray" color={textMuted} />
                 </View>
                 <View style={styles.accountCardFooter}>
-                  <ThemedText style={[styles.accountNameMuted, { color: textMuted }]}>
-                    Sin cuentas
-                  </ThemedText>
-                  <ThemedText style={[styles.accountNumberDark, { color: textMain }]}>
-                    Agrega una
-                  </ThemedText>
+                  <ThemedText style={[styles.accountNameMuted, { color: textMuted }]}>Sin cuentas</ThemedText>
+                  <ThemedText style={[styles.accountNumberDark, { color: textMain }]}>Agrega una</ThemedText>
                 </View>
               </View>
             ) : (
               accounts.map((account, index) => {
                 const isPrimary = account.is_primary === 1;
-                const displayBalance = account.type === 'credit' ? (account.credit_limit || 0) - (account.current_balance || 0) : account.balance;
-                
+                const displayBalance =
+                  account.type === 'credit'
+                    ? (account.credit_limit || 0) - (account.current_balance || 0)
+                    : account.balance;
+
                 if (isPrimary) {
                   return (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       key={account.id}
                       style={styles.accountCardDark}
                       onPress={() => router.push(`/accounts/account-detail?id=${account.id}`)}
                     >
                       <View style={styles.accountCardGlow} />
                       <View style={styles.accountCardHeader}>
-                        <IconSymbol size={22} name={getAccountIcon(account.type) as any} color="rgba(255,255,255,0.8)" />
+                        <IconSymbol
+                          size={22}
+                          name={getAccountIcon(account.type) as IconSymbolName}
+                          color="rgba(255,255,255,0.8)"
+                        />
                         <View style={styles.accountBadge}>
                           <ThemedText style={styles.accountBadgeText}>Principal</ThemedText>
                         </View>
@@ -377,31 +439,45 @@ export function DashboardScreen() {
                       <View style={styles.accountCardFooter}>
                         <ThemedText style={styles.accountNameLight}>{account.name}</ThemedText>
                         <ThemedText style={styles.accountNumber}>
-                          {account.card_last_four ? `**** ${account.card_last_four}` : account.bank_name || 'Efectivo'}
+                          {account.card_last_four
+                            ? `**** ${account.card_last_four}`
+                            : account.bank_name || 'Efectivo'}
                         </ThemedText>
-                        <ThemedText style={styles.accountBalance} numberOfLines={1} adjustsFontSizeToFit>{formatCurrency(displayBalance)}</ThemedText>
+                        <ThemedText style={styles.accountBalance} numberOfLines={1} adjustsFontSizeToFit>
+                          {formatCurrency(displayBalance)}
+                        </ThemedText>
                       </View>
                     </TouchableOpacity>
                   );
                 }
-                
+
                 return (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     key={account.id}
                     style={[styles.accountCard, { backgroundColor: surfaceColor, borderColor }]}
                     onPress={() => router.push(`/accounts/account-detail?id=${account.id}`)}
                   >
                     <View style={styles.accountCardHeader}>
-                      <IconSymbol size={22} name={getAccountIcon(account.type) as any} color={primary} />
+                      <IconSymbol
+                        size={22}
+                        name={getAccountIcon(account.type) as IconSymbolName}
+                        color={primary}
+                      />
                     </View>
                     <View style={styles.accountCardFooter}>
                       <ThemedText style={[styles.accountNameMuted, { color: textMuted }]}>
                         {account.name}
                       </ThemedText>
                       <ThemedText style={[styles.accountNumberDark, { color: textMain }]}>
-                        {account.card_last_four ? `**** ${account.card_last_four}` : account.bank_name || 'Efectivo'}
+                        {account.card_last_four
+                          ? `**** ${account.card_last_four}`
+                          : account.bank_name || 'Efectivo'}
                       </ThemedText>
-                      <ThemedText style={[styles.accountBalanceDark, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
+                      <ThemedText
+                        style={[styles.accountBalanceDark, { color: textMain }]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                      >
                         {formatCurrency(displayBalance)}
                       </ThemedText>
                     </View>
@@ -411,7 +487,7 @@ export function DashboardScreen() {
             )}
 
             {/* Add New Card */}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.addAccountCard, { borderColor: addAccountBorderColor }]}
               onPress={() => router.push('/accounts/add-account')}
             >
@@ -424,7 +500,7 @@ export function DashboardScreen() {
 
         {/* Savings Goals Section */}
         {savingsGoalsSummary && savingsGoalsSummary.active_goals > 0 && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.savingsGoalsCard, { backgroundColor: surfaceColor, borderColor }]}
             onPress={() => router.push('/savings-goals')}
           >
@@ -438,7 +514,9 @@ export function DashboardScreen() {
                     Objetivos de Ahorro
                   </ThemedText>
                   <ThemedText style={[styles.savingsGoalsSubtitle, { color: textMuted }]}>
-                    {savingsGoalsSummary.active_goals} objetivo{savingsGoalsSummary.active_goals !== 1 ? 's' : ''} activo{savingsGoalsSummary.active_goals !== 1 ? 's' : ''}
+                    {savingsGoalsSummary.active_goals} objetivo
+                    {savingsGoalsSummary.active_goals !== 1 ? 's' : ''} activo
+                    {savingsGoalsSummary.active_goals !== 1 ? 's' : ''}
                   </ThemedText>
                 </View>
               </View>
@@ -446,31 +524,35 @@ export function DashboardScreen() {
             </View>
 
             <View style={[styles.savingsGoalsProgress, { backgroundColor: progressBarBg }]}>
-              <View 
+              <View
                 style={[
-                  styles.savingsGoalsProgressFill, 
-                  { 
-                    width: `${Math.min(savingsGoalsSummary.completion_percentage, 100)}%`, 
-                    backgroundColor: primary 
-                  }
-                ]} 
+                  styles.savingsGoalsProgressFill,
+                  {
+                    width: `${Math.min(savingsGoalsSummary.completion_percentage, 100)}%`,
+                    backgroundColor: primary,
+                  },
+                ]}
               />
             </View>
 
             <View style={styles.savingsGoalsAmounts}>
               <View style={{ flex: 1 }}>
-                <ThemedText style={[styles.savingsGoalsLabel, { color: textMuted }]}>
-                  Ahorrado
-                </ThemedText>
-                <ThemedText style={[styles.savingsGoalsAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
+                <ThemedText style={[styles.savingsGoalsLabel, { color: textMuted }]}>Ahorrado</ThemedText>
+                <ThemedText
+                  style={[styles.savingsGoalsAmount, { color: textMain }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   {formatCurrency(savingsGoalsSummary.total_saved)}
                 </ThemedText>
               </View>
               <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                <ThemedText style={[styles.savingsGoalsLabel, { color: textMuted }]}>
-                  Meta Total
-                </ThemedText>
-                <ThemedText style={[styles.savingsGoalsAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
+                <ThemedText style={[styles.savingsGoalsLabel, { color: textMuted }]}>Meta Total</ThemedText>
+                <ThemedText
+                  style={[styles.savingsGoalsAmount, { color: textMain }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   {formatCurrency(savingsGoalsSummary.total_target)}
                 </ThemedText>
               </View>
@@ -486,7 +568,7 @@ export function DashboardScreen() {
 
         {/* Loans Section */}
         {loansSummary && loansSummary.active_loans > 0 && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.loansCard, { backgroundColor: surfaceColor, borderColor }]}
             onPress={() => router.push('/loans')}
           >
@@ -496,11 +578,10 @@ export function DashboardScreen() {
                   <IconSymbol size={24} name="doc.text" color="#f59e0b" />
                 </View>
                 <View>
-                  <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-                    Préstamos
-                  </ThemedText>
+                  <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Préstamos</ThemedText>
                   <ThemedText style={[styles.loansSubtitle, { color: textMuted }]}>
-                    {loansSummary.active_loans} préstamo{loansSummary.active_loans !== 1 ? 's' : ''} activo{loansSummary.active_loans !== 1 ? 's' : ''}
+                    {loansSummary.active_loans} préstamo{loansSummary.active_loans !== 1 ? 's' : ''} activo
+                    {loansSummary.active_loans !== 1 ? 's' : ''}
                   </ThemedText>
                 </View>
               </View>
@@ -512,29 +593,35 @@ export function DashboardScreen() {
                 <ThemedText style={[styles.loansLabel, { color: textMuted }]}>
                   Pendiente por Cobrar
                 </ThemedText>
-                <ThemedText style={[styles.loansAmount, { color: '#f59e0b' }]} numberOfLines={1} adjustsFontSizeToFit>
+                <ThemedText
+                  style={[styles.loansAmount, { color: '#f59e0b' }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   {formatCurrency(loansSummary.total_pending)}
                 </ThemedText>
               </View>
               <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                <ThemedText style={[styles.loansLabel, { color: textMuted }]}>
-                  Total Prestado
-                </ThemedText>
-                <ThemedText style={[styles.loansAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
+                <ThemedText style={[styles.loansLabel, { color: textMuted }]}>Total Prestado</ThemedText>
+                <ThemedText
+                  style={[styles.loansAmount, { color: textMain }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   {formatCurrency(loansSummary.total_lent)}
                 </ThemedText>
               </View>
             </View>
 
             <View style={[styles.loansProgress, { backgroundColor: progressBarBg }]}>
-              <View 
+              <View
                 style={[
-                  styles.loansProgressFill, 
-                  { 
-                    width: `${Math.min(loansSummary.recovery_percentage, 100)}%`, 
-                    backgroundColor: '#10b981' 
-                  }
-                ]} 
+                  styles.loansProgressFill,
+                  {
+                    width: `${Math.min(loansSummary.recovery_percentage, 100)}%`,
+                    backgroundColor: '#10b981',
+                  },
+                ]}
               />
             </View>
 
@@ -558,11 +645,10 @@ export function DashboardScreen() {
                   <IconSymbol size={24} name="chart.pie.fill" color="#9333ea" />
                 </View>
                 <View>
-                  <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-                    Presupuestos
-                  </ThemedText>
+                  <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Presupuestos</ThemedText>
                   <ThemedText style={[styles.budgetsSubtitle, { color: textMuted }]}>
-                    {budgets.length} presupuesto{budgets.length !== 1 ? 's' : ''} activo{budgets.length !== 1 ? 's' : ''}
+                    {budgets.length} presupuesto{budgets.length !== 1 ? 's' : ''} activo
+                    {budgets.length !== 1 ? 's' : ''}
                   </ThemedText>
                 </View>
               </View>
@@ -573,11 +659,18 @@ export function DashboardScreen() {
               const percentage = budget.amount > 0 ? (budget.current_amount / budget.amount) * 100 : 0;
               const barColor = percentage >= 100 ? '#ef4444' : percentage >= 80 ? '#f59e0b' : '#10b981';
               return (
-                <View key={budget.id} style={[styles.budgetItem, index < Math.min(budgets.length, 3) - 1 && { marginBottom: 12 }]}>
+                <View
+                  key={budget.id}
+                  style={[styles.budgetItem, index < Math.min(budgets.length, 3) - 1 && { marginBottom: 12 }]}
+                >
                   <View style={styles.budgetItemHeader}>
                     <View style={styles.budgetItemInfo}>
                       <View style={[styles.budgetItemIcon, { backgroundColor: (budget.color ?? '') + '20' }]}>
-                        <IconSymbol size={16} name={budget.icon as IconSymbolName} color={budget.color ?? textMuted} />
+                        <IconSymbol
+                          size={16}
+                          name={budget.icon as IconSymbolName}
+                          color={budget.color ?? textMuted}
+                        />
                       </View>
                       <ThemedText style={[styles.budgetItemName, { color: textMain }]}>
                         {budget.name}
@@ -591,7 +684,7 @@ export function DashboardScreen() {
                     <View
                       style={[
                         styles.budgetProgressFill,
-                        { width: `${Math.min(percentage, 100)}%`, backgroundColor: barColor }
+                        { width: `${Math.min(percentage, 100)}%`, backgroundColor: barColor },
                       ]}
                     />
                   </View>
@@ -613,11 +706,10 @@ export function DashboardScreen() {
                   <IconSymbol size={24} name="repeat" color="#3b82f6" />
                 </View>
                 <View>
-                  <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-                    Suscripciones
-                  </ThemedText>
+                  <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Suscripciones</ThemedText>
                   <ThemedText style={[styles.subscriptionsSubtitle, { color: textMuted }]}>
-                    {subscriptionsSummary.total_active} activa{subscriptionsSummary.total_active !== 1 ? 's' : ''}
+                    {subscriptionsSummary.total_active} activa
+                    {subscriptionsSummary.total_active !== 1 ? 's' : ''}
                   </ThemedText>
                 </View>
               </View>
@@ -629,7 +721,11 @@ export function DashboardScreen() {
                 <ThemedText style={[styles.subscriptionsLabel, { color: textMuted }]}>
                   Gastos Recurrentes /mes
                 </ThemedText>
-                <ThemedText style={[styles.subscriptionsAmount, { color: '#ef4444' }]} numberOfLines={1} adjustsFontSizeToFit>
+                <ThemedText
+                  style={[styles.subscriptionsAmount, { color: '#ef4444' }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   -{formatCurrency(subscriptionsSummary.monthly_recurring_expenses)}
                 </ThemedText>
               </View>
@@ -637,7 +733,11 @@ export function DashboardScreen() {
                 <ThemedText style={[styles.subscriptionsLabel, { color: textMuted }]}>
                   Ingresos Recurrentes /mes
                 </ThemedText>
-                <ThemedText style={[styles.subscriptionsAmount, { color: '#10b981' }]} numberOfLines={1} adjustsFontSizeToFit>
+                <ThemedText
+                  style={[styles.subscriptionsAmount, { color: '#10b981' }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   +{formatCurrency(subscriptionsSummary.monthly_recurring_income)}
                 </ThemedText>
               </View>
@@ -645,9 +745,7 @@ export function DashboardScreen() {
 
             {subscriptionsSummary.upcoming_payments.length > 0 && (
               <View style={[styles.upcomingSection, { borderTopColor: borderColor }]}>
-                <ThemedText style={[styles.upcomingTitle, { color: textMuted }]}>
-                  Próximos cobros
-                </ThemedText>
+                <ThemedText style={[styles.upcomingTitle, { color: textMuted }]}>Próximos cobros</ThemedText>
                 {subscriptionsSummary.upcoming_payments.slice(0, 3).map((up) => (
                   <View key={up.id} style={styles.upcomingItem}>
                     <View style={styles.upcomingItemLeft}>
@@ -660,10 +758,14 @@ export function DashboardScreen() {
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
                       <ThemedText style={[styles.upcomingItemAmount, { color: textMain }]}>
-                        {up.type === 'salary' || up.type === 'recurring_income' ? '+' : '-'}{formatCurrency(up.amount)}
+                        {up.type === 'salary' || up.type === 'recurring_income' ? '+' : '-'}
+                        {formatCurrency(up.amount)}
                       </ThemedText>
                       <ThemedText style={[styles.upcomingItemDate, { color: textMuted }]}>
-                        {new Date(up.next_date ?? '').toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                        {new Date(up.next_date ?? '').toLocaleDateString('es-MX', {
+                          day: 'numeric',
+                          month: 'short',
+                        })}
                       </ThemedText>
                     </View>
                   </View>
@@ -685,9 +787,7 @@ export function DashboardScreen() {
                   <IconSymbol size={24} name="car" color="#3b82f6" />
                 </View>
                 <View>
-                  <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-                    Vehículo
-                  </ThemedText>
+                  <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Vehículo</ThemedText>
                   <ThemedText style={[styles.vehiclesSubtitle, { color: textMuted }]}>
                     {vehiclesSummary.vehicle.name}
                   </ThemedText>
@@ -715,18 +815,22 @@ export function DashboardScreen() {
 
             <View style={styles.vehiclesAmounts}>
               <View style={{ flex: 1 }}>
-                <ThemedText style={[styles.vehiclesLabel, { color: textMuted }]}>
-                  Gasto este mes
-                </ThemedText>
-                <ThemedText style={[styles.vehiclesAmount, { color: '#ef4444' }]} numberOfLines={1} adjustsFontSizeToFit>
+                <ThemedText style={[styles.vehiclesLabel, { color: textMuted }]}>Gasto este mes</ThemedText>
+                <ThemedText
+                  style={[styles.vehiclesAmount, { color: '#ef4444' }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   {formatCurrency(vehiclesSummary.stats.month_total_cost)}
                 </ThemedText>
               </View>
               <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                <ThemedText style={[styles.vehiclesLabel, { color: textMuted }]}>
-                  Gasto total
-                </ThemedText>
-                <ThemedText style={[styles.vehiclesAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
+                <ThemedText style={[styles.vehiclesLabel, { color: textMuted }]}>Gasto total</ThemedText>
+                <ThemedText
+                  style={[styles.vehiclesAmount, { color: textMain }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   {formatCurrency(vehiclesSummary.stats.total_cost)}
                 </ThemedText>
               </View>
@@ -738,9 +842,7 @@ export function DashboardScreen() {
         {recentMovements.length > 0 && (
           <View style={[styles.recentCard, { backgroundColor: surfaceColor, borderColor }]}>
             <View style={styles.sectionHeader}>
-              <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-                Últimos Movimientos
-              </ThemedText>
+              <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Últimos Movimientos</ThemedText>
               <TouchableOpacity onPress={() => router.push('/(tabs)/movements')}>
                 <ThemedText style={[styles.linkText, { color: primary }]}>Ver todo</ThemedText>
               </TouchableOpacity>
@@ -749,13 +851,22 @@ export function DashboardScreen() {
             {recentMovements.map((movement, index) => {
               const isIncome = movement.type === 'income';
               const isTransfer = movement.type === 'transfer';
-              const iconName = movement.category_icon || (isTransfer ? 'arrow.left.arrow.right' : isIncome ? 'arrow.down' : 'arrow.up');
-              const iconColor = movement.category_color || (isTransfer ? '#3b82f6' : isIncome ? primary : '#ef4444');
+              const iconName =
+                movement.category_icon ||
+                (isTransfer ? 'arrow.left.arrow.right' : isIncome ? 'arrow.down' : 'arrow.up');
+              const iconColor =
+                movement.category_color || (isTransfer ? '#3b82f6' : isIncome ? primary : '#ef4444');
 
               return (
                 <TouchableOpacity
                   key={movement.id}
-                  style={[styles.recentItem, index < recentMovements.length - 1 && { borderBottomWidth: 1, borderBottomColor: borderColor }]}
+                  style={[
+                    styles.recentItem,
+                    index < recentMovements.length - 1 && {
+                      borderBottomWidth: 1,
+                      borderBottomColor: borderColor,
+                    },
+                  ]}
                   onPress={() => router.push(`/movements/movement-detail?id=${movement.id}`)}
                 >
                   <View style={styles.recentItemLeft}>
@@ -767,12 +878,22 @@ export function DashboardScreen() {
                         {movement.title}
                       </ThemedText>
                       <ThemedText style={[styles.recentItemDate, { color: textMuted }]}>
-                        {new Date(movement.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+                        {new Date(movement.date).toLocaleDateString('es-MX', {
+                          day: 'numeric',
+                          month: 'short',
+                        })}
                       </ThemedText>
                     </View>
                   </View>
-                  <ThemedText style={[styles.recentItemAmount, { color: isIncome ? primary : isTransfer ? '#3b82f6' : textMain }]} numberOfLines={1}>
-                    {isIncome ? '+' : isTransfer ? '' : '-'}{formatCurrency(movement.amount)}
+                  <ThemedText
+                    style={[
+                      styles.recentItemAmount,
+                      { color: isIncome ? primary : isTransfer ? '#3b82f6' : textMain },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {isIncome ? '+' : isTransfer ? '' : '-'}
+                    {formatCurrency(movement.amount)}
                   </ThemedText>
                 </TouchableOpacity>
               );
@@ -783,9 +904,7 @@ export function DashboardScreen() {
         {/* Categories Section */}
         <View style={[styles.categoriesCard, { backgroundColor: surfaceColor, borderColor }]}>
           <View style={styles.sectionHeader}>
-            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-              Gasto por Categoría
-            </ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Gasto por Categoría</ThemedText>
             <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}>
               <ThemedText style={[styles.linkText, { color: primary }]}>Estadísticas</ThemedText>
             </TouchableOpacity>
@@ -810,7 +929,11 @@ export function DashboardScreen() {
                     <View style={styles.categoryRow}>
                       <View style={styles.categoryInfo}>
                         <View style={[styles.categoryIcon, { backgroundColor: bgColor }]}>
-                          <IconSymbol size={20} name={category.category_icon as any} color={category.category_color} />
+                          <IconSymbol
+                            size={20}
+                            name={category.category_icon as IconSymbolName}
+                            color={category.category_color}
+                          />
                         </View>
                         <View>
                           <ThemedText style={[styles.categoryName, { color: textMain }]}>
@@ -826,7 +949,12 @@ export function DashboardScreen() {
                       </ThemedText>
                     </View>
                     <View style={[styles.progressBar, { backgroundColor: progressBarBg }]}>
-                      <View style={[styles.progressFill, { width: `${percentage}%`, backgroundColor: category.category_color }]} />
+                      <View
+                        style={[
+                          styles.progressFill,
+                          { width: `${percentage}%`, backgroundColor: category.category_color },
+                        ]}
+                      />
                     </View>
                   </View>
                 );
@@ -840,10 +968,7 @@ export function DashboardScreen() {
       </ScrollView>
 
       {/* Floating Action Button */}
-      <TouchableOpacity 
-        style={styles.fab}
-        onPress={() => router.push('/movements/add-movement')}
-      >
+      <TouchableOpacity style={styles.fab} onPress={() => router.push('/movements/add-movement')}>
         <IconSymbol size={28} name="plus" color="white" />
       </TouchableOpacity>
     </ThemedView>

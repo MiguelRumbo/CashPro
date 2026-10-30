@@ -1,17 +1,28 @@
 import { useState, useCallback } from 'react';
-import { ScrollView, View, StyleSheet, TouchableOpacity, Alert, Modal, TextInput, RefreshControl, Platform } from 'react-native';
-import { router, useLocalSearchParams, useFocusEffect, Stack } from 'expo-router';
+import {
+  ScrollView,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  TextInput,
+  RefreshControl,
+  Platform,
+} from 'react-native';
+import { useLocalSearchParams, useFocusEffect, Stack } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
 import { useThemeColor } from '@/core/ui-kit/use-theme-color';
-import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
+import { IconSymbol } from '@/core/ui-kit/icon-symbol';
 import { useCurrency } from '@/core/preferences/use-currency';
 import { accountsQueryKey, type AccountRecord, type LoanRecord } from '@/core/contracts/finance';
 import { ok } from '@/core/contracts/result';
-import { useCapability } from '@/core/registry/react';
+import { useCapability, useErrorReporter } from '@/core/registry/react';
 import { getLoansRuntime } from '../runtime';
-import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
+import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 type Loan = LoanRecord;
 
@@ -55,7 +66,7 @@ export function LoanDetailScreen() {
   const warning = '#f59e0b';
   const inputBg = useThemeColor({ light: '#f9fafb', dark: '#1f2937' }, 'inputBackground');
 
-  const fetchLoanData = async () => {
+  const fetchLoanData = useStableCallback(async () => {
     try {
       const loanResult = loansService.getLoanById(Number(id));
       const paymentsResult = loansService.getLoanPayments(Number(id));
@@ -73,7 +84,9 @@ export function LoanDetailScreen() {
         setAccounts(accountsResult.data);
         // Seleccionar la cuenta del préstamo por defecto
         if (accountsResult.data.length > 0 && !selectedAccount) {
-          const loanAccount = accountsResult.data.find((a) => loanResult.success && a.id === loanResult.data.account_id);
+          const loanAccount = accountsResult.data.find(
+            (a) => loanResult.success && a.id === loanResult.data.account_id,
+          );
           setSelectedAccount(loanAccount ?? accountsResult.data[0] ?? null);
         }
       }
@@ -81,7 +94,7 @@ export function LoanDetailScreen() {
       reportError('Error al cargar datos:', error);
       Alert.alert('Error', 'No se pudieron cargar los datos del préstamo');
     }
-  };
+  });
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -92,7 +105,7 @@ export function LoanDetailScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchLoanData();
-    }, [id])
+    }, [fetchLoanData]),
   );
 
   const handleAddPayment = async () => {
@@ -141,7 +154,7 @@ export function LoanDetailScreen() {
     }
   };
 
-  const onPaymentDateChange = (event: any, selectedDate?: Date) => {
+  const onPaymentDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowPaymentDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
       setPaymentDate(selectedDate);
@@ -170,12 +183,12 @@ export function LoanDetailScreen() {
               } else {
                 Alert.alert('Error', result.error);
               }
-            } catch (error) {
+            } catch {
               Alert.alert('Error', 'No se pudo condonar el préstamo');
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -195,7 +208,7 @@ export function LoanDetailScreen() {
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
-      <Stack.Screen 
+      <Stack.Screen
         options={{
           title: loan.person_name,
           headerShown: true,
@@ -204,9 +217,7 @@ export function LoanDetailScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}
       >
         {/* Header Card */}
         <View style={[styles.headerCard, { backgroundColor: surfaceColor, borderColor }]}>
@@ -214,14 +225,10 @@ export function LoanDetailScreen() {
             <IconSymbol name="person.fill" size={32} color={primary} />
           </View>
 
-          <ThemedText style={[styles.personName, { color: textMain }]}>
-            {loan.person_name}
-          </ThemedText>
+          <ThemedText style={[styles.personName, { color: textMain }]}>{loan.person_name}</ThemedText>
 
           <View style={styles.amountContainer}>
-            <ThemedText style={[styles.amountLabel, { color: textMuted }]}>
-              Monto prestado
-            </ThemedText>
+            <ThemedText style={[styles.amountLabel, { color: textMuted }]}>Monto prestado</ThemedText>
             <ThemedText style={[styles.amountValue, { color: textMain }]}>
               {formatCurrency(loan.amount)}
             </ThemedText>
@@ -230,12 +237,7 @@ export function LoanDetailScreen() {
           {/* Barra de progreso */}
           <View style={styles.progressSection}>
             <View style={[styles.progressBar, { backgroundColor: borderColor }]}>
-              <View 
-                style={[
-                  styles.progressFill, 
-                  { width: `${progress}%`, backgroundColor: success }
-                ]} 
-              />
+              <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: success }]} />
             </View>
             <View style={styles.progressLabels}>
               <ThemedText style={[styles.progressText, { color: success }]}>
@@ -251,65 +253,76 @@ export function LoanDetailScreen() {
         {/* Información */}
         <View style={[styles.infoCard, { backgroundColor: surfaceColor, borderColor }]}>
           <View style={styles.infoRow}>
-            <ThemedText style={[styles.infoLabel, { color: textMuted }]}>
-              Fecha del préstamo
-            </ThemedText>
+            <ThemedText style={[styles.infoLabel, { color: textMuted }]}>Fecha del préstamo</ThemedText>
             <ThemedText style={[styles.infoValue, { color: textMain }]}>
-              {new Date(loan.date).toLocaleDateString('es-MX', { 
-                day: 'numeric', 
-                month: 'long', 
-                year: 'numeric' 
+              {new Date(loan.date).toLocaleDateString('es-MX', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
               })}
             </ThemedText>
           </View>
 
           {loan.due_date && (
             <View style={styles.infoRow}>
-              <ThemedText style={[styles.infoLabel, { color: textMuted }]}>
-                Fecha límite
-              </ThemedText>
+              <ThemedText style={[styles.infoLabel, { color: textMuted }]}>Fecha límite</ThemedText>
               <ThemedText style={[styles.infoValue, { color: textMain }]}>
-                {new Date(loan.due_date).toLocaleDateString('es-MX', { 
-                  day: 'numeric', 
-                  month: 'long', 
-                  year: 'numeric' 
+                {new Date(loan.due_date).toLocaleDateString('es-MX', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
                 })}
               </ThemedText>
             </View>
           )}
 
           <View style={styles.infoRow}>
-            <ThemedText style={[styles.infoLabel, { color: textMuted }]}>
-              Estado
-            </ThemedText>
-            <View style={[styles.statusBadge, { 
-              backgroundColor: loan.status === 'paid' ? success + '20' : 
-                              loan.status === 'partial' ? warning + '20' : 
-                              loan.status === 'forgiven' ? textMuted + '20' : 
-                              primary + '20' 
-            }]}>
-              <ThemedText style={[styles.statusText, { 
-                color: loan.status === 'paid' ? success : 
-                       loan.status === 'partial' ? warning : 
-                       loan.status === 'forgiven' ? textMuted : 
-                       primary 
-              }]}>
-                {loan.status === 'paid' ? 'Pagado' : 
-                 loan.status === 'partial' ? 'Parcial' : 
-                 loan.status === 'forgiven' ? 'Condonado' : 
-                 'Activo'}
+            <ThemedText style={[styles.infoLabel, { color: textMuted }]}>Estado</ThemedText>
+            <View
+              style={[
+                styles.statusBadge,
+                {
+                  backgroundColor:
+                    loan.status === 'paid'
+                      ? success + '20'
+                      : loan.status === 'partial'
+                        ? warning + '20'
+                        : loan.status === 'forgiven'
+                          ? textMuted + '20'
+                          : primary + '20',
+                },
+              ]}
+            >
+              <ThemedText
+                style={[
+                  styles.statusText,
+                  {
+                    color:
+                      loan.status === 'paid'
+                        ? success
+                        : loan.status === 'partial'
+                          ? warning
+                          : loan.status === 'forgiven'
+                            ? textMuted
+                            : primary,
+                  },
+                ]}
+              >
+                {loan.status === 'paid'
+                  ? 'Pagado'
+                  : loan.status === 'partial'
+                    ? 'Parcial'
+                    : loan.status === 'forgiven'
+                      ? 'Condonado'
+                      : 'Activo'}
               </ThemedText>
             </View>
           </View>
 
           {loan.notes && (
             <View style={styles.infoRow}>
-              <ThemedText style={[styles.infoLabel, { color: textMuted }]}>
-                Notas
-              </ThemedText>
-              <ThemedText style={[styles.infoValue, { color: textMain }]}>
-                {loan.notes}
-              </ThemedText>
+              <ThemedText style={[styles.infoLabel, { color: textMuted }]}>Notas</ThemedText>
+              <ThemedText style={[styles.infoValue, { color: textMain }]}>{loan.notes}</ThemedText>
             </View>
           )}
         </View>
@@ -322,7 +335,10 @@ export function LoanDetailScreen() {
 
           {payments.length > 0 ? (
             payments.map((payment) => (
-              <View key={payment.id} style={[styles.paymentCard, { backgroundColor: surfaceColor, borderColor }]}>
+              <View
+                key={payment.id}
+                style={[styles.paymentCard, { backgroundColor: surfaceColor, borderColor }]}
+              >
                 <View style={styles.paymentHeader}>
                   <View style={[styles.paymentIcon, { backgroundColor: success + '20' }]}>
                     <IconSymbol name="checkmark.circle.fill" size={20} color={success} />
@@ -332,18 +348,16 @@ export function LoanDetailScreen() {
                       {formatCurrency(payment.amount)}
                     </ThemedText>
                     <ThemedText style={[styles.paymentDate, { color: textMuted }]}>
-                      {new Date(payment.date).toLocaleDateString('es-MX', { 
-                        day: 'numeric', 
-                        month: 'short', 
-                        year: 'numeric' 
+                      {new Date(payment.date).toLocaleDateString('es-MX', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
                       })}
                     </ThemedText>
                   </View>
                 </View>
                 {payment.notes && (
-                  <ThemedText style={[styles.paymentNotes, { color: textMuted }]}>
-                    {payment.notes}
-                  </ThemedText>
+                  <ThemedText style={[styles.paymentNotes, { color: textMuted }]}>{payment.notes}</ThemedText>
                 )}
               </View>
             ))
@@ -362,21 +376,14 @@ export function LoanDetailScreen() {
       {/* Botones de acción */}
       {loan.status !== 'paid' && loan.status !== 'forgiven' && (
         <View style={[styles.footer, { backgroundColor: surfaceColor, borderTopColor: borderColor }]}>
-          <TouchableOpacity
-            style={[styles.secondaryButton, { borderColor }]}
-            onPress={handleForgive}
-          >
-            <ThemedText style={[styles.secondaryButtonText, { color: textMain }]}>
-              Condonar
-            </ThemedText>
+          <TouchableOpacity style={[styles.secondaryButton, { borderColor }]} onPress={handleForgive}>
+            <ThemedText style={[styles.secondaryButtonText, { color: textMain }]}>Condonar</ThemedText>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.primaryButton, { backgroundColor: primary }]}
             onPress={() => setShowPaymentModal(true)}
           >
-            <ThemedText style={styles.primaryButtonText}>
-              Registrar Pago
-            </ThemedText>
+            <ThemedText style={styles.primaryButtonText}>Registrar Pago</ThemedText>
           </TouchableOpacity>
         </View>
       )}
@@ -391,9 +398,7 @@ export function LoanDetailScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
             <View style={styles.modalHeader}>
-              <ThemedText style={[styles.modalTitle, { color: textMain }]}>
-                Registrar Pago
-              </ThemedText>
+              <ThemedText style={[styles.modalTitle, { color: textMain }]}>Registrar Pago</ThemedText>
               <TouchableOpacity onPress={() => setShowPaymentModal(false)}>
                 <IconSymbol name="xmark" size={24} color={textMuted} />
               </TouchableOpacity>
@@ -401,9 +406,7 @@ export function LoanDetailScreen() {
 
             <View style={styles.modalBody}>
               <View style={styles.field}>
-                <ThemedText style={[styles.label, { color: textMain }]}>
-                  Monto del pago *
-                </ThemedText>
+                <ThemedText style={[styles.label, { color: textMain }]}>Monto del pago *</ThemedText>
                 <TextInput
                   style={[styles.input, { backgroundColor: inputBg, color: textMain, borderColor }]}
                   value={paymentAmount}
@@ -415,19 +418,17 @@ export function LoanDetailScreen() {
               </View>
 
               <View style={styles.field}>
-                <ThemedText style={[styles.label, { color: textMain }]}>
-                  Fecha del pago *
-                </ThemedText>
+                <ThemedText style={[styles.label, { color: textMain }]}>Fecha del pago *</ThemedText>
                 <TouchableOpacity
                   style={[styles.dateButton, { backgroundColor: inputBg, borderColor }]}
                   onPress={() => setShowPaymentDatePicker(true)}
                 >
                   <IconSymbol name="calendar" size={20} color={textMuted} />
                   <ThemedText style={[styles.dateButtonText, { color: textMain }]}>
-                    {paymentDate.toLocaleDateString('es-MX', { 
-                      day: 'numeric', 
-                      month: 'long', 
-                      year: 'numeric' 
+                    {paymentDate.toLocaleDateString('es-MX', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
                     })}
                   </ThemedText>
                 </TouchableOpacity>
@@ -444,9 +445,7 @@ export function LoanDetailScreen() {
 
               {/* Selector de cuenta */}
               <View style={styles.field}>
-                <ThemedText style={[styles.label, { color: textMain }]}>
-                  Cuenta destino *
-                </ThemedText>
+                <ThemedText style={[styles.label, { color: textMain }]}>Cuenta destino *</ThemedText>
                 <TouchableOpacity
                   style={[styles.accountSelector, { backgroundColor: inputBg, borderColor }]}
                   onPress={() => setShowAccountPicker(true)}
@@ -472,9 +471,7 @@ export function LoanDetailScreen() {
               </View>
 
               <View style={styles.field}>
-                <ThemedText style={[styles.label, { color: textMain }]}>
-                  Notas (opcional)
-                </ThemedText>
+                <ThemedText style={[styles.label, { color: textMain }]}>Notas (opcional)</ThemedText>
                 <TextInput
                   style={[styles.textArea, { backgroundColor: inputBg, color: textMain, borderColor }]}
                   value={paymentNotes}
@@ -513,9 +510,7 @@ export function LoanDetailScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.pickerModalContent, { backgroundColor: surfaceColor }]}>
             <View style={styles.modalHeader}>
-              <ThemedText style={[styles.modalTitle, { color: textMain }]}>
-                Seleccionar Cuenta
-              </ThemedText>
+              <ThemedText style={[styles.modalTitle, { color: textMain }]}>Seleccionar Cuenta</ThemedText>
               <TouchableOpacity onPress={() => setShowAccountPicker(false)}>
                 <IconSymbol name="xmark" size={24} color={textMuted} />
               </TouchableOpacity>
@@ -530,7 +525,7 @@ export function LoanDetailScreen() {
                     {
                       backgroundColor: selectedAccount?.id === account.id ? primary + '10' : 'transparent',
                       borderColor,
-                    }
+                    },
                   ]}
                   onPress={() => {
                     setSelectedAccount(account);
@@ -543,7 +538,7 @@ export function LoanDetailScreen() {
                     </ThemedText>
                     <ThemedText style={[styles.accountItemBalance, { color: textMuted }]}>
                       {account.type === 'credit'
-                        ? `Crédito disponible: ${formatCurrency((account as any).credit_limit - (account as any).current_balance)}`
+                        ? `Crédito disponible: ${formatCurrency(account.credit_limit - account.current_balance)}`
                         : formatCurrency(account.balance)}
                     </ThemedText>
                   </View>

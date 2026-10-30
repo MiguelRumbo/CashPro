@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react';
-import { ScrollView, View, StyleSheet, TouchableOpacity, TextInput, Modal, Platform, Alert } from 'react-native';
+import {
+  ScrollView,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Modal,
+  Platform,
+  Alert,
+} from 'react-native';
 import { Stack, router } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ThemedText } from '@/core/ui-kit/themed-text';
@@ -8,12 +17,13 @@ import { useThemeColor } from '@/core/ui-kit/use-theme-color';
 import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
 import { formatCurrencyInput, getNumericValue } from '@/core/units/format';
 import { categories as CATEGORIES, type Category } from '../domain/categories';
-import { accountsQueryKey, type AccountRecord } from '@/core/contracts/finance';
+import { accountsQueryKey, type AccountRecord, MovementType } from '@/core/contracts/finance';
 import { ok } from '@/core/contracts/result';
-import { useCapability } from '@/core/registry/react';
+import { useCapability, useErrorReporter } from '@/core/registry/react';
 import { getMovementsRuntime } from '../runtime';
-import { useErrorReporter } from '@/core/registry/react';
-import type { MovementType } from '@/core/contracts/finance';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
+import type { MovementDraft } from '../domain/movement-rules';
+import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 type Account = AccountRecord;
 
 export function AddMovementScreen() {
@@ -42,11 +52,7 @@ export function AddMovementScreen() {
   const primary = '#20df60';
   const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#374151' }, 'border');
 
-  useEffect(() => {
-    fetchAccounts();
-  }, []);
-
-  const fetchAccounts = () => {
+  const fetchAccounts = useStableCallback(() => {
     try {
       const result = ok(accountsQuery?.list() ?? []);
 
@@ -62,20 +68,24 @@ export function AddMovementScreen() {
     } catch (error) {
       reportError('Error al cargar cuentas:', error);
     }
-  };
+  });
+
+  useEffect(() => {
+    fetchAccounts();
+  }, [fetchAccounts]);
 
   const handleAmountChange = (text: string) => {
     setAmount(formatCurrencyInput(text));
   };
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
+  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowDatePicker(false);
     if (selectedDate) {
       setDate(selectedDate);
     }
   };
 
-  const handleTimeChange = (event: any, selectedTime?: Date) => {
+  const handleTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
     setShowTimePicker(false);
     if (selectedTime) {
       const newDate = new Date(date);
@@ -115,7 +125,7 @@ export function AddMovementScreen() {
       return;
     }
 
-    const movementData: any = {
+    const movementData: MovementDraft = {
       type: movementType,
       amount: getNumericValue(amount),
       title: title.trim() || (movementType === 'transfer' ? 'Transferencia' : selectedCategory?.name),
@@ -140,7 +150,7 @@ export function AddMovementScreen() {
 
       if (result.success) {
         Alert.alert('Éxito', 'Movimiento creado exitosamente', [
-          { text: 'OK', onPress: () => router.back() }
+          { text: 'OK', onPress: () => router.back() },
         ]);
       } else {
         Alert.alert('Error', result.error || 'No se pudo crear el movimiento');
@@ -172,12 +182,21 @@ export function AddMovementScreen() {
             style={[
               styles.typeButton,
               movementType === 'expense' && styles.typeButtonActive,
-              { backgroundColor: movementType === 'expense' ? 'rgba(239, 68, 68, 0.1)' : surfaceColor, borderColor }
+              {
+                backgroundColor: movementType === 'expense' ? 'rgba(239, 68, 68, 0.1)' : surfaceColor,
+                borderColor,
+              },
             ]}
             onPress={() => setMovementType('expense')}
           >
-            <IconSymbol size={20} name="arrow.down" color={movementType === 'expense' ? '#ef4444' : textSub} />
-            <ThemedText style={[styles.typeButtonText, { color: movementType === 'expense' ? '#ef4444' : textSub }]}>
+            <IconSymbol
+              size={20}
+              name="arrow.down"
+              color={movementType === 'expense' ? '#ef4444' : textSub}
+            />
+            <ThemedText
+              style={[styles.typeButtonText, { color: movementType === 'expense' ? '#ef4444' : textSub }]}
+            >
               Gasto
             </ThemedText>
           </TouchableOpacity>
@@ -186,12 +205,17 @@ export function AddMovementScreen() {
             style={[
               styles.typeButton,
               movementType === 'income' && styles.typeButtonActive,
-              { backgroundColor: movementType === 'income' ? 'rgba(32, 223, 96, 0.1)' : surfaceColor, borderColor }
+              {
+                backgroundColor: movementType === 'income' ? 'rgba(32, 223, 96, 0.1)' : surfaceColor,
+                borderColor,
+              },
             ]}
             onPress={() => setMovementType('income')}
           >
             <IconSymbol size={20} name="arrow.up" color={movementType === 'income' ? primary : textSub} />
-            <ThemedText style={[styles.typeButtonText, { color: movementType === 'income' ? primary : textSub }]}>
+            <ThemedText
+              style={[styles.typeButtonText, { color: movementType === 'income' ? primary : textSub }]}
+            >
               Ingreso
             </ThemedText>
           </TouchableOpacity>
@@ -200,12 +224,21 @@ export function AddMovementScreen() {
             style={[
               styles.typeButton,
               movementType === 'transfer' && styles.typeButtonActive,
-              { backgroundColor: movementType === 'transfer' ? 'rgba(59, 130, 246, 0.1)' : surfaceColor, borderColor }
+              {
+                backgroundColor: movementType === 'transfer' ? 'rgba(59, 130, 246, 0.1)' : surfaceColor,
+                borderColor,
+              },
             ]}
             onPress={() => setMovementType('transfer')}
           >
-            <IconSymbol size={20} name="arrow.left.arrow.right" color={movementType === 'transfer' ? '#3b82f6' : textSub} />
-            <ThemedText style={[styles.typeButtonText, { color: movementType === 'transfer' ? '#3b82f6' : textSub }]}>
+            <IconSymbol
+              size={20}
+              name="arrow.left.arrow.right"
+              color={movementType === 'transfer' ? '#3b82f6' : textSub}
+            />
+            <ThemedText
+              style={[styles.typeButtonText, { color: movementType === 'transfer' ? '#3b82f6' : textSub }]}
+            >
               Transferir
             </ThemedText>
           </TouchableOpacity>
@@ -236,7 +269,11 @@ export function AddMovementScreen() {
             <View style={styles.sectionLeft}>
               {selectedCategory ? (
                 <View style={[styles.categoryIconSmall, { backgroundColor: selectedCategory.bg }]}>
-                  <IconSymbol size={20} name={selectedCategory.icon as IconSymbolName} color={selectedCategory.color} />
+                  <IconSymbol
+                    size={20}
+                    name={selectedCategory.icon as IconSymbolName}
+                    color={selectedCategory.color}
+                  />
                 </View>
               ) : (
                 <View style={[styles.categoryIconSmall, { backgroundColor: borderColor }]}>
@@ -274,7 +311,7 @@ export function AddMovementScreen() {
         </View>
 
         {/* Account (From) */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.section, { backgroundColor: surfaceColor, borderColor }]}
           onPress={() => setShowAccountModal(true)}
         >
@@ -296,7 +333,7 @@ export function AddMovementScreen() {
 
         {/* Account (To) - Only for transfer */}
         {movementType === 'transfer' && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.section, { backgroundColor: surfaceColor, borderColor }]}
             onPress={() => setShowToAccountModal(true)}
           >
@@ -324,9 +361,7 @@ export function AddMovementScreen() {
             <IconSymbol size={20} name="calendar" color={textSub} />
             <View style={styles.dateTimeInfo}>
               <ThemedText style={[styles.sectionLabel, { color: textSub }]}>Fecha</ThemedText>
-              <ThemedText style={[styles.sectionValue, { color: textMain }]}>
-                {formatDate(date)}
-              </ThemedText>
+              <ThemedText style={[styles.sectionValue, { color: textMain }]}>{formatDate(date)}</ThemedText>
             </View>
           </TouchableOpacity>
 
@@ -337,9 +372,7 @@ export function AddMovementScreen() {
             <IconSymbol size={20} name="clock" color={textSub} />
             <View style={styles.dateTimeInfo}>
               <ThemedText style={[styles.sectionLabel, { color: textSub }]}>Hora</ThemedText>
-              <ThemedText style={[styles.sectionValue, { color: textMain }]}>
-                {formatTime(date)}
-              </ThemedText>
+              <ThemedText style={[styles.sectionValue, { color: textMain }]}>{formatTime(date)}</ThemedText>
             </View>
           </TouchableOpacity>
         </View>
@@ -362,10 +395,7 @@ export function AddMovementScreen() {
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity 
-          style={[styles.saveButton, { backgroundColor: primary }]}
-          onPress={handleSave}
-        >
+        <TouchableOpacity style={[styles.saveButton, { backgroundColor: primary }]} onPress={handleSave}>
           <ThemedText style={styles.saveButtonText}>Guardar Movimiento</ThemedText>
         </TouchableOpacity>
 
@@ -410,10 +440,7 @@ export function AddMovementScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView
-              contentContainerStyle={styles.categoriesGrid}
-              showsVerticalScrollIndicator={false}
-            >
+            <ScrollView contentContainerStyle={styles.categoriesGrid} showsVerticalScrollIndicator={false}>
               {CATEGORIES.map((category) => (
                 <TouchableOpacity
                   key={category.id}
@@ -426,20 +453,21 @@ export function AddMovementScreen() {
                   <View style={[styles.categoryIcon, { backgroundColor: category.bg }]}>
                     <IconSymbol size={28} name={category.icon as IconSymbolName} color={category.color} />
                   </View>
-                  <ThemedText style={[styles.categoryName, { color: textMain }]}>
-                    {category.name}
-                  </ThemedText>
+                  <ThemedText style={[styles.categoryName, { color: textMain }]}>{category.name}</ThemedText>
                 </TouchableOpacity>
               ))}
 
               {/* Add Category Button */}
               <TouchableOpacity style={styles.categoryItem}>
-                <View style={[styles.categoryIcon, { backgroundColor: borderColor, borderWidth: 2, borderStyle: 'dashed', borderColor }]}>
+                <View
+                  style={[
+                    styles.categoryIcon,
+                    { backgroundColor: borderColor, borderWidth: 2, borderStyle: 'dashed', borderColor },
+                  ]}
+                >
                   <IconSymbol size={28} name="plus" color={textSub} />
                 </View>
-                <ThemedText style={[styles.categoryName, { color: textSub }]}>
-                  Agregar
-                </ThemedText>
+                <ThemedText style={[styles.categoryName, { color: textSub }]}>Agregar</ThemedText>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -456,9 +484,7 @@ export function AddMovementScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
             <View style={styles.modalHeader}>
-              <ThemedText style={[styles.modalTitle, { color: textMain }]}>
-                Selecciona una Cuenta
-              </ThemedText>
+              <ThemedText style={[styles.modalTitle, { color: textMain }]}>Selecciona una Cuenta</ThemedText>
               <TouchableOpacity onPress={() => setShowAccountModal(false)}>
                 <IconSymbol size={24} name="xmark" color={textSub} />
               </TouchableOpacity>
@@ -466,9 +492,10 @@ export function AddMovementScreen() {
 
             <ScrollView showsVerticalScrollIndicator={false}>
               {accounts.map((account) => {
-                const displayBal = account.type === 'credit'
-                  ? (account.credit_limit || 0) - (account.current_balance || 0)
-                  : account.balance;
+                const displayBal =
+                  account.type === 'credit'
+                    ? (account.credit_limit || 0) - (account.current_balance || 0)
+                    : account.balance;
                 return (
                   <TouchableOpacity
                     key={account.id}
@@ -478,9 +505,7 @@ export function AddMovementScreen() {
                       setShowAccountModal(false);
                     }}
                   >
-                    <ThemedText style={[styles.accountName, { color: textMain }]}>
-                      {account.name}
-                    </ThemedText>
+                    <ThemedText style={[styles.accountName, { color: textMain }]}>{account.name}</ThemedText>
                     <ThemedText style={[styles.accountBalance, { color: textSub }]}>
                       {account.type === 'credit' ? 'Disponible: ' : ''}${displayBal.toFixed(2)}
                     </ThemedText>
@@ -511,28 +536,31 @@ export function AddMovementScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              {accounts.filter(a => a.id !== selectedAccount?.id).map((account) => {
-                const displayBal = account.type === 'credit'
-                  ? (account.credit_limit || 0) - (account.current_balance || 0)
-                  : account.balance;
-                return (
-                  <TouchableOpacity
-                    key={account.id}
-                    style={[styles.accountItem, { borderBottomColor: borderColor }]}
-                    onPress={() => {
-                      setSelectedToAccount(account);
-                      setShowToAccountModal(false);
-                    }}
-                  >
-                    <ThemedText style={[styles.accountName, { color: textMain }]}>
-                      {account.name}
-                    </ThemedText>
-                    <ThemedText style={[styles.accountBalance, { color: textSub }]}>
-                      {account.type === 'credit' ? 'Disponible: ' : ''}${displayBal.toFixed(2)}
-                    </ThemedText>
-                  </TouchableOpacity>
-                );
-              })}
+              {accounts
+                .filter((a) => a.id !== selectedAccount?.id)
+                .map((account) => {
+                  const displayBal =
+                    account.type === 'credit'
+                      ? (account.credit_limit || 0) - (account.current_balance || 0)
+                      : account.balance;
+                  return (
+                    <TouchableOpacity
+                      key={account.id}
+                      style={[styles.accountItem, { borderBottomColor: borderColor }]}
+                      onPress={() => {
+                        setSelectedToAccount(account);
+                        setShowToAccountModal(false);
+                      }}
+                    >
+                      <ThemedText style={[styles.accountName, { color: textMain }]}>
+                        {account.name}
+                      </ThemedText>
+                      <ThemedText style={[styles.accountBalance, { color: textSub }]}>
+                        {account.type === 'credit' ? 'Disponible: ' : ''}${displayBal.toFixed(2)}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  );
+                })}
             </ScrollView>
           </View>
         </View>

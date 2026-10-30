@@ -5,11 +5,12 @@ import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
 import { useThemeColor } from '@/core/ui-kit/use-theme-color';
 import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
-import { accountsQueryKey, type AccountRecord, type RecurringPaymentRecord } from '@/core/contracts/finance';
+import { accountsQueryKey, type AccountRecord } from '@/core/contracts/finance';
 import { ok } from '@/core/contracts/result';
-import { useCapability } from '@/core/registry/react';
+import { useCapability, useErrorReporter } from '@/core/registry/react';
 import { getSubscriptionsRuntime } from '../runtime';
-import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
+import type { RecurringInput } from '../services/recurring-service';
 
 type Account = AccountRecord;
 
@@ -42,10 +43,7 @@ const ICONS = [
   { name: 'creditcard', label: 'Tarjeta' },
 ];
 
-const COLORS = [
-  '#ef4444', '#f59e0b', '#10b981', '#3b82f6',
-  '#8b5cf6', '#ec4899', '#06b6d4', '#eab308',
-];
+const COLORS = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4', '#eab308'];
 
 export function AddSubscriptionScreen() {
   const { recurring: recurringService } = getSubscriptionsRuntime();
@@ -73,11 +71,7 @@ export function AddSubscriptionScreen() {
   const inputBg = useThemeColor({ light: '#f9fafb', dark: '#1f2937' }, 'surface');
   const primary = '#20df60';
 
-  useEffect(() => {
-    fetchAccounts();
-  }, []);
-
-  const fetchAccounts = async () => {
+  const fetchAccounts = useStableCallback(async () => {
     try {
       const result = ok(accountsQuery?.list() ?? []);
       if (result.success) {
@@ -89,7 +83,11 @@ export function AddSubscriptionScreen() {
     } catch (error) {
       reportError('Error al cargar cuentas:', error);
     }
-  };
+  });
+
+  useEffect(() => {
+    fetchAccounts();
+  }, [fetchAccounts]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -108,7 +106,7 @@ export function AddSubscriptionScreen() {
     setSaving(true);
 
     try {
-      const body: any = {
+      const body: RecurringInput = {
         name: name.trim(),
         type,
         amount: parseFloat(amount),
@@ -135,7 +133,7 @@ export function AddSubscriptionScreen() {
       } else {
         Alert.alert('Error', result.error);
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'No se pudo guardar');
     } finally {
       setSaving(false);
@@ -170,13 +168,12 @@ export function AddSubscriptionScreen() {
                 setColor(t.color);
               }}
             >
-              <IconSymbol name={t.icon as IconSymbolName} size={18} color={type === t.value ? t.color : textMuted} />
-              <ThemedText
-                style={[
-                  styles.typeChipText,
-                  { color: type === t.value ? t.color : textMuted },
-                ]}
-              >
+              <IconSymbol
+                name={t.icon as IconSymbolName}
+                size={18}
+                color={type === t.value ? t.color : textMuted}
+              />
+              <ThemedText style={[styles.typeChipText, { color: type === t.value ? t.color : textMuted }]}>
                 {t.label}
               </ThemedText>
             </TouchableOpacity>
@@ -220,10 +217,7 @@ export function AddSubscriptionScreen() {
               onPress={() => setFrequency(f.value)}
             >
               <ThemedText
-                style={[
-                  styles.frequencyChipText,
-                  { color: frequency === f.value ? primary : textMuted },
-                ]}
+                style={[styles.frequencyChipText, { color: frequency === f.value ? primary : textMuted }]}
               >
                 {f.label}
               </ThemedText>
@@ -278,10 +272,7 @@ export function AddSubscriptionScreen() {
               onPress={() => setAccountId(account.id)}
             >
               <ThemedText
-                style={[
-                  styles.accountChipText,
-                  { color: accountId === account.id ? primary : textMain },
-                ]}
+                style={[styles.accountChipText, { color: accountId === account.id ? primary : textMain }]}
               >
                 {account.name}
               </ThemedText>
@@ -304,7 +295,11 @@ export function AddSubscriptionScreen() {
               ]}
               onPress={() => setIcon(i.name)}
             >
-              <IconSymbol name={i.name as IconSymbolName} size={22} color={icon === i.name ? color : textMuted} />
+              <IconSymbol
+                name={i.name as IconSymbolName}
+                size={22}
+                color={icon === i.name ? color : textMuted}
+              />
             </TouchableOpacity>
           ))}
         </View>
@@ -315,11 +310,7 @@ export function AddSubscriptionScreen() {
           {COLORS.map((c) => (
             <TouchableOpacity
               key={c}
-              style={[
-                styles.colorChip,
-                { backgroundColor: c },
-                color === c && styles.colorChipSelected,
-              ]}
+              style={[styles.colorChip, { backgroundColor: c }, color === c && styles.colorChipSelected]}
               onPress={() => setColor(c)}
             />
           ))}
@@ -328,9 +319,7 @@ export function AddSubscriptionScreen() {
         {/* Registro automático */}
         <View style={[styles.switchRow, { borderColor }]}>
           <View>
-            <ThemedText style={[styles.switchLabel, { color: textMain }]}>
-              Registro automático
-            </ThemedText>
+            <ThemedText style={[styles.switchLabel, { color: textMain }]}>Registro automático</ThemedText>
             <ThemedText style={[styles.switchDescription, { color: textMuted }]}>
               Crear movimiento automáticamente al llegar la fecha
             </ThemedText>
@@ -361,9 +350,7 @@ export function AddSubscriptionScreen() {
           onPress={handleSave}
           disabled={saving}
         >
-          <ThemedText style={styles.saveButtonText}>
-            {saving ? 'Guardando...' : 'Guardar'}
-          </ThemedText>
+          <ThemedText style={styles.saveButtonText}>{saving ? 'Guardando...' : 'Guardar'}</ThemedText>
         </TouchableOpacity>
 
         <View style={{ height: 40 }} />

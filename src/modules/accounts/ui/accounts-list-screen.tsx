@@ -9,12 +9,13 @@ import { useCurrency } from '@/core/preferences/use-currency';
 import type { AccountRecord } from '@/core/contracts/finance';
 import { getAccountsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 
 type Account = AccountRecord;
 
 export function AccountsListScreen() {
   const { formatCurrency } = useCurrency();
-  const { accounts: accountsService, msi: msiService } = getAccountsRuntime();
+  const { accounts: accountsService } = getAccountsRuntime();
   const reportError = useErrorReporter();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [totalBalance, setTotalBalance] = useState(0);
@@ -26,7 +27,7 @@ export function AccountsListScreen() {
   const textSub = '#64876f';
   const primary = '#20df60';
 
-  const fetchAccounts = () => {
+  const fetchAccounts = useStableCallback(() => {
     try {
       const result = accountsService.getAccounts();
 
@@ -37,9 +38,9 @@ export function AccountsListScreen() {
       reportError('Error al cargar cuentas:', error);
       Alert.alert('Error', 'No se pudieron cargar las cuentas.');
     }
-  };
+  });
 
-  const fetchTotalBalance = () => {
+  const fetchTotalBalance = useStableCallback(() => {
     try {
       const result = accountsService.getAccountsStats();
 
@@ -49,7 +50,7 @@ export function AccountsListScreen() {
     } catch (error) {
       reportError('Error al cargar balance:', error);
     }
-  };
+  });
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -62,16 +63,21 @@ export function AccountsListScreen() {
     useCallback(() => {
       fetchAccounts();
       fetchTotalBalance();
-    }, [])
+    }, [fetchAccounts, fetchTotalBalance]),
   );
 
   const getAccountIcon = (type: string) => {
     switch (type) {
-      case 'cash': return { name: 'banknote', color: '#16a34a', bg: '#f0fdf4' };
-      case 'bank': return { name: 'building.columns.fill', color: '#2563eb', bg: '#eff6ff' };
-      case 'debit': return { name: 'creditcard', color: '#7c3aed', bg: '#faf5ff' };
-      case 'credit': return { name: 'creditcard.fill', color: '#dc2626', bg: '#fef2f2' };
-      default: return { name: 'banknote', color: '#64748b', bg: '#f1f5f9' };
+      case 'cash':
+        return { name: 'banknote', color: '#16a34a', bg: '#f0fdf4' };
+      case 'bank':
+        return { name: 'building.columns.fill', color: '#2563eb', bg: '#eff6ff' };
+      case 'debit':
+        return { name: 'creditcard', color: '#7c3aed', bg: '#faf5ff' };
+      case 'credit':
+        return { name: 'creditcard.fill', color: '#dc2626', bg: '#fef2f2' };
+      default:
+        return { name: 'banknote', color: '#64748b', bg: '#f1f5f9' };
     }
   };
 
@@ -80,31 +86,27 @@ export function AccountsListScreen() {
   };
 
   const handleDeleteAccount = (id: number, name: string) => {
-    Alert.alert(
-      'Eliminar Cuenta',
-      `¿Estás seguro de eliminar "${name}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () => {
-            try {
-              const result = accountsService.deleteAccount(id);
+    Alert.alert('Eliminar Cuenta', `¿Estás seguro de eliminar "${name}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () => {
+          try {
+            const result = accountsService.deleteAccount(id);
 
-              if (result.success) {
-                fetchAccounts();
-                fetchTotalBalance();
-              } else {
-                Alert.alert('Error', result.error || 'No se pudo eliminar la cuenta');
-              }
-            } catch (error) {
-              Alert.alert('Error', 'No se pudo eliminar la cuenta');
+            if (result.success) {
+              fetchAccounts();
+              fetchTotalBalance();
+            } else {
+              Alert.alert('Error', result.error || 'No se pudo eliminar la cuenta');
             }
-          },
+          } catch {
+            Alert.alert('Error', 'No se pudo eliminar la cuenta');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -125,9 +127,7 @@ export function AccountsListScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}
       >
         {/* Total Balance Card */}
         <View style={styles.balanceCard}>
@@ -139,7 +139,9 @@ export function AccountsListScreen() {
             <ThemedText style={styles.balanceAmount}>{formatCurrencyLocal(totalBalance)}</ThemedText>
             <View style={styles.balanceBadge}>
               <IconSymbol size={14} name="arrow.up.right" color={primary} />
-              <ThemedText style={styles.balanceBadgeText}>{accounts.length} cuenta{accounts.length !== 1 ? 's' : ''}</ThemedText>
+              <ThemedText style={styles.balanceBadgeText}>
+                {accounts.length} cuenta{accounts.length !== 1 ? 's' : ''}
+              </ThemedText>
             </View>
           </View>
         </View>
@@ -166,7 +168,7 @@ export function AccountsListScreen() {
               const iconData = getAccountIcon(account.type);
               const isCredit = account.type === 'credit';
               const displayBalance = isCredit ? account.current_balance || 0 : account.balance;
-              
+
               return (
                 <TouchableOpacity
                   key={account.id}
@@ -178,23 +180,22 @@ export function AccountsListScreen() {
                     <IconSymbol size={24} name={iconData.name as IconSymbolName} color={iconData.color} />
                   </View>
                   <View style={styles.accountInfo}>
-                    <ThemedText style={[styles.accountName, { color: textMain }]}>
-                      {account.name}
-                    </ThemedText>
+                    <ThemedText style={[styles.accountName, { color: textMain }]}>{account.name}</ThemedText>
                     <ThemedText style={[styles.accountDetail, { color: textSub }]}>
-                      {account.card_last_four 
+                      {account.card_last_four
                         ? `•••• ${account.card_last_four}`
                         : account.bank_name || 'Efectivo'}
                     </ThemedText>
                   </View>
                   <View style={styles.accountRight}>
-                    <ThemedText 
+                    <ThemedText
                       style={[
                         isCredit ? styles.accountAmountNegative : styles.accountAmount,
-                        { color: isCredit ? '#ef4444' : textMain }
+                        { color: isCredit ? '#ef4444' : textMain },
                       ]}
                     >
-                      {isCredit ? '-' : ''}{formatCurrencyLocal(displayBalance)}
+                      {isCredit ? '-' : ''}
+                      {formatCurrencyLocal(displayBalance)}
                     </ThemedText>
                     {isCredit && account.credit_limit && (
                       <ThemedText style={[styles.accountSubDetail, { color: textSub }]}>
@@ -209,10 +210,7 @@ export function AccountsListScreen() {
         </View>
 
         {/* Add Account Button */}
-        <TouchableOpacity 
-          style={styles.addButton}
-          onPress={() => router.push('/accounts/add-account')}
-        >
+        <TouchableOpacity style={styles.addButton} onPress={() => router.push('/accounts/add-account')}>
           <IconSymbol size={24} name="plus.circle.fill" color="white" />
           <ThemedText style={styles.addButtonText}>Agregar nueva cuenta</ThemedText>
         </TouchableOpacity>

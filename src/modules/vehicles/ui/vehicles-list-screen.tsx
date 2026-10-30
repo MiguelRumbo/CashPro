@@ -4,20 +4,17 @@ import { router, useFocusEffect, Stack } from 'expo-router';
 import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
 import { useThemeColor } from '@/core/ui-kit/use-theme-color';
-import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
+import { IconSymbol } from '@/core/ui-kit/icon-symbol';
 import { useCurrency } from '@/core/preferences/use-currency';
-import { accountsQueryKey, type AccountRecord, type VehicleRecord, type MaintenanceRecord, type VehicleStats } from '@/core/contracts/finance';
-import { ok } from '@/core/contracts/result';
-import { useCapability } from '@/core/registry/react';
-import { getVehiclesRuntime } from '../runtime';
+import { type VehicleRecord, type VehicleStats } from '@/core/contracts/finance';
 import { useErrorReporter } from '@/core/registry/react';
+import { getVehiclesRuntime } from '../runtime';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 
 type Vehicle = VehicleRecord;
 
-
 export function VehiclesListScreen() {
   const { vehicles: vehiclesService } = getVehiclesRuntime();
-  const accountsQuery = useCapability(accountsQueryKey);
   const reportError = useErrorReporter();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [stats, setStats] = useState<{ [key: number]: VehicleStats }>({});
@@ -31,7 +28,7 @@ export function VehiclesListScreen() {
   const borderColor = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'border');
   const primary = '#20df60';
 
-  const fetchVehicles = async () => {
+  const fetchVehicles = useStableCallback(async () => {
     try {
       const result = vehiclesService.getVehicles();
 
@@ -42,14 +39,14 @@ export function VehiclesListScreen() {
         result.data.forEach((vehicle: Vehicle) => {
           const statsResult = vehiclesService.getVehicleStats(vehicle.id);
           if (statsResult.success) {
-            setStats(prev => ({ ...prev, [vehicle.id]: statsResult.data }));
+            setStats((prev) => ({ ...prev, [vehicle.id]: statsResult.data }));
           }
         });
       }
     } catch (error) {
       reportError('Error al cargar vehículos:', error);
     }
-  };
+  });
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -60,7 +57,7 @@ export function VehiclesListScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchVehicles();
-    }, [])
+    }, [fetchVehicles]),
   );
 
   const handleDelete = (id: number, name: string) => {
@@ -82,27 +79,37 @@ export function VehiclesListScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
   const getFuelTypeLabel = (type: string) => {
     switch (type) {
-      case 'gasoline': return 'Gasolina';
-      case 'diesel': return 'Diésel';
-      case 'electric': return 'Eléctrico';
-      case 'hybrid': return 'Híbrido';
-      default: return type;
+      case 'gasoline':
+        return 'Gasolina';
+      case 'diesel':
+        return 'Diésel';
+      case 'electric':
+        return 'Eléctrico';
+      case 'hybrid':
+        return 'Híbrido';
+      default:
+        return type;
     }
   };
 
   const getFuelTypeIcon = (type: string) => {
     switch (type) {
-      case 'gasoline': return 'drop.fill';
-      case 'diesel': return 'drop.fill';
-      case 'electric': return 'bolt.fill';
-      case 'hybrid': return 'leaf.fill';
-      default: return 'car';
+      case 'gasoline':
+        return 'drop.fill';
+      case 'diesel':
+        return 'drop.fill';
+      case 'electric':
+        return 'bolt.fill';
+      case 'hybrid':
+        return 'leaf.fill';
+      default:
+        return 'car';
     }
   };
 
@@ -121,9 +128,7 @@ export function VehiclesListScreen() {
             <IconSymbol name="car" size={28} color="#3b82f6" />
           </View>
           <View style={styles.vehicleInfo}>
-            <ThemedText style={[styles.vehicleName, { color: textMain }]}>
-              {vehicle.name}
-            </ThemedText>
+            <ThemedText style={[styles.vehicleName, { color: textMain }]}>{vehicle.name}</ThemedText>
             <ThemedText style={[styles.vehicleModel, { color: textMuted }]}>
               {vehicle.brand} {vehicle.model} {vehicle.year}
             </ThemedText>
@@ -161,11 +166,15 @@ export function VehiclesListScreen() {
         </View>
 
         {vehicleStats && (
-          <View style={[styles.monthCost, { backgroundColor: '#ef4444' + '10', borderColor: '#ef4444' + '30' }]}>
-            <ThemedText style={[styles.monthCostLabel, { color: textMuted }]}>
-              Gasto este mes
-            </ThemedText>
-            <ThemedText style={[styles.monthCostValue, { color: '#ef4444' }]} numberOfLines={1} adjustsFontSizeToFit>
+          <View
+            style={[styles.monthCost, { backgroundColor: '#ef4444' + '10', borderColor: '#ef4444' + '30' }]}
+          >
+            <ThemedText style={[styles.monthCostLabel, { color: textMuted }]}>Gasto este mes</ThemedText>
+            <ThemedText
+              style={[styles.monthCostValue, { color: '#ef4444' }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
               {formatCurrency(vehicleStats.month_total_cost)}
             </ThemedText>
           </View>
@@ -185,14 +194,10 @@ export function VehiclesListScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}
       >
         {vehicles.length > 0 ? (
-          <View style={styles.vehiclesList}>
-            {vehicles.map(renderVehicleCard)}
-          </View>
+          <View style={styles.vehiclesList}>{vehicles.map(renderVehicleCard)}</View>
         ) : (
           <View style={styles.emptyState}>
             <IconSymbol name="car" size={64} color={textMuted} />
@@ -214,7 +219,6 @@ export function VehiclesListScreen() {
       >
         <IconSymbol name="plus" size={24} color="#ffffff" />
       </TouchableOpacity>
-
     </ThemedView>
   );
 }

@@ -18,7 +18,8 @@ export default function TabLayout() {
   const tabs = [...registry.tabs(), MORE_TAB].sort((a, b) => a.order - b.order);
   const byRoute = new Map(tabs.map((tab) => [tab.routeName, tab]));
   const ordered = [...TAB_ROUTES].sort(
-    (a, b) => (byRoute.get(a)?.order ?? Number.MAX_SAFE_INTEGER) - (byRoute.get(b)?.order ?? Number.MAX_SAFE_INTEGER),
+    (a, b) =>
+      (byRoute.get(a)?.order ?? Number.MAX_SAFE_INTEGER) - (byRoute.get(b)?.order ?? Number.MAX_SAFE_INTEGER),
   );
 
   return (
@@ -32,7 +33,8 @@ export default function TabLayout() {
           backgroundColor: colorScheme === 'dark' ? '#1a2c20' : '#ffffff',
           borderTopColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb',
         },
-      }}>
+      }}
+    >
       {ordered.map((routeName) => {
         const tab = byRoute.get(routeName);
         return (
@@ -43,7 +45,9 @@ export default function TabLayout() {
               tab
                 ? {
                     title: tab.title,
-                    tabBarIcon: ({ color }) => <IconSymbol size={TAB_ICON_SIZE} name={tab.icon} color={color} />,
+                    tabBarIcon: ({ color }) => (
+                      <IconSymbol size={TAB_ICON_SIZE} name={tab.icon} color={color} />
+                    ),
                   }
                 : { href: null }
             }

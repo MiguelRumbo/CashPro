@@ -4,11 +4,12 @@ import { router, useFocusEffect, Stack } from 'expo-router';
 import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
 import { useThemeColor } from '@/core/ui-kit/use-theme-color';
-import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
+import { IconSymbol } from '@/core/ui-kit/icon-symbol';
 import { useCurrency } from '@/core/preferences/use-currency';
 import type { LoanRecord } from '@/core/contracts/finance';
 import { getLoansRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 
 type Loan = LoanRecord;
 
@@ -18,7 +19,7 @@ export function LoansListScreen() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const { formatCurrency } = useCurrency();
-  
+
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
@@ -28,7 +29,7 @@ export function LoansListScreen() {
   const warning = '#f59e0b';
   const success = '#10b981';
 
-  const fetchLoans = async () => {
+  const fetchLoans = useStableCallback(async () => {
     try {
       const result = loansService.getLoans();
 
@@ -39,7 +40,7 @@ export function LoansListScreen() {
       reportError('Error al cargar préstamos:', error);
       Alert.alert('Error', 'No se pudieron cargar los préstamos');
     }
-  };
+  });
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -50,51 +51,55 @@ export function LoansListScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchLoans();
-    }, [])
+    }, [fetchLoans]),
   );
 
   const handleDeleteLoan = (id: number, name: string) => {
-    Alert.alert(
-      'Eliminar Préstamo',
-      `¿Estás seguro de eliminar el préstamo a "${name}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const result = loansService.deleteLoan(id);
+    Alert.alert('Eliminar Préstamo', `¿Estás seguro de eliminar el préstamo a "${name}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const result = loansService.deleteLoan(id);
 
-              if (result.success) {
-                fetchLoans();
-              } else {
-                Alert.alert('Error', result.error);
-              }
-            } catch (error) {
-              Alert.alert('Error', 'No se pudo eliminar el préstamo');
+            if (result.success) {
+              fetchLoans();
+            } else {
+              Alert.alert('Error', result.error);
             }
-          },
+          } catch {
+            Alert.alert('Error', 'No se pudo eliminar el préstamo');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'paid': return success;
-      case 'partial': return warning;
-      case 'forgiven': return textMuted;
-      default: return primary;
+      case 'paid':
+        return success;
+      case 'partial':
+        return warning;
+      case 'forgiven':
+        return textMuted;
+      default:
+        return primary;
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'paid': return 'Pagado';
-      case 'partial': return 'Parcial';
-      case 'forgiven': return 'Condonado';
-      default: return 'Activo';
+      case 'paid':
+        return 'Pagado';
+      case 'partial':
+        return 'Parcial';
+      case 'forgiven':
+        return 'Condonado';
+      default:
+        return 'Activo';
     }
   };
 
@@ -107,8 +112,8 @@ export function LoansListScreen() {
     return diffDays;
   };
 
-  const activeLoans = loans.filter(l => l.status === 'active' || l.status === 'partial');
-  const completedLoans = loans.filter(l => l.status === 'paid' || l.status === 'forgiven');
+  const activeLoans = loans.filter((l) => l.status === 'active' || l.status === 'partial');
+  const completedLoans = loans.filter((l) => l.status === 'paid' || l.status === 'forgiven');
 
   const totalPending = activeLoans.reduce((sum, l) => sum + l.remaining_amount, 0);
   const totalLent = loans.reduce((sum, l) => sum + l.amount, 0);
@@ -116,7 +121,7 @@ export function LoansListScreen() {
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
-      <Stack.Screen 
+      <Stack.Screen
         options={{
           title: 'Préstamos',
           headerShown: true,
@@ -125,46 +130,46 @@ export function LoansListScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}
       >
         {/* Resumen */}
         <View style={[styles.summaryCard, { backgroundColor: surfaceColor, borderColor }]}>
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
-              <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>
-                Total Prestado
-              </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
+              <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>Total Prestado</ThemedText>
+              <ThemedText
+                style={[styles.summaryValue, { color: textMain }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
                 {formatCurrency(totalLent)}
               </ThemedText>
             </View>
             <View style={styles.summaryItem}>
-              <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>
-                Pendiente
-              </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: warning }]} numberOfLines={1} adjustsFontSizeToFit>
+              <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>Pendiente</ThemedText>
+              <ThemedText
+                style={[styles.summaryValue, { color: warning }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
                 {formatCurrency(totalPending)}
               </ThemedText>
             </View>
           </View>
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
-              <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>
-                Recuperado
-              </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: success }]} numberOfLines={1} adjustsFontSizeToFit>
+              <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>Recuperado</ThemedText>
+              <ThemedText
+                style={[styles.summaryValue, { color: success }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
                 {formatCurrency(totalRecovered)}
               </ThemedText>
             </View>
             <View style={styles.summaryItem}>
-              <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>
-                Préstamos Activos
-              </ThemedText>
-              <ThemedText style={[styles.summaryValue, { color: textMain }]}>
-                {activeLoans.length}
-              </ThemedText>
+              <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>Préstamos Activos</ThemedText>
+              <ThemedText style={[styles.summaryValue, { color: textMain }]}>{activeLoans.length}</ThemedText>
             </View>
           </View>
         </View>
@@ -172,12 +177,11 @@ export function LoansListScreen() {
         {/* Préstamos Activos */}
         {activeLoans.length > 0 && (
           <View style={styles.section}>
-            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-              Activos
-            </ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Activos</ThemedText>
             {activeLoans.map((loan) => {
               const daysRemaining = getDaysRemaining(loan.due_date);
-              const progress = loan.amount > 0 ? ((loan.amount - loan.remaining_amount) / loan.amount) * 100 : 0;
+              const progress =
+                loan.amount > 0 ? ((loan.amount - loan.remaining_amount) / loan.amount) * 100 : 0;
 
               return (
                 <TouchableOpacity
@@ -196,15 +200,17 @@ export function LoansListScreen() {
                           {loan.person_name}
                         </ThemedText>
                         <ThemedText style={[styles.loanDate, { color: textMuted }]}>
-                          {new Date(loan.date).toLocaleDateString('es-MX', { 
-                            day: 'numeric', 
-                            month: 'short', 
-                            year: 'numeric' 
+                          {new Date(loan.date).toLocaleDateString('es-MX', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
                           })}
                         </ThemedText>
                       </View>
                     </View>
-                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(loan.status) + '20' }]}>
+                    <View
+                      style={[styles.statusBadge, { backgroundColor: getStatusColor(loan.status) + '20' }]}
+                    >
                       <ThemedText style={[styles.statusText, { color: getStatusColor(loan.status) }]}>
                         {getStatusText(loan.status)}
                       </ThemedText>
@@ -213,17 +219,13 @@ export function LoansListScreen() {
 
                   <View style={styles.loanAmounts}>
                     <View style={styles.amountRow}>
-                      <ThemedText style={[styles.amountLabel, { color: textMuted }]}>
-                        Prestado:
-                      </ThemedText>
+                      <ThemedText style={[styles.amountLabel, { color: textMuted }]}>Prestado:</ThemedText>
                       <ThemedText style={[styles.amountValue, { color: textMain }]}>
                         {formatCurrency(loan.amount)}
                       </ThemedText>
                     </View>
                     <View style={styles.amountRow}>
-                      <ThemedText style={[styles.amountLabel, { color: textMuted }]}>
-                        Pendiente:
-                      </ThemedText>
+                      <ThemedText style={[styles.amountLabel, { color: textMuted }]}>Pendiente:</ThemedText>
                       <ThemedText style={[styles.amountValue, { color: warning }]}>
                         {formatCurrency(loan.remaining_amount)}
                       </ThemedText>
@@ -233,11 +235,8 @@ export function LoansListScreen() {
                   {/* Barra de progreso */}
                   <View style={styles.progressContainer}>
                     <View style={[styles.progressBar, { backgroundColor: borderColor }]}>
-                      <View 
-                        style={[
-                          styles.progressFill, 
-                          { width: `${progress}%`, backgroundColor: success }
-                        ]} 
+                      <View
+                        style={[styles.progressFill, { width: `${progress}%`, backgroundColor: success }]}
                       />
                     </View>
                     <ThemedText style={[styles.progressText, { color: textMuted }]}>
@@ -247,23 +246,22 @@ export function LoansListScreen() {
 
                   {daysRemaining !== null && loan.status !== 'paid' && (
                     <View style={styles.dueDateContainer}>
-                      <IconSymbol 
-                        name="clock" 
-                        size={14} 
-                        color={daysRemaining < 0 ? '#ef4444' : daysRemaining <= 7 ? warning : textMuted} 
+                      <IconSymbol
+                        name="clock"
+                        size={14}
+                        color={daysRemaining < 0 ? '#ef4444' : daysRemaining <= 7 ? warning : textMuted}
                       />
-                      <ThemedText 
+                      <ThemedText
                         style={[
-                          styles.dueDateText, 
-                          { color: daysRemaining < 0 ? '#ef4444' : daysRemaining <= 7 ? warning : textMuted }
+                          styles.dueDateText,
+                          { color: daysRemaining < 0 ? '#ef4444' : daysRemaining <= 7 ? warning : textMuted },
                         ]}
                       >
-                        {daysRemaining < 0 
+                        {daysRemaining < 0
                           ? `Vencido hace ${Math.abs(daysRemaining)} días`
                           : daysRemaining === 0
-                          ? 'Vence hoy'
-                          : `Vence en ${daysRemaining} días`
-                        }
+                            ? 'Vence hoy'
+                            : `Vence en ${daysRemaining} días`}
                       </ThemedText>
                     </View>
                   )}
@@ -276,9 +274,7 @@ export function LoansListScreen() {
         {/* Préstamos Completados */}
         {completedLoans.length > 0 && (
           <View style={styles.section}>
-            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>
-              Completados
-            </ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Completados</ThemedText>
             {completedLoans.map((loan) => (
               <TouchableOpacity
                 key={loan.id}
@@ -288,18 +284,24 @@ export function LoansListScreen() {
               >
                 <View style={styles.loanHeader}>
                   <View style={styles.loanInfo}>
-                    <View style={[styles.iconContainer, { backgroundColor: getStatusColor(loan.status) + '20' }]}>
-                      <IconSymbol name="checkmark.circle.fill" size={20} color={getStatusColor(loan.status)} />
+                    <View
+                      style={[styles.iconContainer, { backgroundColor: getStatusColor(loan.status) + '20' }]}
+                    >
+                      <IconSymbol
+                        name="checkmark.circle.fill"
+                        size={20}
+                        color={getStatusColor(loan.status)}
+                      />
                     </View>
                     <View style={styles.loanDetails}>
                       <ThemedText style={[styles.loanName, { color: textMain }]}>
                         {loan.person_name}
                       </ThemedText>
                       <ThemedText style={[styles.loanDate, { color: textMuted }]}>
-                        {new Date(loan.date).toLocaleDateString('es-MX', { 
-                          day: 'numeric', 
-                          month: 'short', 
-                          year: 'numeric' 
+                        {new Date(loan.date).toLocaleDateString('es-MX', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
                         })}
                       </ThemedText>
                     </View>
@@ -313,9 +315,7 @@ export function LoansListScreen() {
 
                 <View style={styles.loanAmounts}>
                   <View style={styles.amountRow}>
-                    <ThemedText style={[styles.amountLabel, { color: textMuted }]}>
-                      Monto:
-                    </ThemedText>
+                    <ThemedText style={[styles.amountLabel, { color: textMuted }]}>Monto:</ThemedText>
                     <ThemedText style={[styles.amountValue, { color: textMain }]}>
                       {formatCurrency(loan.amount)}
                     </ThemedText>
@@ -348,7 +348,6 @@ export function LoansListScreen() {
       >
         <IconSymbol name="plus" size={24} color="#ffffff" />
       </TouchableOpacity>
-
     </ThemedView>
   );
 }

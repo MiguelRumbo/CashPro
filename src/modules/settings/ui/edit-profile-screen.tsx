@@ -4,10 +4,11 @@ import { Stack, router } from 'expo-router';
 import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
 import { useThemeColor } from '@/core/ui-kit/use-theme-color';
-import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
+import { IconSymbol } from '@/core/ui-kit/icon-symbol';
 import { getInitials } from '@/core/units/initials';
 import { getSettingsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 
 export function EditProfileScreen() {
   const { settings: settingsService } = getSettingsRuntime();
@@ -23,11 +24,7 @@ export function EditProfileScreen() {
   const primary = '#20df60';
   const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#374151' }, 'border');
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = () => {
+  const fetchProfile = useStableCallback(() => {
     try {
       const result = settingsService.getProfile();
 
@@ -40,7 +37,11 @@ export function EditProfileScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  });
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -56,7 +57,7 @@ export function EditProfileScreen() {
 
       if (result.success) {
         Alert.alert('Éxito', 'Perfil actualizado exitosamente', [
-          { text: 'OK', onPress: () => router.back() }
+          { text: 'OK', onPress: () => router.back() },
         ]);
       } else {
         Alert.alert('Error', result.error || 'No se pudo actualizar el perfil');
@@ -66,7 +67,6 @@ export function EditProfileScreen() {
       Alert.alert('Error', 'No se pudo actualizar el perfil');
     }
   };
-
 
   if (loading) {
     return (
@@ -103,15 +103,13 @@ export function EditProfileScreen() {
         {/* Avatar */}
         <View style={styles.avatarSection}>
           <View style={[styles.avatar, { backgroundColor: primary }]}>
-            <ThemedText style={styles.avatarText}>
-              {getInitials(name)}
-            </ThemedText>
+            <ThemedText style={styles.avatarText}>{getInitials(name)}</ThemedText>
           </View>
-          <TouchableOpacity style={[styles.changePhotoButton, { backgroundColor: surfaceColor, borderColor }]}>
+          <TouchableOpacity
+            style={[styles.changePhotoButton, { backgroundColor: surfaceColor, borderColor }]}
+          >
             <IconSymbol size={16} name="camera.fill" color={primary} />
-            <ThemedText style={[styles.changePhotoText, { color: primary }]}>
-              Cambiar Foto
-            </ThemedText>
+            <ThemedText style={[styles.changePhotoText, { color: primary }]}>Cambiar Foto</ThemedText>
           </TouchableOpacity>
         </View>
 
@@ -148,7 +146,12 @@ export function EditProfileScreen() {
         </View>
 
         {/* Info */}
-        <View style={[styles.infoBox, { backgroundColor: 'rgba(32, 223, 96, 0.1)', borderColor: 'rgba(32, 223, 96, 0.2)' }]}>
+        <View
+          style={[
+            styles.infoBox,
+            { backgroundColor: 'rgba(32, 223, 96, 0.1)', borderColor: 'rgba(32, 223, 96, 0.2)' },
+          ]}
+        >
           <IconSymbol size={20} name="info.circle.fill" color={primary} />
           <ThemedText style={[styles.infoText, { color: textMain }]}>
             Tu nombre se mostrará en el dashboard y en los reportes. El correo es opcional.

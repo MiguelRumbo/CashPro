@@ -22,7 +22,11 @@ export function createGoalsRepository(db: DbHandle) {
       return orm.insert(savingsGoals).values(row).returning().get();
     },
     update(id: number, fields: GoalUpdate): SavingsGoalRecord | undefined {
-      orm.update(savingsGoals).set({ ...fields, updated_at: nowIso() }).where(eq(savingsGoals.id, id)).run();
+      orm
+        .update(savingsGoals)
+        .set({ ...fields, updated_at: nowIso() })
+        .where(eq(savingsGoals.id, id))
+        .run();
       return this.getById(id);
     },
     delete(id: number): void {

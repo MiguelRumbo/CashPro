@@ -6,10 +6,7 @@ export const BACKUP_FORMAT_VERSION = '2.0.0';
 const tablesSchema = z.record(z.string(), z.unknown());
 
 /** Acepta `{ version, exportDate, data: {...} }` o directamente `{ tabla: filas }` (como v1). */
-export const backupFileSchema = z.union([
-  z.object({ data: tablesSchema }).passthrough(),
-  tablesSchema,
-]);
+export const backupFileSchema = z.union([z.object({ data: tablesSchema }).passthrough(), tablesSchema]);
 
 export function extractTables(raw: unknown): Record<string, unknown> | undefined {
   const parsed = backupFileSchema.safeParse(raw);

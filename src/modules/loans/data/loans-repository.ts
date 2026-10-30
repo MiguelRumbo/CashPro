@@ -22,7 +22,11 @@ export function createLoansRepository(db: DbHandle) {
       return orm.insert(loans).values(row).returning().get();
     },
     update(id: number, fields: LoanUpdate): LoanRecord | undefined {
-      orm.update(loans).set({ ...fields, updated_at: nowIso() }).where(eq(loans.id, id)).run();
+      orm
+        .update(loans)
+        .set({ ...fields, updated_at: nowIso() })
+        .where(eq(loans.id, id))
+        .run();
       return this.getById(id);
     },
     delete(id: number): void {

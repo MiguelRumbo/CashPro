@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { ScrollView, View, StyleSheet, TouchableOpacity, TextInput, Switch, Platform, Alert } from 'react-native';
+import {
+  ScrollView,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Switch,
+  Platform,
+  Alert,
+} from 'react-native';
 import { Stack, router } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ThemedText } from '@/core/ui-kit/themed-text';
@@ -9,6 +18,7 @@ import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
 import { formatCurrencyInput, getNumericValue } from '@/core/units/format';
 import { getSavingsGoalsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
+import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 interface GoalIcon {
   id: string;
@@ -46,7 +56,7 @@ export function AddGoalScreen() {
   const primary = '#20df60';
   const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#374151' }, 'border');
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
+  const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowDatePicker(false);
     if (selectedDate) {
       setDeadline(selectedDate);
@@ -93,9 +103,7 @@ export function AddGoalScreen() {
       const result = goalsService.createSavingsGoal(goalData);
 
       if (result.success) {
-        Alert.alert('Éxito', 'Objetivo creado exitosamente', [
-          { text: 'OK', onPress: () => router.back() }
-        ]);
+        Alert.alert('Éxito', 'Objetivo creado exitosamente', [{ text: 'OK', onPress: () => router.back() }]);
       } else {
         Alert.alert('Error', result.error || 'No se pudo crear el objetivo');
       }
@@ -165,7 +173,7 @@ export function AddGoalScreen() {
                 style={[
                   styles.iconOption,
                   { backgroundColor: icon.color + '20' },
-                  selectedIcon.id === icon.id && { borderWidth: 3, borderColor: icon.color }
+                  selectedIcon.id === icon.id && { borderWidth: 3, borderColor: icon.color },
                 ]}
                 onPress={() => setSelectedIcon(icon)}
               >
@@ -185,7 +193,9 @@ export function AddGoalScreen() {
               <IconSymbol size={20} name="calendar" color={textSub} />
             </View>
             <View style={styles.sectionInfo}>
-              <ThemedText style={[styles.sectionLabel, { color: textSub }]}>Fecha Límite (Opcional)</ThemedText>
+              <ThemedText style={[styles.sectionLabel, { color: textSub }]}>
+                Fecha Límite (Opcional)
+              </ThemedText>
               <ThemedText style={[styles.sectionValue, { color: textMain }]}>
                 {formatDate(deadline)}
               </ThemedText>
@@ -200,9 +210,7 @@ export function AddGoalScreen() {
             onPress={() => setDeadline(null)}
           >
             <IconSymbol size={16} name="xmark" color={textSub} />
-            <ThemedText style={[styles.clearButtonText, { color: textSub }]}>
-              Quitar fecha límite
-            </ThemedText>
+            <ThemedText style={[styles.clearButtonText, { color: textSub }]}>Quitar fecha límite</ThemedText>
           </TouchableOpacity>
         )}
 
@@ -236,7 +244,9 @@ export function AddGoalScreen() {
               <View style={styles.autoDeductAmount}>
                 <ThemedText style={[styles.sectionLabel, { color: textSub }]}>Monto</ThemedText>
                 <View style={styles.amountInputContainer}>
-                  <ThemedText style={[styles.currencySymbol, { color: textMain, fontSize: 20 }]}>$</ThemedText>
+                  <ThemedText style={[styles.currencySymbol, { color: textMain, fontSize: 20 }]}>
+                    $
+                  </ThemedText>
                   <TextInput
                     style={[styles.amountInput, { color: textMain, fontSize: 24 }]}
                     placeholder="0"
@@ -256,14 +266,16 @@ export function AddGoalScreen() {
                     style={[
                       styles.periodButton,
                       { borderColor },
-                      autoDeductPeriod === 'weekly' && { backgroundColor: primary, borderColor: primary }
+                      autoDeductPeriod === 'weekly' && { backgroundColor: primary, borderColor: primary },
                     ]}
                     onPress={() => setAutoDeductPeriod('weekly')}
                   >
-                    <ThemedText style={[
-                      styles.periodButtonText,
-                      { color: autoDeductPeriod === 'weekly' ? '#ffffff' : textMain }
-                    ]}>
+                    <ThemedText
+                      style={[
+                        styles.periodButtonText,
+                        { color: autoDeductPeriod === 'weekly' ? '#ffffff' : textMain },
+                      ]}
+                    >
                       Semanal
                     </ThemedText>
                   </TouchableOpacity>
@@ -271,14 +283,16 @@ export function AddGoalScreen() {
                     style={[
                       styles.periodButton,
                       { borderColor },
-                      autoDeductPeriod === 'biweekly' && { backgroundColor: primary, borderColor: primary }
+                      autoDeductPeriod === 'biweekly' && { backgroundColor: primary, borderColor: primary },
                     ]}
                     onPress={() => setAutoDeductPeriod('biweekly')}
                   >
-                    <ThemedText style={[
-                      styles.periodButtonText,
-                      { color: autoDeductPeriod === 'biweekly' ? '#ffffff' : textMain }
-                    ]}>
+                    <ThemedText
+                      style={[
+                        styles.periodButtonText,
+                        { color: autoDeductPeriod === 'biweekly' ? '#ffffff' : textMain },
+                      ]}
+                    >
                       Quincenal
                     </ThemedText>
                   </TouchableOpacity>
@@ -286,14 +300,16 @@ export function AddGoalScreen() {
                     style={[
                       styles.periodButton,
                       { borderColor },
-                      autoDeductPeriod === 'monthly' && { backgroundColor: primary, borderColor: primary }
+                      autoDeductPeriod === 'monthly' && { backgroundColor: primary, borderColor: primary },
                     ]}
                     onPress={() => setAutoDeductPeriod('monthly')}
                   >
-                    <ThemedText style={[
-                      styles.periodButtonText,
-                      { color: autoDeductPeriod === 'monthly' ? '#ffffff' : textMain }
-                    ]}>
+                    <ThemedText
+                      style={[
+                        styles.periodButtonText,
+                        { color: autoDeductPeriod === 'monthly' ? '#ffffff' : textMain },
+                      ]}
+                    >
                       Mensual
                     </ThemedText>
                   </TouchableOpacity>
@@ -304,10 +320,7 @@ export function AddGoalScreen() {
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity 
-          style={[styles.saveButton, { backgroundColor: primary }]}
-          onPress={handleSave}
-        >
+        <TouchableOpacity style={[styles.saveButton, { backgroundColor: primary }]} onPress={handleSave}>
           <ThemedText style={styles.saveButtonText}>Crear Objetivo</ThemedText>
         </TouchableOpacity>
 

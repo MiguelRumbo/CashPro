@@ -13,7 +13,13 @@ import { nowIso, type DbHandle } from '@/core/db/handle';
 import type { EventBus } from '@/core/events/bus';
 
 import type { MovementsRepository } from '../data/movements-repository';
-import { buildMovementsCsv, isMovementType, snapshotOf, validateManualMovement, type MovementDraft } from '../domain/movement-rules';
+import {
+  buildMovementsCsv,
+  isMovementType,
+  snapshotOf,
+  validateManualMovement,
+  type MovementDraft,
+} from '../domain/movement-rules';
 import { movementsTexts } from '../texts';
 
 /** Origen de los movimientos capturados a mano. */

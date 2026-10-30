@@ -30,7 +30,8 @@ export function createSettingsService(deps: {
   const isCurrency = (value: string | undefined): value is ProfileRecord['currency'] =>
     value !== undefined && value in config.currency.formats;
 
-  const ensureProfile = () => repo.ensure({ name: settingsTexts.defaultProfileName, currency: config.currency.default });
+  const ensureProfile = () =>
+    repo.ensure({ name: settingsTexts.defaultProfileName, currency: config.currency.default });
   const syncPreferencesFromProfile = () => preferences.set({ currency: ensureProfile().currency });
 
   return {

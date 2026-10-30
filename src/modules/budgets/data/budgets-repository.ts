@@ -24,7 +24,11 @@ export function createBudgetsRepository(db: DbHandle) {
       return orm.insert(budgets).values(row).returning().get();
     },
     update(id: number, fields: BudgetUpdate): BudgetRecord | undefined {
-      orm.update(budgets).set({ ...fields, updated_at: nowIso() }).where(eq(budgets.id, id)).run();
+      orm
+        .update(budgets)
+        .set({ ...fields, updated_at: nowIso() })
+        .where(eq(budgets.id, id))
+        .run();
       return this.getById(id);
     },
     delete(id: number): void {

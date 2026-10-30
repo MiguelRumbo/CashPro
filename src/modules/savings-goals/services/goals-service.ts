@@ -1,5 +1,10 @@
 import type { FrozenAppConfig } from '@/config/schema';
-import type { AccountsQuery, MovementsLedger, SavingsGoalRecord, SavingsGoalsStats } from '@/core/contracts/finance';
+import type {
+  AccountsQuery,
+  MovementsLedger,
+  SavingsGoalRecord,
+  SavingsGoalsStats,
+} from '@/core/contracts/finance';
 import { fail, failFromError, ok, type Result } from '@/core/contracts/result';
 import { nowIso, type DbHandle } from '@/core/db/handle';
 
@@ -139,7 +144,10 @@ export function createGoalsService(deps: {
           const ts = nowIso();
           repo.addContribution({ goal_id: goalId, amount, date: ts, notes: notes ?? null, created_at: ts });
           const newAmount = goal.current_amount + amount;
-          const row = repo.update(goalId, { current_amount: newAmount, status: statusAfterSaving(goal, newAmount) });
+          const row = repo.update(goalId, {
+            current_amount: newAmount,
+            status: statusAfterSaving(goal, newAmount),
+          });
           movementsLedger.record(
             {
               type: 'expense',

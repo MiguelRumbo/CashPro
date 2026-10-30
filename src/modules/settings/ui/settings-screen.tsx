@@ -1,16 +1,25 @@
 import { ScrollView, View, StyleSheet, TouchableOpacity, Switch, Modal, Alert } from 'react-native';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback } from 'react';
 import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
 import { useThemeColor } from '@/core/ui-kit/use-theme-color';
 import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
 import { useCurrency } from '@/core/preferences/use-currency';
-import { copyFile, databaseFilePath, fileExists, pickDocument, readText, shareFile, SharingUnavailableError, writeAndShare } from '../platform/files';
+import {
+  copyFile,
+  databaseFilePath,
+  fileExists,
+  pickDocument,
+  readText,
+  shareFile,
+  SharingUnavailableError,
+  writeAndShare,
+} from '../platform/files';
 import { getInitials } from '@/core/units/initials';
 import { getSettingsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 
 type SettingsRowProps = {
   icon: IconSymbolName;
@@ -59,9 +68,7 @@ function SettingsRow({
           )}
         </View>
       </View>
-      {hasArrow && (
-        <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />
-      )}
+      {hasArrow && <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />}
       {hasSwitch && (
         <Switch
           value={switchValue}
@@ -77,7 +84,6 @@ function SettingsRow({
 export function SettingsScreen() {
   const { settings: settingsService, dbFileName } = getSettingsRuntime();
   const reportError = useErrorReporter();
-  const [notifications, setNotifications] = useState(true);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [profileName, setProfileName] = useState('Usuario');
   const [profileEmail, setProfileEmail] = useState('');
@@ -100,21 +106,11 @@ export function SettingsScreen() {
   ];
 
   const getSelectedCurrencyLabel = () => {
-    const curr = currencies.find(c => c.code === currency);
+    const curr = currencies.find((c) => c.code === currency);
     return curr ? curr.label : 'MXN - Peso Mexicano';
   };
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchProfile();
-    }, [])
-  );
-
-  const fetchProfile = () => {
+  const fetchProfile = useStableCallback(() => {
     try {
       const result = settingsService.getProfile();
       if (result.success && result.data) {
@@ -124,13 +120,22 @@ export function SettingsScreen() {
     } catch (error) {
       reportError('Error al cargar perfil:', error);
     }
-  };
+  });
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfile();
+    }, [fetchProfile]),
+  );
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const handleCurrencyChange = (currencyCode: string) => {
     setShowCurrencyModal(false);
     setGlobalCurrency(currencyCode as 'MXN' | 'USD' | 'EUR');
   };
-
 
   // ==========================================
   // EXPORT HANDLERS
@@ -144,7 +149,12 @@ export function SettingsScreen() {
       }
 
       const fileName = `cashpro_backup_${new Date().toISOString().split('T')[0]}.json`;
-      await writeAndShare(fileName, JSON.stringify(result.data, null, 2), 'application/json', 'Exportar respaldo JSON');
+      await writeAndShare(
+        fileName,
+        JSON.stringify(result.data, null, 2),
+        'application/json',
+        'Exportar respaldo JSON',
+      );
     } catch (error) {
       if (error instanceof SharingUnavailableError) {
         Alert.alert('Archivo guardado', `Respaldo guardado en: ${error.savedUri ?? ''}`);
@@ -199,7 +209,12 @@ export function SettingsScreen() {
   // ==========================================
   const handleImportData = async () => {
     try {
-      const file = await pickDocument(['application/json', 'text/csv', 'application/x-sqlite3', 'application/octet-stream']);
+      const file = await pickDocument([
+        'application/json',
+        'text/csv',
+        'application/x-sqlite3',
+        'application/octet-stream',
+      ]);
       if (!file) return;
       const fileName = file.name.toLowerCase();
 
@@ -223,12 +238,12 @@ export function SettingsScreen() {
                   } else {
                     Alert.alert('Error', result.error || 'No se pudieron importar los datos');
                   }
-                } catch (e) {
+                } catch {
                   Alert.alert('Error', 'El archivo JSON no tiene un formato válido');
                 }
               },
             },
-          ]
+          ],
         );
       } else if (fileName.endsWith('.db')) {
         Alert.alert(
@@ -243,14 +258,17 @@ export function SettingsScreen() {
                 try {
                   // Se reemplaza el archivo; las migraciones corren en el siguiente arranque.
                   await copyFile(file.uri, databaseFilePath(dbFileName));
-                  Alert.alert('Importación exitosa', 'Base de datos restaurada correctamente. Reinicia la aplicación para ver los cambios.');
+                  Alert.alert(
+                    'Importación exitosa',
+                    'Base de datos restaurada correctamente. Reinicia la aplicación para ver los cambios.',
+                  );
                   fetchProfile();
-                } catch (e) {
+                } catch {
                   Alert.alert('Error', 'No se pudo importar la base de datos');
                 }
               },
             },
-          ]
+          ],
         );
       } else {
         Alert.alert('Formato no soportado', 'Solo se admiten archivos .json y .db');
@@ -288,7 +306,7 @@ export function SettingsScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -331,10 +349,7 @@ export function SettingsScreen() {
         {/* PREFERENCIAS */}
         <ThemedText style={styles.sectionLabel}>PREFERENCIAS</ThemedText>
         <View style={[styles.sectionCard, { backgroundColor: surfaceColor }]}>
-          <TouchableOpacity
-            style={[styles.settingsRow]}
-            onPress={() => setShowCurrencyModal(true)}
-          >
+          <TouchableOpacity style={[styles.settingsRow]} onPress={() => setShowCurrencyModal(true)}>
             <View style={styles.settingsRowLeft}>
               <View style={[styles.settingsIcon, { backgroundColor: '#eff6ff' }]}>
                 <IconSymbol size={22} name="banknote" color="#2563eb" />
@@ -401,9 +416,7 @@ export function SettingsScreen() {
                 <IconSymbol size={22} name="arrow.down.circle.fill" color="#2563eb" />
               </View>
               <View>
-                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>
-                  Exportar JSON
-                </ThemedText>
+                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>Exportar JSON</ThemedText>
                 <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
                   Respaldo completo de todos los datos
                 </ThemedText>
@@ -422,9 +435,7 @@ export function SettingsScreen() {
                 <IconSymbol size={22} name="arrow.down.circle.fill" color={dataIconColor} />
               </View>
               <View>
-                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>
-                  Exportar CSV
-                </ThemedText>
+                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>Exportar CSV</ThemedText>
                 <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
                   Movimientos en formato CSV
                 </ThemedText>
@@ -464,9 +475,7 @@ export function SettingsScreen() {
                 <IconSymbol size={22} name="arrow.down.circle.fill" color="#9333ea" />
               </View>
               <View>
-                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>
-                  Importar Datos
-                </ThemedText>
+                <ThemedText style={[styles.settingsTitle, { color: textMain }]}>Importar Datos</ThemedText>
                 <ThemedText style={[styles.settingsSubtitle, { color: textMuted }]}>
                   Restaurar desde JSON o SQLite (.db)
                 </ThemedText>
@@ -476,10 +485,7 @@ export function SettingsScreen() {
           </TouchableOpacity>
 
           {/* Eliminar Todos los Datos */}
-          <TouchableOpacity
-            style={[styles.settingsRow]}
-            onPress={handleDeleteAllData}
-          >
+          <TouchableOpacity style={[styles.settingsRow]} onPress={handleDeleteAllData}>
             <View style={styles.settingsRowLeft}>
               <View style={[styles.settingsIcon, { backgroundColor: '#fee2e2' }]}>
                 <IconSymbol size={22} name="trash.fill" color="#ef4444" />
@@ -518,9 +524,7 @@ export function SettingsScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: surfaceColor }]}>
             <View style={styles.modalHeader}>
-              <ThemedText style={[styles.modalTitle, { color: textMain }]}>
-                Seleccionar Moneda
-              </ThemedText>
+              <ThemedText style={[styles.modalTitle, { color: textMain }]}>Seleccionar Moneda</ThemedText>
               <TouchableOpacity onPress={() => setShowCurrencyModal(false)}>
                 <IconSymbol size={24} name="xmark" color={textMuted} />
               </TouchableOpacity>
@@ -537,12 +541,8 @@ export function SettingsScreen() {
                   ]}
                   onPress={() => handleCurrencyChange(curr.code)}
                 >
-                  <ThemedText style={[styles.currencyText, { color: textMain }]}>
-                    {curr.label}
-                  </ThemedText>
-                  {currency === curr.code && (
-                    <IconSymbol size={20} name="checkmark" color={primary} />
-                  )}
+                  <ThemedText style={[styles.currencyText, { color: textMain }]}>{curr.label}</ThemedText>
+                  {currency === curr.code && <IconSymbol size={20} name="checkmark" color={primary} />}
                 </TouchableOpacity>
               ))}
             </View>

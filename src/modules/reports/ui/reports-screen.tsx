@@ -6,10 +6,16 @@ import { ThemedView } from '@/core/ui-kit/themed-view';
 import { useThemeColor } from '@/core/ui-kit/use-theme-color';
 import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
 import { useCurrency } from '@/core/preferences/use-currency';
-import { budgetsQueryKey, movementsLedgerKey, savingsGoalsQueryKey, subscriptionsQueryKey, type MovementWithAccount } from '@/core/contracts/finance';
+import {
+  budgetsQueryKey,
+  movementsLedgerKey,
+  savingsGoalsQueryKey,
+  subscriptionsQueryKey,
+  type MovementWithAccount,
+} from '@/core/contracts/finance';
 import { fromOptional } from '@/core/contracts/result';
-import { useCapability } from '@/core/registry/react';
-import { useErrorReporter } from '@/core/registry/react';
+import { useCapability, useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 
 const DATE_FILTERS = ['Este mes', 'Mes pasado', '3 meses', 'Personalizado'];
 
@@ -75,14 +81,14 @@ type DateRange = {
 };
 
 // Donut chart using border-based segments
-function DonutChart({ 
-  surfaceColor, 
-  textMain, 
-  textMuted, 
-  topCategory 
-}: { 
-  surfaceColor: string; 
-  textMain: string; 
+function DonutChart({
+  surfaceColor,
+  textMain,
+  textMuted,
+  topCategory,
+}: {
+  surfaceColor: string;
+  textMain: string;
   textMuted: string;
   topCategory: CategoryStat | null;
 }) {
@@ -110,27 +116,31 @@ function DonutChart({
         }}
       />
       {/* Extra wedge overlay */}
-      <View style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: SIZE / 2,
-        height: SIZE,
-        overflow: 'hidden',
-      }}>
-        <View style={{
+      <View
+        style={{
           position: 'absolute',
           top: 0,
           left: 0,
-          width: SIZE,
+          width: SIZE / 2,
           height: SIZE,
-          borderRadius: SIZE / 2,
-          borderWidth: BORDER,
-          borderColor: 'transparent',
-          borderTopColor: topColor,
-          borderLeftColor: topColor,
-          transform: [{ rotate: '20deg' }],
-        }} />
+          overflow: 'hidden',
+        }}
+      >
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: SIZE,
+            height: SIZE,
+            borderRadius: SIZE / 2,
+            borderWidth: BORDER,
+            borderColor: 'transparent',
+            borderTopColor: topColor,
+            borderLeftColor: topColor,
+            transform: [{ rotate: '20deg' }],
+          }}
+        />
       </View>
       {/* Center hole */}
       <View
@@ -174,10 +184,10 @@ export function ReportsScreen() {
   const [expenseChange, setExpenseChange] = useState(0);
   const [incomeChange, setIncomeChange] = useState(0);
   const [dateRange, setDateRange] = useState<DateRange | null>(null);
-  const [topCategory, setTopCategory] = useState<string>('');
+  const [, setTopCategory] = useState<string>('');
   const [insightText, setInsightText] = useState<string>('');
   const { formatCurrency } = useCurrency();
-  
+
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c22' }, 'surface');
   const textMain = useThemeColor({ light: '#1e293b', dark: '#ffffff' }, 'text');
@@ -189,8 +199,6 @@ export function ReportsScreen() {
   const chipText = useThemeColor({ light: '#475569', dark: '#cbd5e1' }, 'text');
   const weekendBarColor = useThemeColor({ light: '#cbd5e1', dark: '#475569' }, 'text');
   const primary = '#20df60';
-
-  const BUDGET = 1500; // Mock - mantener como constante
 
   const getDateRangeForFilter = (filter: string): DateRange => {
     const now = new Date();
@@ -227,7 +235,7 @@ export function ReportsScreen() {
     return { start, end };
   };
 
-  const fetchData = (customRange?: DateRange) => {
+  const fetchData = useStableCallback((customRange?: DateRange) => {
     try {
       // Determinar el rango de fechas a usar
       const range = customRange || dateRange || getDateRangeForFilter(activeFilter);
@@ -287,7 +295,7 @@ export function ReportsScreen() {
 
         // Calcular estadísticas por categoría del periodo
         const categoryData = calculateCategoryStats(currentExpenses);
-        const incomeCategoryData = calculateIncomeCategoryStats(currentIncomes);
+        calculateIncomeCategoryStats(currentIncomes);
 
         // Generar insight dinámico
         generateInsight(categoryData, changeExp, activeFilter);
@@ -347,15 +355,15 @@ export function ReportsScreen() {
     } catch (error) {
       reportError('Error al cargar datos:', error);
     }
-  };
+  });
 
   const calculateCategoryStats = (expenses: MovementWithAccount[]) => {
     const categoryMap = new Map<string, CategoryStat>();
     let totalAmount = 0;
-    
+
     expenses
-      .filter(m => m.category_name)
-      .forEach(movement => {
+      .filter((m) => m.category_name)
+      .forEach((movement) => {
         totalAmount += movement.amount;
         const categoryName = movement.category_name ?? '';
         const existing = categoryMap.get(categoryName);
@@ -376,30 +384,30 @@ export function ReportsScreen() {
 
     // Calcular porcentajes
     const stats = Array.from(categoryMap.values())
-      .map(stat => ({
+      .map((stat) => ({
         ...stat,
         percentage: totalAmount > 0 ? (stat.total / totalAmount) * 100 : 0,
       }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 4);
-    
+
     setCategoryStats(stats);
-    
+
     // Guardar la categoría top para el insight
     if (stats[0]) {
       setTopCategory(stats[0].category_name);
     }
-    
+
     return stats;
   };
 
   const calculateIncomeCategoryStats = (incomes: MovementWithAccount[]) => {
     const categoryMap = new Map<string, IncomeCategoryStat>();
     let totalAmount = 0;
-    
+
     incomes
-      .filter(m => m.category_name)
-      .forEach(movement => {
+      .filter((m) => m.category_name)
+      .forEach((movement) => {
         totalAmount += movement.amount;
         const categoryName = movement.category_name ?? '';
         const existing = categoryMap.get(categoryName);
@@ -420,34 +428,37 @@ export function ReportsScreen() {
 
     // Calcular porcentajes
     const stats = Array.from(categoryMap.values())
-      .map(stat => ({
+      .map((stat) => ({
         ...stat,
         percentage: totalAmount > 0 ? (stat.total / totalAmount) * 100 : 0,
       }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 4);
-    
+
     setIncomeCategoryStats(stats);
-    
+
     return stats;
   };
 
   const generateInsight = (categories: CategoryStat[], changePercent: number, filter: string) => {
     if (categories.length === 0) {
-      setInsightText('No hay gastos registrados en este periodo. ¡Comienza a registrar tus movimientos para obtener insights personalizados!');
+      setInsightText(
+        'No hay gastos registrados en este periodo. ¡Comienza a registrar tus movimientos para obtener insights personalizados!',
+      );
       return;
     }
 
     const topCat = categories[0];
     if (!topCat) return;
-    const changeText = changePercent > 0 
-      ? `${Math.abs(changePercent).toFixed(1)}% más` 
-      : `${Math.abs(changePercent).toFixed(1)}% menos`;
-    
+    const changeText =
+      changePercent > 0
+        ? `${Math.abs(changePercent).toFixed(1)}% más`
+        : `${Math.abs(changePercent).toFixed(1)}% menos`;
+
     const periodText = filter === 'Este mes' ? 'el mes anterior' : 'el periodo anterior';
-    
+
     let insight = '';
-    
+
     if (Math.abs(changePercent) < 5) {
       insight = `Tu gasto se mantiene estable. La categoría donde más gastas es ${topCat.category_name} con ${formatCurrency(topCat.total)} (${topCat.percentage.toFixed(1)}% del total).`;
     } else if (changePercent < 0) {
@@ -455,19 +466,19 @@ export function ReportsScreen() {
     } else {
       insight = `Has gastado un ${changeText} en comparación con ${periodText}. La categoría donde más gastas es ${topCat.category_name} con ${formatCurrency(topCat.total)}. Considera revisar estos gastos.`;
     }
-    
+
     setInsightText(insight);
   };
 
   const calculateMonthlyTrend = (movements: MovementWithAccount[], range: DateRange) => {
     // Determinar si mostrar días o semanas según el rango
     const periodDays = Math.ceil((range.end.getTime() - range.start.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (periodDays <= 31) {
       // Mostrar últimos 7 días
       const now = range.end;
       const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-      
+
       const last7Days = Array.from({ length: 7 }, (_, i) => {
         const date = new Date(now);
         date.setDate(date.getDate() - (6 - i));
@@ -479,17 +490,17 @@ export function ReportsScreen() {
         dayStart.setHours(0, 0, 0, 0);
         const dayEnd = new Date(date);
         dayEnd.setHours(23, 59, 59, 999);
-        
+
         const dayExpenses = movements.filter((m) => {
           if (m.type !== 'expense') return false;
           const movementDate = new Date(m.date);
           return movementDate >= dayStart && movementDate <= dayEnd;
         });
-        
+
         const total = dayExpenses.reduce((sum: number, m) => sum + m.amount, 0);
         const dayOfWeek = date.getDay();
         const isToday = date.toDateString() === now.toDateString();
-        
+
         return {
           label: daysOfWeek[dayOfWeek] ?? '',
           amount: total,
@@ -499,8 +510,8 @@ export function ReportsScreen() {
         };
       });
 
-      const maxAmount = Math.max(...dailyExpenses.map(d => d.amount), 1);
-      const trendData = dailyExpenses.map(day => ({
+      const maxAmount = Math.max(...dailyExpenses.map((d) => d.amount), 1);
+      const trendData = dailyExpenses.map((day) => ({
         ...day,
         height: maxAmount > 0 ? (day.amount / maxAmount) * 100 : 20,
       }));
@@ -510,21 +521,21 @@ export function ReportsScreen() {
       // Mostrar por semanas para periodos más largos
       const weeks = Math.min(Math.ceil(periodDays / 7), 7);
       const weeklyData: MonthlyTrend[] = [];
-      
+
       for (let i = 0; i < weeks; i++) {
         const weekEnd = new Date(range.end);
-        weekEnd.setDate(weekEnd.getDate() - (i * 7));
+        weekEnd.setDate(weekEnd.getDate() - i * 7);
         const weekStart = new Date(weekEnd);
         weekStart.setDate(weekStart.getDate() - 6);
-        
+
         const weekExpenses = movements.filter((m) => {
           if (m.type !== 'expense') return false;
           const movementDate = new Date(m.date);
           return movementDate >= weekStart && movementDate <= weekEnd;
         });
-        
+
         const total = weekExpenses.reduce((sum: number, m) => sum + m.amount, 0);
-        
+
         weeklyData.unshift({
           label: `S${weeks - i}`,
           amount: total,
@@ -533,13 +544,13 @@ export function ReportsScreen() {
           weekend: false,
         });
       }
-      
-      const maxAmount = Math.max(...weeklyData.map(w => w.amount), 1);
-      const trendData = weeklyData.map(week => ({
+
+      const maxAmount = Math.max(...weeklyData.map((w) => w.amount), 1);
+      const trendData = weeklyData.map((week) => ({
         ...week,
         height: maxAmount > 0 ? (week.amount / maxAmount) * 100 : 20,
       }));
-      
+
       setMonthlyTrend(trendData);
     }
   };
@@ -563,7 +574,7 @@ export function ReportsScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchData();
-    }, [])
+    }, [fetchData]),
   );
 
   return (
@@ -598,9 +609,7 @@ export function ReportsScreen() {
               <ThemedText
                 style={[
                   styles.filterPillText,
-                  activeFilter === filter
-                    ? styles.filterPillTextActive
-                    : { color: chipText },
+                  activeFilter === filter ? styles.filterPillTextActive : { color: chipText },
                 ]}
               >
                 {filter}
@@ -608,7 +617,10 @@ export function ReportsScreen() {
             </TouchableOpacity>
           ))}
           <TouchableOpacity
-            style={[styles.calendarButton, { backgroundColor: chipBg, borderColor: chipBorder, borderWidth: 1 }]}
+            style={[
+              styles.calendarButton,
+              { backgroundColor: chipBg, borderColor: chipBorder, borderWidth: 1 },
+            ]}
           >
             <IconSymbol size={20} name="calendar" color={chipText} />
           </TouchableOpacity>
@@ -620,9 +632,7 @@ export function ReportsScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}
       >
         {/* Summary Cards */}
         <View style={styles.summaryRow}>
@@ -632,15 +642,24 @@ export function ReportsScreen() {
               <View style={[styles.summaryIconBg, { backgroundColor: '#ffe4e6' }]}>
                 <IconSymbol size={22} name="arrow.down.right" color="#e11d48" />
               </View>
-              <View style={[styles.percentBadge, { backgroundColor: expenseChange < 0 ? '#dcfce7' : '#fff1f2' }]}>
-                <ThemedText style={[styles.percentBadgeText, { color: expenseChange < 0 ? '#16a34a' : '#e11d48' }]}>
-                  {expenseChange > 0 ? '+' : ''}{expenseChange.toFixed(1)}%
+              <View
+                style={[styles.percentBadge, { backgroundColor: expenseChange < 0 ? '#dcfce7' : '#fff1f2' }]}
+              >
+                <ThemedText
+                  style={[styles.percentBadgeText, { color: expenseChange < 0 ? '#16a34a' : '#e11d48' }]}
+                >
+                  {expenseChange > 0 ? '+' : ''}
+                  {expenseChange.toFixed(1)}%
                 </ThemedText>
               </View>
             </View>
             <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>Gastos</ThemedText>
             <View style={styles.summaryAmountRow}>
-              <ThemedText style={[styles.summaryAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
+              <ThemedText
+                style={[styles.summaryAmount, { color: textMain }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
                 ${Math.floor(totalExpense).toLocaleString('en-US')}
               </ThemedText>
               <ThemedText style={[styles.summaryAmountCents, { color: textMuted }]}>
@@ -655,15 +674,24 @@ export function ReportsScreen() {
               <View style={[styles.summaryIconBg, { backgroundColor: '#dcfce7' }]}>
                 <IconSymbol size={22} name="arrow.up.right" color="#16a34a" />
               </View>
-              <View style={[styles.percentBadge, { backgroundColor: incomeChange > 0 ? '#dcfce7' : '#fff1f2' }]}>
-                <ThemedText style={[styles.percentBadgeText, { color: incomeChange > 0 ? '#16a34a' : '#e11d48' }]}>
-                  {incomeChange > 0 ? '+' : ''}{incomeChange.toFixed(1)}%
+              <View
+                style={[styles.percentBadge, { backgroundColor: incomeChange > 0 ? '#dcfce7' : '#fff1f2' }]}
+              >
+                <ThemedText
+                  style={[styles.percentBadgeText, { color: incomeChange > 0 ? '#16a34a' : '#e11d48' }]}
+                >
+                  {incomeChange > 0 ? '+' : ''}
+                  {incomeChange.toFixed(1)}%
                 </ThemedText>
               </View>
             </View>
             <ThemedText style={[styles.summaryLabel, { color: textMuted }]}>Ingresos</ThemedText>
             <View style={styles.summaryAmountRow}>
-              <ThemedText style={[styles.summaryAmount, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
+              <ThemedText
+                style={[styles.summaryAmount, { color: textMain }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
                 ${Math.floor(totalIncome).toLocaleString('en-US')}
               </ThemedText>
               <ThemedText style={[styles.summaryAmountCents, { color: textMuted }]}>
@@ -676,11 +704,17 @@ export function ReportsScreen() {
         {/* Balance Card */}
         <View style={[styles.balanceCard, { backgroundColor: surfaceColor, borderColor }]}>
           <View style={styles.balanceCardContent}>
-            <ThemedText style={[styles.balanceLabel, { color: textMuted }]}>
-              Balance del Periodo
-            </ThemedText>
-            <ThemedText style={[styles.balanceAmount, { color: totalIncome - totalExpense >= 0 ? '#16a34a' : '#e11d48' }]} numberOfLines={1} adjustsFontSizeToFit>
-              {totalIncome - totalExpense >= 0 ? '+' : ''}{formatCurrency(totalIncome - totalExpense)}
+            <ThemedText style={[styles.balanceLabel, { color: textMuted }]}>Balance del Periodo</ThemedText>
+            <ThemedText
+              style={[
+                styles.balanceAmount,
+                { color: totalIncome - totalExpense >= 0 ? '#16a34a' : '#e11d48' },
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {totalIncome - totalExpense >= 0 ? '+' : ''}
+              {formatCurrency(totalIncome - totalExpense)}
             </ThemedText>
             <View style={styles.balanceBreakdown}>
               <View style={styles.balanceItem}>
@@ -706,9 +740,9 @@ export function ReportsScreen() {
 
           <View style={styles.donutSection}>
             {/* Donut Chart */}
-            <DonutChart 
-              surfaceColor={surfaceColor} 
-              textMain={textMain} 
+            <DonutChart
+              surfaceColor={surfaceColor}
+              textMain={textMain}
               textMuted={textMuted}
               topCategory={categoryStats[0] || null}
             />
@@ -793,8 +827,14 @@ export function ReportsScreen() {
                 <View key={index} style={styles.categoryStatItem}>
                   <View style={styles.categoryStatRow}>
                     <View style={styles.categoryStatInfo}>
-                      <View style={[styles.categoryStatIcon, { backgroundColor: category.category_color + '20' }]}>
-                        <IconSymbol size={20} name={category.category_icon as any} color={category.category_color} />
+                      <View
+                        style={[styles.categoryStatIcon, { backgroundColor: category.category_color + '20' }]}
+                      >
+                        <IconSymbol
+                          size={20}
+                          name={category.category_icon as IconSymbolName}
+                          color={category.category_color}
+                        />
                       </View>
                       <View>
                         <ThemedText style={[styles.categoryStatName, { color: textMain }]}>
@@ -815,11 +855,11 @@ export function ReportsScreen() {
                     </View>
                   </View>
                   <View style={[styles.categoryStatBar, { backgroundColor: barBg }]}>
-                    <View 
+                    <View
                       style={[
-                        styles.categoryStatBarFill, 
-                        { width: `${category.percentage}%`, backgroundColor: category.category_color }
-                      ]} 
+                        styles.categoryStatBarFill,
+                        { width: `${category.percentage}%`, backgroundColor: category.category_color },
+                      ]}
                     />
                   </View>
                 </View>
@@ -840,7 +880,8 @@ export function ReportsScreen() {
 
             <View style={styles.budgetStatsList}>
               {budgetStats.map((budget) => {
-                const barColor = budget.percentage >= 100 ? '#ef4444' : budget.percentage >= 80 ? '#f59e0b' : '#10b981';
+                const barColor =
+                  budget.percentage >= 100 ? '#ef4444' : budget.percentage >= 80 ? '#f59e0b' : '#10b981';
                 return (
                   <View key={budget.id} style={styles.budgetStatItem}>
                     <View style={styles.budgetStatRow}>
@@ -857,11 +898,11 @@ export function ReportsScreen() {
                       </ThemedText>
                     </View>
                     <View style={[styles.budgetStatBar, { backgroundColor: barBg }]}>
-                      <View 
+                      <View
                         style={[
-                          styles.budgetStatBarFill, 
-                          { width: `${Math.min(budget.percentage, 100)}%`, backgroundColor: barColor }
-                        ]} 
+                          styles.budgetStatBarFill,
+                          { width: `${Math.min(budget.percentage, 100)}%`, backgroundColor: barColor },
+                        ]}
                       />
                     </View>
                     <ThemedText style={[styles.budgetStatPercent, { color: barColor }]}>
@@ -901,11 +942,11 @@ export function ReportsScreen() {
                     </ThemedText>
                   </View>
                   <View style={[styles.goalStatBar, { backgroundColor: barBg }]}>
-                    <View 
+                    <View
                       style={[
-                        styles.goalStatBarFill, 
-                        { width: `${Math.min(goal.percentage, 100)}%`, backgroundColor: goal.color }
-                      ]} 
+                        styles.goalStatBarFill,
+                        { width: `${Math.min(goal.percentage, 100)}%`, backgroundColor: goal.color },
+                      ]}
                     />
                   </View>
                   <ThemedText style={[styles.goalStatPercent, { color: goal.color }]}>
@@ -930,7 +971,14 @@ export function ReportsScreen() {
             <View style={styles.subscriptionStatsList}>
               {subscriptionStats.map((sub) => {
                 const isIncome = sub.type === 'salary' || sub.type === 'recurring_income';
-                const frequencyLabel = sub.frequency === 'monthly' ? '/mes' : sub.frequency === 'weekly' ? '/sem' : sub.frequency === 'yearly' ? '/año' : '';
+                const frequencyLabel =
+                  sub.frequency === 'monthly'
+                    ? '/mes'
+                    : sub.frequency === 'weekly'
+                      ? '/sem'
+                      : sub.frequency === 'yearly'
+                        ? '/año'
+                        : '';
                 return (
                   <View key={sub.id} style={styles.subscriptionStatItem}>
                     <View style={[styles.subscriptionStatIcon, { backgroundColor: sub.color + '20' }]}>
@@ -941,11 +989,22 @@ export function ReportsScreen() {
                         {sub.name}
                       </ThemedText>
                       <ThemedText style={[styles.subscriptionStatType, { color: textMuted }]}>
-                        {sub.type === 'subscription' ? 'Suscripción' : sub.type === 'salary' ? 'Salario' : sub.type === 'recurring_income' ? 'Ingreso' : 'Gasto'} · {frequencyLabel}
+                        {sub.type === 'subscription'
+                          ? 'Suscripción'
+                          : sub.type === 'salary'
+                            ? 'Salario'
+                            : sub.type === 'recurring_income'
+                              ? 'Ingreso'
+                              : 'Gasto'}{' '}
+                        · {frequencyLabel}
                       </ThemedText>
                     </View>
-                    <ThemedText style={[styles.subscriptionStatAmount, { color: isIncome ? '#16a34a' : textMain }]} numberOfLines={1}>
-                      {isIncome ? '+' : '-'}{formatCurrency(sub.amount)}
+                    <ThemedText
+                      style={[styles.subscriptionStatAmount, { color: isIncome ? '#16a34a' : textMain }]}
+                      numberOfLines={1}
+                    >
+                      {isIncome ? '+' : '-'}
+                      {formatCurrency(sub.amount)}
                     </ThemedText>
                   </View>
                 );
@@ -961,7 +1020,11 @@ export function ReportsScreen() {
           </View>
           <View style={styles.insightContent}>
             <ThemedText style={[styles.insightTitle, { color: textMain }]}>
-              {expenseChange <= -5 ? 'Salud Financiera: Excelente' : expenseChange >= 10 ? 'Salud Financiera: Atención' : 'Salud Financiera: Buena'}
+              {expenseChange <= -5
+                ? 'Salud Financiera: Excelente'
+                : expenseChange >= 10
+                  ? 'Salud Financiera: Atención'
+                  : 'Salud Financiera: Buena'}
             </ThemedText>
             <ThemedText style={[styles.insightText, { color: textMuted }]}>
               {insightText || 'Cargando análisis...'}

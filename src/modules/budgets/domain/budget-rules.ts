@@ -4,7 +4,10 @@ export const isBudgetType = (v: string): v is BudgetType => v === 'saving' || v 
 export const isBudgetPeriod = (v: string): v is BudgetPeriod => v === 'weekly' || v === 'monthly';
 
 /** Un presupuesto de gasto sin categorías aplica a todas; con categorías, solo a esas (regla v1). */
-export function budgetCoversCategory(budget: Pick<BudgetRecord, 'category_ids'>, categoryId: string): boolean {
+export function budgetCoversCategory(
+  budget: Pick<BudgetRecord, 'category_ids'>,
+  categoryId: string,
+): boolean {
   if (!budget.category_ids || budget.category_ids === 'null') return true;
   try {
     const ids: unknown = JSON.parse(budget.category_ids);

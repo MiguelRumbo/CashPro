@@ -39,9 +39,7 @@ export async function startModules({ config, db, logger, loaders }: StartOptions
   const preferences = createPreferencesStore({ currency: config.currency.default });
   const unsubscribers: (() => void)[] = [];
 
-  const enabledIds = (Object.keys(config.modules) as ModuleId[]).filter(
-    (id) => config.modules[id].enabled,
-  );
+  const enabledIds = (Object.keys(config.modules) as ModuleId[]).filter((id) => config.modules[id].enabled);
 
   for (const id of enabledIds) {
     const provided: string[] = [];

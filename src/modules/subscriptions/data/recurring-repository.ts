@@ -21,7 +21,11 @@ export function createRecurringRepository(db: DbHandle) {
       return orm.insert(recurringPayments).values(row).returning().get();
     },
     update(id: number, fields: RecurringUpdate): RecurringPaymentRecord | undefined {
-      orm.update(recurringPayments).set({ ...fields, updated_at: nowIso() }).where(eq(recurringPayments.id, id)).run();
+      orm
+        .update(recurringPayments)
+        .set({ ...fields, updated_at: nowIso() })
+        .where(eq(recurringPayments.id, id))
+        .run();
       return this.getById(id);
     },
     delete(id: number): void {

@@ -25,7 +25,11 @@ export function createProfileRepository(db: DbHandle) {
         .get();
     },
     update(fields: { name: string; email: string; currency: CurrencyCode }): ProfileRecord | undefined {
-      orm.update(userProfile).set({ ...fields, updated_at: nowIso() }).where(eq(userProfile.id, PROFILE_ID)).run();
+      orm
+        .update(userProfile)
+        .set({ ...fields, updated_at: nowIso() })
+        .where(eq(userProfile.id, PROFILE_ID))
+        .run();
       return this.get();
     },
   };

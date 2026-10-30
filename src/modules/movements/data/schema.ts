@@ -16,8 +16,12 @@ export const movements = sqliteTable(
     to_account_id: integer('to_account_id'),
     date: text('date').notNull(),
     notes: text('notes'),
-    created_at: text('created_at').notNull().default(sql`(datetime('now'))`),
-    updated_at: text('updated_at').notNull().default(sql`(datetime('now'))`),
+    created_at: text('created_at')
+      .notNull()
+      .default(sql`(datetime('now'))`),
+    updated_at: text('updated_at')
+      .notNull()
+      .default(sql`(datetime('now'))`),
   },
   (t) => [check('movements_type_check', sql`${t.type} IN ('expense', 'income', 'transfer')`)],
 );

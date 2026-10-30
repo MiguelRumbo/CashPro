@@ -22,7 +22,11 @@ export function createAccountsRepository(db: DbHandle) {
       return orm.insert(accounts).values(row).returning().get();
     },
     update(id: number, fields: AccountUpdate): AccountRecord | undefined {
-      orm.update(accounts).set({ ...fields, updated_at: nowIso() }).where(eq(accounts.id, id)).run();
+      orm
+        .update(accounts)
+        .set({ ...fields, updated_at: nowIso() })
+        .where(eq(accounts.id, id))
+        .run();
       return this.getById(id);
     },
     delete(id: number): void {

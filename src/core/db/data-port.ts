@@ -34,8 +34,13 @@ export function createTableDataPort(db: DbHandle, tables: readonly SQLiteTable[]
         if (!parsed.success) throw new DataImportError(`Formato inválido en la tabla ${name}`);
         const columns = Object.keys(getTableColumns(table));
         for (const row of parsed.data) {
-          const values = Object.fromEntries(columns.map((c) => [c, row[c] ?? null]).filter(([, v]) => v !== null));
-          db.orm.insert(table).values(values as SQLiteTable['$inferInsert']).run();
+          const values = Object.fromEntries(
+            columns.map((c) => [c, row[c] ?? null]).filter(([, v]) => v !== null),
+          );
+          db.orm
+            .insert(table)
+            .values(values as SQLiteTable['$inferInsert'])
+            .run();
         }
       }
     },

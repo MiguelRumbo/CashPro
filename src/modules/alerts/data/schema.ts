@@ -14,6 +14,10 @@ export const notificationSettings = sqliteTable('notification_settings', {
   vacation_mode: integer('vacation_mode').notNull().default(0),
   vacation_mode_until: text('vacation_mode_until'),
   push_token: text('push_token'),
-  created_at: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updated_at: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  created_at: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updated_at: text('updated_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
 });

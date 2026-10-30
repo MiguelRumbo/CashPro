@@ -6,14 +6,14 @@ import { ThemedView } from '@/core/ui-kit/themed-view';
 import { useThemeColor } from '@/core/ui-kit/use-theme-color';
 import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
 import { formatCardNumber, formatCurrencyInput, getNumericValue } from '@/core/units/format';
-import type { AccountRecord } from '@/core/contracts/finance';
 import { getAccountsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
+import type { AccountInput } from '../services/accounts-service';
 
 type AccountType = 'cash' | 'bank' | 'debit' | 'credit';
 
 export function AddAccountScreen() {
-  const { accounts: accountsService, msi: msiService } = getAccountsRuntime();
+  const { accounts: accountsService } = getAccountsRuntime();
   const reportError = useErrorReporter();
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1c2e24' }, 'surface');
@@ -25,14 +25,14 @@ export function AddAccountScreen() {
   const [accountType, setAccountType] = useState<AccountType>('cash');
   const [name, setName] = useState('');
   const [balance, setBalance] = useState('');
-  
+
   // Campos para banco/débito
   const [clabe, setClabe] = useState('');
   const [bankName, setBankName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [generatesInterest, setGeneratesInterest] = useState(false);
   const [interestRate, setInterestRate] = useState('');
-  
+
   // Campos para crédito
   const [creditLimit, setCreditLimit] = useState('');
   const [currentBalance, setCurrentBalance] = useState('');
@@ -95,7 +95,7 @@ export function AddAccountScreen() {
       }
     }
 
-    const accountData: any = {
+    const accountData: AccountInput = {
       name: name.trim(),
       type: accountType,
       balance: accountType === 'credit' ? 0 : getNumericValue(balance),
@@ -127,9 +127,7 @@ export function AddAccountScreen() {
       const result = accountsService.createAccount(accountData);
 
       if (result.success) {
-        Alert.alert('Éxito', 'Cuenta creada exitosamente', [
-          { text: 'OK', onPress: () => router.back() }
-        ]);
+        Alert.alert('Éxito', 'Cuenta creada exitosamente', [{ text: 'OK', onPress: () => router.back() }]);
       } else {
         Alert.alert('Error', result.error || 'No se pudo crear la cuenta');
       }
@@ -163,20 +161,18 @@ export function AddAccountScreen() {
                 key={type.id}
                 style={[
                   styles.typeCard,
-                  { 
+                  {
                     backgroundColor: surfaceColor,
                     borderColor: accountType === type.id ? primary : borderColor,
                     borderWidth: accountType === type.id ? 2 : 1,
-                  }
+                  },
                 ]}
                 onPress={() => setAccountType(type.id as AccountType)}
               >
                 <View style={[styles.typeIcon, { backgroundColor: `${type.color}20` }]}>
                   <IconSymbol size={24} name={type.icon as IconSymbolName} color={type.color} />
                 </View>
-                <ThemedText style={[styles.typeLabel, { color: textMain }]}>
-                  {type.label}
-                </ThemedText>
+                <ThemedText style={[styles.typeLabel, { color: textMain }]}>{type.label}</ThemedText>
               </TouchableOpacity>
             ))}
           </View>

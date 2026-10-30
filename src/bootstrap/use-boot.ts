@@ -9,9 +9,7 @@ import { manifestLoaders } from './manifest-loaders';
 import { startModules, type AppRuntime } from './start';
 
 export type BootState =
-  | { status: 'loading' }
-  | { status: 'ready'; runtime: AppRuntime }
-  | { status: 'error'; message: string };
+  { status: 'loading' } | { status: 'ready'; runtime: AppRuntime } | { status: 'error'; message: string };
 
 const logger = createLogger(__DEV__ ? appConfig.logger.devMinLevel : appConfig.logger.prodMinLevel);
 

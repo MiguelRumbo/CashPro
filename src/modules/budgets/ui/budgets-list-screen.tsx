@@ -9,6 +9,7 @@ import { useCurrency } from '@/core/preferences/use-currency';
 import type { BudgetRecord } from '@/core/contracts/finance';
 import { getBudgetsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
+import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 
 type Budget = BudgetRecord;
 
@@ -18,7 +19,7 @@ export function BudgetsListScreen() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const { formatCurrency } = useCurrency();
-  
+
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
@@ -28,7 +29,7 @@ export function BudgetsListScreen() {
   const warning = '#f59e0b';
   const danger = '#ef4444';
 
-  const fetchBudgets = () => {
+  const fetchBudgets = useStableCallback(() => {
     try {
       const result = budgetsService.getBudgets();
 
@@ -40,7 +41,7 @@ export function BudgetsListScreen() {
       reportError('Error al cargar presupuestos:', error);
       Alert.alert('Error', 'No se pudieron cargar los presupuestos');
     }
-  };
+  });
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -51,34 +52,30 @@ export function BudgetsListScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchBudgets();
-    }, [])
+    }, [fetchBudgets]),
   );
 
   const handleDeleteBudget = (id: number, name: string) => {
-    Alert.alert(
-      'Eliminar Presupuesto',
-      `¿Estás seguro de eliminar "${name}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () => {
-            try {
-              const result = budgetsService.deleteBudget(id);
+    Alert.alert('Eliminar Presupuesto', `¿Estás seguro de eliminar "${name}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () => {
+          try {
+            const result = budgetsService.deleteBudget(id);
 
-              if (result.success) {
-                fetchBudgets();
-              } else {
-                Alert.alert('Error', result.error);
-              }
-            } catch (error) {
-              Alert.alert('Error', 'No se pudo eliminar el presupuesto');
+            if (result.success) {
+              fetchBudgets();
+            } else {
+              Alert.alert('Error', result.error);
             }
-          },
+          } catch {
+            Alert.alert('Error', 'No se pudo eliminar el presupuesto');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const getProgress = (budget: Budget) => {
@@ -94,16 +91,20 @@ export function BudgetsListScreen() {
 
   const getPeriodText = (period: string) => {
     switch (period) {
-      case 'daily': return 'Diario';
-      case 'weekly': return 'Semanal';
-      case 'monthly': return 'Mensual';
-      default: return period;
+      case 'daily':
+        return 'Diario';
+      case 'weekly':
+        return 'Semanal';
+      case 'monthly':
+        return 'Mensual';
+      default:
+        return period;
     }
   };
 
   return (
     <ThemedView style={[styles.container, { backgroundColor }]}>
-      <Stack.Screen 
+      <Stack.Screen
         options={{
           title: 'Presupuestos',
           headerShown: true,
@@ -112,9 +113,7 @@ export function BudgetsListScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}
       >
         {/* Descripción */}
         <View style={[styles.infoCard, { backgroundColor: surfaceColor, borderColor }]}>
@@ -122,11 +121,10 @@ export function BudgetsListScreen() {
             <IconSymbol name="chart.pie.fill" size={24} color={primary} />
           </View>
           <View style={styles.infoContent}>
-            <ThemedText style={[styles.infoTitle, { color: textMain }]}>
-              Control de Gastos
-            </ThemedText>
+            <ThemedText style={[styles.infoTitle, { color: textMain }]}>Control de Gastos</ThemedText>
             <ThemedText style={[styles.infoText, { color: textMuted }]}>
-              Establece límites de gasto diarios, semanales o mensuales para mantener tus finanzas bajo control
+              Establece límites de gasto diarios, semanales o mensuales para mantener tus finanzas bajo
+              control
             </ThemedText>
           </View>
         </View>
@@ -149,12 +147,14 @@ export function BudgetsListScreen() {
                 <View style={styles.budgetHeader}>
                   <View style={styles.budgetInfo}>
                     <View style={[styles.iconContainer, { backgroundColor: (budget.color ?? '') + '20' }]}>
-                      <IconSymbol name={budget.icon as IconSymbolName} size={24} color={budget.color ?? primary} />
+                      <IconSymbol
+                        name={budget.icon as IconSymbolName}
+                        size={24}
+                        color={budget.color ?? primary}
+                      />
                     </View>
                     <View style={styles.budgetDetails}>
-                      <ThemedText style={[styles.budgetName, { color: textMain }]}>
-                        {budget.name}
-                      </ThemedText>
+                      <ThemedText style={[styles.budgetName, { color: textMain }]}>{budget.name}</ThemedText>
                       <View style={styles.periodBadge}>
                         <IconSymbol name="calendar" size={12} color={textMuted} />
                         <ThemedText style={[styles.periodText, { color: textMuted }]}>
@@ -173,19 +173,23 @@ export function BudgetsListScreen() {
                 {/* Montos */}
                 <View style={styles.amountsRow}>
                   <View style={styles.amountItem}>
-                    <ThemedText style={[styles.amountLabel, { color: textMuted }]}>
-                      Gastado
-                    </ThemedText>
-                    <ThemedText style={[styles.amountValue, { color: progressColor }]} numberOfLines={1} adjustsFontSizeToFit>
+                    <ThemedText style={[styles.amountLabel, { color: textMuted }]}>Gastado</ThemedText>
+                    <ThemedText
+                      style={[styles.amountValue, { color: progressColor }]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                    >
                       {formatCurrency(budget.current_amount)}
                     </ThemedText>
                   </View>
                   <View style={[styles.amountDivider, { backgroundColor: borderColor }]} />
                   <View style={[styles.amountItem, { alignItems: 'flex-end' }]}>
-                    <ThemedText style={[styles.amountLabel, { color: textMuted }]}>
-                      Límite
-                    </ThemedText>
-                    <ThemedText style={[styles.amountValue, { color: textMain }]} numberOfLines={1} adjustsFontSizeToFit>
+                    <ThemedText style={[styles.amountLabel, { color: textMuted }]}>Límite</ThemedText>
+                    <ThemedText
+                      style={[styles.amountValue, { color: textMain }]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                    >
                       {formatCurrency(budget.amount)}
                     </ThemedText>
                   </View>
@@ -194,14 +198,14 @@ export function BudgetsListScreen() {
                 {/* Barra de progreso */}
                 <View style={styles.progressContainer}>
                   <View style={[styles.progressBar, { backgroundColor: borderColor }]}>
-                    <View 
+                    <View
                       style={[
-                        styles.progressFill, 
-                        { 
-                          width: `${Math.min(progress, 100)}%`, 
-                          backgroundColor: progressColor 
-                        }
-                      ]} 
+                        styles.progressFill,
+                        {
+                          width: `${Math.min(progress, 100)}%`,
+                          backgroundColor: progressColor,
+                        },
+                      ]}
                     />
                   </View>
                   <View style={styles.progressLabels}>
@@ -220,7 +224,12 @@ export function BudgetsListScreen() {
 
                 {/* Alerta de exceso */}
                 {progress >= 100 && (
-                  <View style={[styles.alertBanner, { backgroundColor: danger + '10', borderColor: danger + '30' }]}>
+                  <View
+                    style={[
+                      styles.alertBanner,
+                      { backgroundColor: danger + '10', borderColor: danger + '30' },
+                    ]}
+                  >
                     <IconSymbol name="exclamationmark.triangle.fill" size={16} color={danger} />
                     <ThemedText style={[styles.alertText, { color: danger }]}>
                       Has excedido tu presupuesto por {formatCurrency(budget.current_amount - budget.amount)}
@@ -233,9 +242,7 @@ export function BudgetsListScreen() {
         ) : (
           <View style={styles.emptyState}>
             <IconSymbol name="chart.pie.fill" size={64} color={textMuted} />
-            <ThemedText style={[styles.emptyText, { color: textMuted }]}>
-              No hay presupuestos
-            </ThemedText>
+            <ThemedText style={[styles.emptyText, { color: textMuted }]}>No hay presupuestos</ThemedText>
             <ThemedText style={[styles.emptySubtext, { color: textMuted }]}>
               Toca el botón + para crear uno
             </ThemedText>
@@ -252,7 +259,6 @@ export function BudgetsListScreen() {
       >
         <IconSymbol name="plus" size={24} color="#ffffff" />
       </TouchableOpacity>
-
     </ThemedView>
   );
 }

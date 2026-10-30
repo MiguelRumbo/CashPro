@@ -165,7 +165,8 @@ export function createVehiclesService(deps: {
     /** Una carga actualiza el odómetro y registra un gasto de Transporte. */
     createFuelLoad(vehicleId: number, input: FuelLoadInput): Result<FuelLoad> {
       const { liters, price_per_liter, total_cost, odometer, account_id } = input;
-      if (!liters || !price_per_liter || !total_cost || !odometer || !account_id) return fail(errors.missingFields);
+      if (!liters || !price_per_liter || !total_cost || !odometer || !account_id)
+        return fail(errors.missingFields);
       const vehicle = repo.getById(vehicleId);
       if (!vehicle) return fail(errors.notFound);
       const accountId = toInt(account_id);
@@ -199,7 +200,10 @@ export function createVehiclesService(deps: {
               category_color: fuelMovement.categoryColor,
               account_id: accountId,
               date,
-              notes: fuelNotes({ liters, price_per_liter, station_name: input.station_name, notes: input.notes }, true),
+              notes: fuelNotes(
+                { liters, price_per_liter, station_name: input.station_name, notes: input.notes },
+                true,
+              ),
             },
             { origin: 'vehicles', affectsBalance: true },
           );
@@ -217,7 +221,8 @@ export function createVehiclesService(deps: {
      */
     updateFuelLoad(id: number, input: FuelLoadInput): Result<FuelLoad> {
       const { liters, price_per_liter, total_cost, odometer, account_id } = input;
-      if (!liters || !price_per_liter || !total_cost || !odometer || !account_id) return fail(errors.missingFields);
+      if (!liters || !price_per_liter || !total_cost || !odometer || !account_id)
+        return fail(errors.missingFields);
       const load = repo.getFuelLoad(id);
       if (!load) return fail(errors.fuelLoadNotFound);
       const vehicle = repo.getById(load.vehicle_id);
@@ -251,7 +256,10 @@ export function createVehiclesService(deps: {
               title: fuelMovement.title(vehicle.name),
               account_id: accountId,
               date,
-              notes: fuelNotes({ liters, price_per_liter, station_name: input.station_name, notes: input.notes }, false),
+              notes: fuelNotes(
+                { liters, price_per_liter, station_name: input.station_name, notes: input.notes },
+                false,
+              ),
             });
           }
           return row;
@@ -329,7 +337,11 @@ export function createVehiclesService(deps: {
               category_color: maintenanceMovement.categoryColor,
               account_id: accountId,
               date,
-              notes: maintenanceNotes({ description, workshop_name: input.workshop_name, notes: input.notes }),
+              notes: maintenanceNotes({
+                description,
+                workshop_name: input.workshop_name,
+                notes: input.notes,
+              }),
             },
             { origin: 'vehicles', affectsBalance: true },
           );

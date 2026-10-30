@@ -5,10 +5,8 @@ import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
 import { useThemeColor } from '@/core/ui-kit/use-theme-color';
 import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
-import { accountsQueryKey, type AccountRecord, type VehicleRecord, type MaintenanceRecord, type VehicleStats } from '@/core/contracts/finance';
-import { ok } from '@/core/contracts/result';
-import { useCapability } from '@/core/registry/react';
 import { getVehiclesRuntime } from '../runtime';
+import type { VehicleInput } from '../services/vehicles-service';
 
 const FUEL_TYPES = [
   { value: 'gasoline', label: 'Gasolina', icon: 'drop.fill', color: '#ef4444' },
@@ -19,7 +17,6 @@ const FUEL_TYPES = [
 
 export function EditVehicleScreen() {
   const { vehicles: vehiclesService } = getVehiclesRuntime();
-  const accountsQuery = useCapability(accountsQueryKey);
   const { id } = useLocalSearchParams<{ id: string }>();
   const [name, setName] = useState('');
   const [brand, setBrand] = useState('');
@@ -58,7 +55,7 @@ export function EditVehicleScreen() {
           Alert.alert('Error', 'No se pudo cargar el vehículo');
           router.back();
         }
-      } catch (error) {
+      } catch {
         Alert.alert('Error', 'No se pudo cargar el vehículo');
         router.back();
       } finally {
@@ -67,7 +64,7 @@ export function EditVehicleScreen() {
     };
 
     loadVehicle();
-  }, [id]);
+  }, [id, vehiclesService]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -94,7 +91,7 @@ export function EditVehicleScreen() {
     setSaving(true);
 
     try {
-      const updates: any = {
+      const updates: VehicleInput = {
         name: name.trim(),
         brand: brand.trim(),
         model: model.trim(),
@@ -122,7 +119,7 @@ export function EditVehicleScreen() {
       } else {
         Alert.alert('Error', result.error);
       }
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'No se pudo actualizar el vehículo');
     } finally {
       setSaving(false);
@@ -232,10 +229,7 @@ export function EditVehicleScreen() {
                 color={fuelType === type.value ? type.color : textMuted}
               />
               <ThemedText
-                style={[
-                  styles.fuelTypeText,
-                  { color: fuelType === type.value ? type.color : textMuted },
-                ]}
+                style={[styles.fuelTypeText, { color: fuelType === type.value ? type.color : textMuted }]}
               >
                 {type.label}
               </ThemedText>
@@ -262,9 +256,7 @@ export function EditVehicleScreen() {
           onPress={handleSave}
           disabled={saving}
         >
-          <ThemedText style={styles.saveButtonText}>
-            {saving ? 'Guardando...' : 'Guardar Cambios'}
-          </ThemedText>
+          <ThemedText style={styles.saveButtonText}>{saving ? 'Guardando...' : 'Guardar Cambios'}</ThemedText>
         </TouchableOpacity>
 
         <View style={{ height: 40 }} />

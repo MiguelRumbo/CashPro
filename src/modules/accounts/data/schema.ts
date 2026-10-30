@@ -23,8 +23,12 @@ export const accounts = sqliteTable(
     payment_due_day: integer('payment_due_day'),
     is_primary: integer('is_primary').notNull().default(0),
     include_in_balance: integer('include_in_balance').notNull().default(1),
-    created_at: text('created_at').notNull().default(sql`(datetime('now'))`),
-    updated_at: text('updated_at').notNull().default(sql`(datetime('now'))`),
+    created_at: text('created_at')
+      .notNull()
+      .default(sql`(datetime('now'))`),
+    updated_at: text('updated_at')
+      .notNull()
+      .default(sql`(datetime('now'))`),
   },
   (t) => [check('accounts_type_check', sql`${t.type} IN ('cash', 'bank', 'debit', 'credit')`)],
 );
@@ -42,6 +46,10 @@ export const msiPurchases = sqliteTable('msi_purchases', {
   remaining_amount: real('remaining_amount').notNull(),
   start_date: text('start_date').notNull(),
   status: text('status').notNull().default('active'),
-  created_at: text('created_at').notNull().default(sql`(datetime('now'))`),
-  updated_at: text('updated_at').notNull().default(sql`(datetime('now'))`),
+  created_at: text('created_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
+  updated_at: text('updated_at')
+    .notNull()
+    .default(sql`(datetime('now'))`),
 });
