@@ -1,0 +1,30 @@
+export const accountsTexts = {
+  tabTitle: 'Cuentas',
+  errors: {
+    nameAndTypeRequired: 'El nombre y tipo de cuenta son requeridos',
+    invalidType: 'Tipo de cuenta inválido',
+    notFound: 'Cuenta no encontrada',
+    nothingToUpdate: 'No hay campos para actualizar',
+    msiMissingFields: 'Faltan campos requeridos',
+    creditAccountNotFound: 'Cuenta de crédito no encontrada',
+    msiNotFound: 'Compra MSI no encontrada',
+    msiAlreadyPaid: 'Esta compra MSI ya está liquidada',
+    msiAllInstallmentsPaid: 'Todos los pagos ya fueron registrados',
+  },
+  messages: {
+    created: 'Cuenta creada exitosamente',
+    updated: 'Cuenta actualizada exitosamente',
+    deleted: 'Cuenta eliminada exitosamente',
+    primaryUpdated: 'Cuenta principal actualizada exitosamente',
+    msiDeleted: 'Compra MSI eliminada',
+    msiCompleted: 'MSI liquidado',
+    msiInstallmentPaid: (paid: number, total: number) => `Pago ${paid}/${total} registrado`,
+  },
+  msiMovement: {
+    categoryName: 'MSI',
+    categoryIcon: 'creditcard',
+    categoryColor: '#7c3aed',
+    title: (description: string) => `Pago MSI - ${description}`,
+    notes: (paid: number, total: number, description: string) => `Pago ${paid}/${total} - ${description}`,
+  },
+} as const;
