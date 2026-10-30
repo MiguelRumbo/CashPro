@@ -1,5 +1,24 @@
 # Bitácora
 
+## 2026-10-30 — Primer `release.yml`: falló la verificación de la huella
+
+### Hecho
+
+- Se mezcló el PR #1 a `prod`; `release.yml` corrió por primera vez. `checks` pasó y `assembleRelease` compiló y firmó el APK (14 min 12 s), pero el paso de la huella falló: `apksigner` imprime `Signer #1: certificate SHA-256 digest: <hex>` y el script tomaba el segundo campo en lugar del último. No se publicó ningún Release ni tag.
+- Corregido: se toma el último campo y se valida que sean 64 hex; si no, se imprime la salida de `apksigner`.
+
+### Verificado
+
+- Parseo probado localmente con los dos formatos de línea (con y sin `:` tras `Signer #1`). YAML válido.
+
+### No verificado
+
+- Que la huella real del APK coincida con la de EAS: se sabrá al volver a correr `release.yml`.
+
+### Sigue
+
+- Merge de este fix a `prod` → `release.yml` vuelve a correr (el tag `v2.0.0` no existe, así que compila y publica).
+
 ## 2026-10-30 — Release 2.0.0 y rama estable `prod`
 
 ### Hecho

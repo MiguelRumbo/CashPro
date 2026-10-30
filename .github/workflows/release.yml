@@ -109,8 +109,14 @@ jobs:
         run: |
           APK=android/app/build/outputs/apk/release/app-release.apk
           APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
-          ACTUAL=$("$APKSIGNER" verify --print-certs "$APK" | grep -m1 'SHA-256 digest' | awk -F': ' '{print $2}' | tr -d ':' | tr 'A-F' 'a-f')
+          CERTS=$("$APKSIGNER" verify --print-certs "$APK")
+          # La etiqueta cambia según build-tools ("Signer #1: certificate SHA-256 digest: <hex>");
+          # el digest siempre es el último campo de la línea.
+          ACTUAL=$(echo "$CERTS" | grep -m1 'SHA-256 digest' | awk '{print $NF}' | tr -d ':' | tr 'A-F' 'a-f')
           EXPECTED=$(echo "$CERT_SHA256" | tr -d ': ' | tr 'A-F' 'a-f')
+          if ! echo "$ACTUAL" | grep -Eq '^[0-9a-f]{64}$'; then
+            echo "::error::No se pudo leer la huella SHA-256 del APK"; echo "$CERTS"; exit 1
+          fi
           if [ "$ACTUAL" != "$EXPECTED" ]; then
             echo "::error::La huella del certificado no coincide (esperada $EXPECTED, obtenida $ACTUAL)"; exit 1
           fi
