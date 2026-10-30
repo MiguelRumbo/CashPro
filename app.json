@@ -1,12 +1,75 @@
 {
   "expo": {
+    "name": "CashPro",
+    "slug": "cashpro",
+    "version": "2.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "cashpro",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "main": "expo-router/entry",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cashpro.app"
+    },
+    "android": {
+      "package": "com.cashpro.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "versionCode": 3,
+      "allowBackup": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "backgroundColor": "#000000"
+          }
+        }
+      ],
+      [
+        "expo-sqlite",
+        {
+          "android": {
+            "useSQLCipher": true
+          }
+        }
+      ],
+      "expo-secure-store",
+      "expo-local-authentication",
+      "./plugins/with-release-signing",
+      [
+        "./plugins/with-android-abis",
+        {
+          "architectures": ["arm64-v8a"]
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
     "extra": {
       "eas": {
         "projectId": "791a2f26-10f0-4509-b6c6-989827055765"
       }
-    },
-    "android": {
-      "package": "com.miguelrumbo.cashpro"
     }
   }
 }

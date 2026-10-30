@@ -1,0 +1,9 @@
+node_modules
+package-lock.json
+drizzle/meta
+docs/design
+docs/archive
+android
+ios
+.expo
+coverage
