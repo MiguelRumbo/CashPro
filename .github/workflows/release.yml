@@ -16,6 +16,9 @@ env:
   NODE_VERSION: '22'
   JAVA_VERSION: '17'
   HUSKY: '0'
+  # Llave de EAS para com.cashpro.app (Build Credentials qvBeHpmqek). No son secretos.
+  KEY_ALIAS: 'd44c8df3e59f117e436be4abbf896f0c'
+  CERT_SHA256: 'B6:42:C9:3C:1B:83:9E:D9:45:CD:59:68:C7:6D:EF:32:E5:49:0E:D6:27:73:52:90:6B:86:EF:F9:F7:22:4F:03'
 
 jobs:
   version:
@@ -57,9 +60,6 @@ jobs:
     if: needs.version.outputs.build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      KEY_ALIAS: ${{ vars.CASHPRO_KEY_ALIAS }} # no es secreto
-      CERT_SHA256: ${{ vars.CASHPRO_CERT_SHA256 }} # no es secreto
     steps:
       - name: Revisar secretos y variables
         env:
@@ -71,8 +71,6 @@ jobs:
           [ -z "$KEYSTORE" ] && missing="$missing CASHPRO_KEYSTORE_BASE64"
           [ -z "$STORE_PASSWORD" ] && missing="$missing CASHPRO_RELEASE_STORE_PASSWORD"
           [ -z "$KEY_PASSWORD" ] && missing="$missing CASHPRO_RELEASE_KEY_PASSWORD"
-          [ -z "$KEY_ALIAS" ] && missing="$missing vars.CASHPRO_KEY_ALIAS"
-          [ -z "$CERT_SHA256" ] && missing="$missing vars.CASHPRO_CERT_SHA256"
           if [ -n "$missing" ]; then echo "::error::Faltan:$missing (ver docs/release.md)"; exit 1; fi
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

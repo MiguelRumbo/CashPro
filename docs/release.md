@@ -14,15 +14,24 @@
 - `plugins/with-release-signing.js` agrega `signingConfigs.release` desde las propiedades `CASHPRO_RELEASE_*` y **hace fallar** cualquier `assembleRelease` sin llave. En EAS Build (`EAS_BUILD=true`) no actúa: EAS firma con sus credenciales.
 - `plugins/with-android-abis.js` deja solo `arm64-v8a` (`app.json`). Para un emulador x86_64: `./gradlew assembleRelease -PreactNativeArchitectures=x86_64`.
 
-### Configurar GitHub una sola vez
+### Llave
 
-1. Descargar la llave de EAS: `npx eas-cli credentials -p android` → perfil `production` → _Keystore_ → **Download existing keystore**. Anota el **key alias**, las contraseñas del keystore y de la llave, y el **SHA256 Fingerprint** que muestra la misma pantalla.
-2. En GitHub → Settings → Secrets and variables → Actions:
-   - **Secrets:** `CASHPRO_KEYSTORE_BASE64` (salida de `base64 -w0 archivo.jks`), `CASHPRO_RELEASE_STORE_PASSWORD`, `CASHPRO_RELEASE_KEY_PASSWORD`.
-   - **Variables:** `CASHPRO_KEY_ALIAS` y `CASHPRO_CERT_SHA256` (no son secretos; con o sin `:`).
-3. Guarda el `.jks` fuera del repo (`*.jks` está en `.gitignore`). Nunca lo subas.
+Keystore de EAS para `com.cashpro.app` (Build Credentials `qvBeHpmqek`), descargado con `npx eas-cli credentials -p android` → _Download existing keystore_ (genera `credentials.json` y `credentials/android/keystore.jks`; ambos están en `.gitignore` por la regla `credentials*`).
 
-> CLAUDE.md §11.2 pide el alias y la huella dentro del YAML. Como aún no se conocen, el workflow los lee de variables del repositorio; se pueden pasar al YAML cuando estén confirmados.
+| Dato                    | Valor                                                                                             | Dónde                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------- |
+| Key alias               | `d44c8df3e59f117e436be4abbf896f0c`                                                                | `release.yml` (`KEY_ALIAS`)   |
+| SHA-256 del certificado | `B6:42:C9:3C:1B:83:9E:D9:45:CD:59:68:C7:6D:EF:32:E5:49:0E:D6:27:73:52:90:6B:86:EF:F9:F7:22:4F:03` | `release.yml` (`CERT_SHA256`) |
+
+### Secretos de GitHub (Settings → Secrets and variables → Actions → Secrets)
+
+| Secreto                          | Valor                                                                                                                                                              |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `CASHPRO_KEYSTORE_BASE64`        | `keystore.jks` en base64, en una sola línea. PowerShell: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("credentials\android\keystore.jks")) \| Set-Clipboard` |
+| `CASHPRO_RELEASE_STORE_PASSWORD` | `keystorePassword` de `credentials.json`                                                                                                                           |
+| `CASHPRO_RELEASE_KEY_PASSWORD`   | `keyPassword` de `credentials.json`                                                                                                                                |
+
+Respalda `keystore.jks` y `credentials.json` fuera del repo (gestor de contraseñas). Siguen también en EAS.
 
 ## Versionado
 
@@ -42,6 +51,6 @@ cd android
 
 ## Pendiente
 
-- [ ] Cargar secretos y variables en GitHub (pasos de arriba).
+- [ ] Cargar los 3 secretos en GitHub (tabla de arriba).
 - [ ] Primera ejecución de `release.yml` (no se ha corrido; tamaño y tiempo de build por medir).
 - [ ] `npm audit` antes de publicar.
