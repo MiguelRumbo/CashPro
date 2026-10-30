@@ -3,10 +3,10 @@
 ## Workflows
 
 - **`checks.yml`** (cada PR y reutilizable): `npm ci` → `format:check` → `lint` → `typecheck` → `test --ci`.
-- **`release.yml`** (push a `main` y manual):
-  1. `version`: falla si `app.json` y `package.json` difieren o si `CHANGELOG.md` no tiene `## [X.Y.Z]`; en `main`, si el tag `vX.Y.Z` ya existe, no compila.
+- **`release.yml`** (push a `prod` y manual):
+  1. `version`: falla si `app.json` y `package.json` difieren o si `CHANGELOG.md` no tiene `## [X.Y.Z]`; en `prod`, si el tag `vX.Y.Z` ya existe, no compila.
   2. `checks` y `apk` en paralelo. `apk`: revisa secretos → Node 22 + Java 17 + caché de Gradle → `npm ci` → keystore en `$RUNNER_TEMP` → `expo prebuild --clean` → `./gradlew assembleRelease` (contraseñas como `ORG_GRADLE_PROJECT_*`) → borra el keystore → verifica la huella SHA-256 con `apksigner` → sube `cashpro-vX.Y.Z.apk` (7 días).
-  3. `publish` (solo `main`): crea o actualiza el GitHub Release `vX.Y.Z` con la sección del CHANGELOG como notas.
+  3. `publish` (solo `prod`): crea o actualiza el GitHub Release `vX.Y.Z` con la sección del CHANGELOG como notas.
 
 ## Firma
 
@@ -37,7 +37,7 @@ Respalda `keystore.jks` y `credentials.json` fuera del repo (gestor de contrase�
 
 - Versión actual: **2.0.0**, `android.versionCode` **3** (producción anterior: 1.1.0 / versionCode 2).
 - `eas.json` usa `appVersionSource: remote`. Si se vuelve a compilar con EAS, su contador remoto debe quedar por debajo del `versionCode` de `app.json`.
-- Para publicar: renombrar `## [Unreleased]` a `## [2.0.0] - AAAA-MM-DD` en `CHANGELOG.md` (con OK del usuario) y hacer merge a `main`. Sin esa sección, `release.yml` falla a propósito en el job `version`.
+- Para publicar: renombrar `## [Unreleased]` a `## [2.0.0] - AAAA-MM-DD` en `CHANGELOG.md` (con OK del usuario) y hacer merge a `prod`. Sin esa sección, `release.yml` falla a propósito en el job `version`.
 
 ## Builds locales
 

@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    branches: [main]
+    branches: [prod]
   workflow_dispatch:
 
 concurrency:
@@ -43,7 +43,7 @@ jobs:
       - id: tag
         name: ¿Ya se publicó esta versión?
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ] && git ls-remote --exit-code --tags origin "refs/tags/v${{ steps.read.outputs.version }}" >/dev/null; then
+          if [ "${{ github.ref }}" = "refs/heads/prod" ] && git ls-remote --exit-code --tags origin "refs/tags/v${{ steps.read.outputs.version }}" >/dev/null; then
             echo "El tag v${{ steps.read.outputs.version }} ya existe: no se compila."
             echo "build=false" >> "$GITHUB_OUTPUT"
           else
@@ -123,7 +123,7 @@ jobs:
 
   publish:
     needs: [version, checks, apk]
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/prod'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

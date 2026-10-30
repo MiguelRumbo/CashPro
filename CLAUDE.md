@@ -210,7 +210,7 @@ Imports cruzados entre módulos, estado global compartido a escondidas, lógica 
 
 ### 10.1 Ramas y commits
 
-- Rama principal `main`, siempre estable (compila, lint y tests en verde). Los cambios llegan **solo por PR**.
+- Rama principal `prod` (rama por defecto del repo; OQ-020), siempre estable (compila, lint y tests en verde). Los cambios llegan **solo por PR**.
 - Ramas `feat/<tema>`, `fix/<tema>`, `chore/<tema>`, `docs/<tema>`, `refactor/<tema>`. El `<tema>` describe el cambio real (`fix/gps-gaps-idle-trips`), no un nombre genérico. En sesiones en la nube, la rama del entorno.
 - **Conventional Commits** en inglés, imperativo, asunto ≤ 72 caracteres: `feat(tracking): add background location task`.
   - Tipos: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `build`, `ci`.
@@ -219,7 +219,7 @@ Imports cruzados entre módulos, estado global compartido a escondidas, lógica 
 - Nunca commitear secretos, `node_modules`, `android/` o `ios/` generados, builds, archivos de IDE ni datos reales de usuarios.
 - Hooks: husky + lint-staged (eslint + prettier en lo staged), `typecheck` en pre-commit y commitlint en commit-msg. **No usar `--no-verify`.**
 - **Push** de la rama de trabajo sin preguntar al terminar la tarea. Force push, reescribir historia, borrar ramas o tags y tocar remotos requieren permiso.
-- GitHub borra la rama al hacer merge (`delete_branch_on_merge`). Si el PR de tu rama ya se mezcló, el trabajo nuevo empieza desde `main` actualizado.
+- GitHub borra la rama al hacer merge (`delete_branch_on_merge`). Si el PR de tu rama ya se mezcló, el trabajo nuevo empieza desde `prod` actualizado.
 
 ### 10.2 Versionado (SemVer + CHANGELOG)
 
@@ -239,13 +239,13 @@ Imports cruzados entre módulos, estado global compartido a escondidas, lógica 
 
 `npm ci` → `format:check` → `lint` → `typecheck` → `test --ci`, con Node LTS, `HUSKY=0` y `permissions: contents: read`.
 
-### 11.2 `release.yml` (push a `main` y manual)
+### 11.2 `release.yml` (push a `prod` y manual)
 
 Jobs:
 
 1. **`version`**:
    - falla si `app.json` y `package.json` difieren o si el CHANGELOG no tiene `## [X.Y.Z]`;
-   - en `main`, si el tag `vX.Y.Z` ya existe, **no compila** (un merge sin subir versión no gasta minutos).
+   - en `prod`, si el tag `vX.Y.Z` ya existe, **no compila** (un merge sin subir versión no gasta minutos).
 2. **`checks`** (reutiliza `checks.yml`) y **`apk`** corren **en paralelo**. Pasos de `apk`:
    - revisar que existan los secretos;
    - Node + Java 17 + caché de Gradle (`actions/cache` de `~/.gradle/caches` y `~/.gradle/wrapper`, con clave según `package-lock.json`, `app.json` y `plugins/**`);
@@ -256,7 +256,7 @@ Jobs:
    - borrar el keystore (`if: always()`);
    - **verificar la huella SHA-256 del certificado** con `apksigner`, comparando solo los digests (la etiqueta cambia según la versión de build-tools);
    - subir el APK como artefacto (7 días).
-3. **`publish`** (solo `main`, `needs: [version, checks, apk]`): descarga el artefacto y crea o actualiza el GitHub Release `vX.Y.Z` con las notas del CHANGELOG (`gh release create … --notes-file`).
+3. **`publish`** (solo `prod`, `needs: [version, checks, apk]`): descarga el artefacto y crea o actualiza el GitHub Release `vX.Y.Z` con las notas del CHANGELOG (`gh release create … --notes-file`).
 
 Secretos: `CASHPRO_KEYSTORE_BASE64`, `CASHPRO_RELEASE_STORE_PASSWORD`, `CASHPRO_RELEASE_KEY_PASSWORD` y los tokens públicos que necesite el build (`EXPO_PUBLIC_*`). El alias y la huella del certificado no son secretos y van en el YAML.
 
@@ -462,7 +462,7 @@ export const xManifest: ModuleManifest = {
 ```yaml
 name: Release
 on:
-  push: { branches: [main] }
+  push: { branches: [prod] }
   workflow_dispatch:
 concurrency: { group: release-${{ github.ref }}, cancel-in-progress: false }
 permissions: { contents: write }
@@ -473,7 +473,7 @@ env:
   CERT_SHA256: '<sha256-cert>'   # no es secreto
 
 jobs:
-  version:        # valida versiones + CHANGELOG; build=false si el tag ya existe en main
+  version:        # valida versiones + CHANGELOG; build=false si el tag ya existe en prod
   checks:
     needs: version
     if: needs.version.outputs.build == 'true'
@@ -490,7 +490,7 @@ jobs:
       # → rm keystore (always) → verificar SHA-256 → upload-artifact
   publish:
     needs: [version, checks, apk]
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/prod'
     runs-on: ubuntu-latest
     steps:
       # checkout → download-artifact → gh release create/upload vX.Y.Z --notes-file (sección del CHANGELOG)
