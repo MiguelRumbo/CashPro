@@ -97,7 +97,6 @@ export const appConfigSchema = z
     security: z
       .object({
         lockOnBackgroundMs: z.number().int().min(0),
-        preventScreenshots: z.boolean(),
       })
       .strict(),
     ui: z

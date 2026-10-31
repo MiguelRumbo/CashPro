@@ -6,7 +6,6 @@ import { useAppLock } from '../ui/use-app-lock';
 const fakeSecurity = (available: boolean, results: boolean[]): DeviceSecurity => ({
   canAuthenticate: jest.fn(async () => available),
   authenticate: jest.fn(async () => results.shift() ?? false),
-  preventScreenCapture: jest.fn(async () => undefined),
 });
 
 describe('useAppLock', () => {

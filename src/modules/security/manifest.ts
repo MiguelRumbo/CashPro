@@ -1,6 +1,6 @@
 import type { ModuleManifest } from '@/core/contracts/module';
 
-import { disposeSecurityRuntime, initSecurityRuntime, startSecurityRuntime } from './runtime';
+import { disposeSecurityRuntime, initSecurityRuntime } from './runtime';
 import { LockGate } from './ui/lock-gate';
 
 export const manifest: ModuleManifest = {
@@ -9,6 +9,5 @@ export const manifest: ModuleManifest = {
   routes: [],
   gate: LockGate,
   register: initSecurityRuntime,
-  onReady: startSecurityRuntime,
   dispose: disposeSecurityRuntime,
 };

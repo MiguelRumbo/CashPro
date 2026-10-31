@@ -85,7 +85,6 @@ Una pestaña cuyo módulo está apagado se oculta (`href: null`); una ruta de m�
 | `alerts.goalDaysPerMonth`             | 30                                               | días       | Aproximación de mes para metas                                |
 | `alerts.goalBehindRatio`              | 0.5                                              | fracción   | Umbral de meta atrasada                                       |
 | `security.lockOnBackgroundMs`         | 0                                                | ms         | Tiempo en segundo plano antes de volver a pedir autenticación |
-| `security.preventScreenshots`         | `true`                                           | bool       | `FLAG_SECURE`                                                 |
 | `ui.splashFadeMs`                     | 250                                              | ms         | Desvanecido del splash                                        |
 | `ui.primaryColor`                     | `#20df60`                                        | color      | Color activo de pestañas                                      |
 

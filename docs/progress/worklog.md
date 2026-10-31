@@ -1,5 +1,24 @@
 # Bitácora
 
+## 2026-10-31 — Release 2.0.0 publicado; se permiten capturas
+
+### Hecho
+
+- `release.yml` (run 2) en verde: GitHub Release `v2.0.0` con `cashpro-v2.0.0.apk` (53 MB), firma verificada contra la huella de EAS.
+- A pedido del usuario se retiró `FLAG_SECURE` (OQ-022): fuera `expo-screen-capture`, `security.preventScreenshots`, RNF-12 y MT-12.
+
+### Verificado
+
+- `typecheck`, `lint`, tests en verde.
+
+### No verificado
+
+- En dispositivo: que las capturas funcionen (debería, ya no se activa la bandera).
+
+### Sigue
+
+- Propuesta de rediseño visual (UI/UX) para que el usuario elija dirección antes de tocar las pantallas.
+
 ## 2026-10-30 — Primer `release.yml`: falló la verificación de la huella
 
 ### Hecho

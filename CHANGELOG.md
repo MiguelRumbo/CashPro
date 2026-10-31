@@ -4,6 +4,10 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versionado
 
 ## [Unreleased]
 
+### Cambiado
+
+- Ya se pueden tomar capturas de pantalla dentro de la app; la vista previa en apps recientes vuelve a mostrarse.
+
 ## [2.0.0] - 2026-10-30
 
 ### Añadido

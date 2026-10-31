@@ -4,7 +4,7 @@
 
 ## Propósito
 
-Bloqueo de la app con biometría o el PIN del teléfono (RNF-11) y `FLAG_SECURE` (RNF-12). El cifrado de la BD (RNF-10) no vive aquí: la llave se maneja en `core/db/encryption-key.ts` porque se necesita antes de arrancar cualquier módulo.
+Bloqueo de la app con biometría o el PIN del teléfono (RNF-11). Las capturas de pantalla están permitidas (OQ-022). El cifrado de la BD (RNF-10) no vive aquí: la llave se maneja en `core/db/encryption-key.ts` porque se necesita antes de arrancar cualquier módulo.
 
 ## Datos
 
@@ -12,7 +12,7 @@ No tiene tablas.
 
 ## API pública y comunicación
 
-`index.ts` solo exporta `manifest`. Aporta un `gate` (`LockGate`) que envuelve toda la app (ADR-003). En `onReady` activa `FLAG_SECURE` si `security.preventScreenshots` es `true`. El acceso al sistema operativo pasa por `platform/device-security.ts` (`expo-local-authentication`, `expo-screen-capture`), que los tests reemplazan por un doble.
+`index.ts` solo exporta `manifest`. Aporta un `gate` (`LockGate`) que envuelve toda la app (ADR-003).preventScreenshots`es`true`. El acceso al sistema operativo pasa por `platform/device-security.ts` (`expo-local-authentication`), que los tests reemplazan por un doble.
 
 ## Funcionamiento
 
@@ -22,4 +22,4 @@ No tiene tablas.
 
 ## Si se apaga
 
-No hay bloqueo ni `FLAG_SECURE`; la BD sigue cifrada. La app arranca igual (smoke test).
+No hay bloqueo; la BD sigue cifrada. La app arranca igual (smoke test).

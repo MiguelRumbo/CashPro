@@ -35,7 +35,6 @@ Versiones fijadas por `package-lock.json`. Las de Expo se instalan con la versi�
 | `expo-secure-store`                     | ~15.0.8        | Llave de SQLCipher, contraseña de PDF     | 1    |
 | `expo-local-authentication`             | ~17.0.9        | Bloqueo biométrico                        | 1    |
 | `expo-crypto`                           | ~15.0.9        | Hash de fingerprint y de eventos crudos   | 1    |
-| `expo-screen-capture`                   | ~8.0.10        | `FLAG_SECURE`                             | 1    |
 | `expo-auth-session`                     | ~7.0.11        | Gmail OAuth _(pendiente OQ-101)_          | 4    |
 | `com.tom-roush:pdfbox-android` (Gradle) | 2.0.27.0       | Texto de PDF (incluye PDF con contraseña) | 1b   |
 
@@ -63,7 +62,7 @@ Capas, reglas de dependencia, anatomía de módulo y comunicación: `CLAUDE.md` 
 
 | Módulo                 | Responsabilidad                                                              | Depende de (capacidades)                                     |
 | ---------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `security`             | Llave SQLCipher, bloqueo biométrico, `FLAG_SECURE`, respaldo cifrado         | — (lo usa `bootstrap` antes de abrir la BD)                  |
+| `security`             | Llave SQLCipher, bloqueo biométrico, respaldo cifrado                        | — (lo usa `bootstrap` antes de abrir la BD)                  |
 | `ingestion`            | Tabla `raw_events`, registro de parsers, bandeja "Sin procesar"              | `movementsLedgerKey`, `accountsQueryKey`                     |
 | `notification-capture` | Puente con el módulo nativo del listener, lista blanca, salud                | provee eventos a `ingestion` vía capacidad `rawEventSinkKey` |
 | `statements`           | Importación CSV/XML/PDF, vista previa, `import_batches`, validación de saldo | `rawEventSinkKey`, `movementsLedgerKey`                      |
@@ -156,12 +155,11 @@ Todo vive en `src/config/app.config.ts` (tabla completa en `docs/architecture.md
 | `reconciliation.mergeWindowDays`   | 1                                  | días   | Fusión notificación/correo                                         |
 | `reconciliation.confirmWindowDays` | 3                                  | días   | Confirmación con estado de cuenta                                  |
 | `security.lockOnBackgroundMs`      | 0                                  | ms     | Tiempo en segundo plano antes de pedir biometría (✅ implementado) |
-| `security.preventScreenshots`      | `true`                             | bool   | `FLAG_SECURE` (✅ implementado)                                    |
 | `statements.maxFileBytes`          | 10485760                           | bytes  | Tamaño máximo de archivo importado                                 |
 
 ## 6. Seguridad y privacidad
 
-Detalle en `docs/security.md`. Resumen: todo local; SQLCipher + Keystore; biometría; `FLAG_SECURE`; sin telemetría; el listener descarta todo lo que no esté en la lista blanca **antes** de guardar; la única salida de red prevista es el correo (si se aprueba) y el respaldo a un destino elegido por el usuario.
+Detalle en `docs/security.md`. Resumen: todo local; SQLCipher + Keystore; biometría; sin telemetría; el listener descarta todo lo que no esté en la lista blanca **antes** de guardar; la única salida de red prevista es el correo (si se aprueba) y el respaldo a un destino elegido por el usuario.
 
 ## 7. Riesgos
 
@@ -180,7 +178,7 @@ Detalle en `docs/security.md`. Resumen: todo local; SQLCipher + Keystore; biomet
 No se avanza de fase con la anterior rota. Cada fase termina con DoD (`CLAUDE.md` §16).
 
 - **Fase 0 — Fundamentos.** ✅ Reestructura modular, config Zod, core, Drizzle con migración base, transacciones, tooling, CI de checks, smoke tests. ⏳ Partir pantallas grandes (se hace al tocarlas).
-- **Fase 1 — Datos v2 y seguridad.** ✅ SQLCipher (llave en secure-store), bloqueo biométrico, `FLAG_SECURE`, `allowBackup: false`, release a GitHub (`release.yml` + plugins). ⏳ Esquema v2 (centavos, ms, saldos derivados, categorías en tabla, `wallet`) regenerando la base (OQ-017); respaldo cifrado (OQ-106).
+- **Fase 1 — Datos v2 y seguridad.** ✅ SQLCipher (llave en secure-store), bloqueo biométrico, `allowBackup: false`, release a GitHub (`release.yml` + plugins). ⏳ Esquema v2 (centavos, ms, saldos derivados, categorías en tabla, `wallet`) regenerando la base (OQ-017); respaldo cifrado (OQ-106).
 - **Fase 1b — Estados de cuenta.** `statements` + `ingestion` (sin nativo para CSV/XML), vista previa, lotes reversibles, validación de saldo; después extracción PDF nativa.
 - **Fase 2 — Notificaciones.** Spike del listener en dispositivo, módulo nativo, cola, pantalla de permisos, parsers de 1–2 bancos.
 - **Fase 3 — Conciliación.** Fingerprint, fusión, `pending/confirmed`, conflictos.
