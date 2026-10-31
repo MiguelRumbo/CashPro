@@ -12,7 +12,7 @@ No tiene tablas.
 
 ## API pública y comunicación
 
-`index.ts` solo exporta `manifest`. Aporta un `gate` (`LockGate`) que envuelve toda la app (ADR-003).preventScreenshots`es`true`. El acceso al sistema operativo pasa por `platform/device-security.ts` (`expo-local-authentication`), que los tests reemplazan por un doble.
+`index.ts` solo exporta `manifest`. Aporta un `gate` (`LockGate`) que envuelve toda la app (ADR-003). El acceso al sistema operativo pasa por `platform/device-security.ts` (`expo-local-authentication`), que los tests reemplazan por un doble.
 
 ## Funcionamiento
 
