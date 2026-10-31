@@ -28,6 +28,8 @@ Versiones fijadas por `package-lock.json`. Las de Expo se instalan con la versi�
 
 **Ya instaladas (aprobadas el 2026-10-30):** `drizzle-orm`, `drizzle-kit`, `zod`, `expo-dev-client`, `babel-plugin-inline-import`, `prettier`, `eslint-config-prettier`, `jest`, `jest-expo`, `@testing-library/react-native` (+ su peer `test-renderer`), `sql.js` (+ `@types/sql.js`), `husky`, `lint-staged`, `@commitlint/cli`, `@commitlint/config-conventional`, `@types/jest`. Más las heredadas de v1 (`package.json`).
 
+**Aprobadas el 2026-10-31 (rediseño 2.1.0):** `@expo-google-fonts/sora`, `@expo-google-fonts/manrope` (con `expo-font`, ya presente desde v1).
+
 **Propuestas para v2 (requieren OK antes de instalarse):**
 
 | Paquete                                 | Versión SDK 54 | Para qué                                  | Fase |

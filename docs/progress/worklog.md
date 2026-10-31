@@ -1,5 +1,31 @@
 # Bitácora
 
+## 2026-10-31 — Rediseño visual, temas y 2.1.0
+
+### Hecho
+
+- Dirección A (Bosque nocturno) con tarjetas apiladas de C; selector de tema A/B/C en Ajustes (ADR-004, OQ-023).
+- `core/ui-kit`: temas, `AppThemeProvider`/`usePalette`, tipografía por peso (Sora/Manrope), `FabTabButton`; `ThemedApp` aplica tema a UI, navegación y barra de estado; fuentes cargadas en el arranque.
+- Preferencia `theme` guardada en `user_profile.theme` (migración aditiva `0001_profile_theme`).
+- Navegación: "+" central (slot `tabbar.fab` de `movements`); Estadísticas y Ajustes al menú Más (con secciones).
+- Cuentas reescrita: cartera de tarjetas apiladas + movimientos recientes de la seleccionada. Inicio: tarjeta de patrimonio con degradado e ingresos/gastos.
+- Codemod en pantallas heredadas: fondos pastel → tintes translúcidos; acento y texto secundario fijos → tema; botones "+" duplicados quitados.
+- Capturas permitidas (OQ-022). Versión 2.1.0 / versionCode 4.
+
+### Verificado
+
+- `format:check`, `lint`, `typecheck`, tests (15 suites, 64) en verde; `expo export --platform android` empaqueta; `expo prebuild` sin cambios nativos inesperados.
+
+### No verificado
+
+- **Nada visual**: no hay emulador en el entorno. Pendientes MT-14..MT-17 y revisar cada pantalla en los tres temas (sobre todo Claro y Cartera en pantallas no rediseñadas a mano).
+
+### Sigue
+
+- Revisar en el teléfono y ajustar lo que se vea mal.
+- Rediseñar a mano Movimientos y el resto de pantallas con los componentes nuevos.
+- Esquema de datos v2 (OQ-021).
+
 ## 2026-10-31 — Release 2.0.0 publicado; se permiten capturas
 
 ### Hecho

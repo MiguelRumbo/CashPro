@@ -18,6 +18,10 @@ Tablas propias: `accounts`, `msi_purchases`. Ningún otro módulo las escribe.
 
 Pestaña Cuentas; `accounts.list`, `accounts.add`, `accounts.edit`, `accounts.detail`.
 
+## Pantalla de cuentas
+
+Cartera de tarjetas apiladas (`ui/account-stack-view.tsx`, `ui/account-card-view.tsx`): la seleccionada va al frente (`domain/card-stack.ts`); tocar una de atrás la trae al frente, tocar la del frente abre el detalle y mantener presionado la elimina. Debajo, los últimos movimientos de esa cuenta.
+
 ## Si se apaga
 
 Sin cuentas no se pueden crear movimientos (la validación de cuenta falla) y las pantallas de otros módulos muestran listas de cuentas vacías. La app arranca igual (smoke test `tests/integration/modules-off.smoke.test.ts`).

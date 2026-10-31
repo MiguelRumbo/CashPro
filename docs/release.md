@@ -35,7 +35,7 @@ Respalda `keystore.jks` y `credentials.json` fuera del repo (gestor de contrase�
 
 ## Versionado
 
-- Versi처n actual: **2.0.0**, `android.versionCode` **3** (producci처n anterior: 1.1.0 / versionCode 2).
+- Versi처n actual: **2.1.0**, `android.versionCode` **4** (anteriores: 2.0.0 / 3, 1.1.0 / 2).
 - `eas.json` usa `appVersionSource: remote`. Si se vuelve a compilar con EAS, su contador remoto debe quedar por debajo del `versionCode` de `app.json`.
 - Para publicar: renombrar `## [Unreleased]` a `## [2.0.0] - AAAA-MM-DD` en `CHANGELOG.md` (con OK del usuario) y hacer merge a `prod`. Sin esa secci처n, `release.yml` falla a prop처sito en el job `version`.
 

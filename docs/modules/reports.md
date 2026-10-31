@@ -16,8 +16,8 @@ Tablas propias: — (no tiene tablas). Ningún otro módulo las escribe.
 
 ## UI
 
-Pestaña Estadísticas; `reports.home`.
+Menú Más → Estadísticas; `reports.home`.
 
 ## Si se apaga
 
-Se oculta la pestaña Estadísticas. La app arranca igual (smoke test `tests/integration/modules-off.smoke.test.ts`).
+Desaparece de Más. La app arranca igual (smoke test `tests/integration/modules-off.smoke.test.ts`).

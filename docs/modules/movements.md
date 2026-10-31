@@ -12,7 +12,7 @@ Tablas propias: `movements`. Ningún otro módulo las escribe.
 
 ## API pública y comunicación
 
-`index.ts` solo exporta `manifest`. Provee `movementsLedgerKey` (`list`, `getById`, `record`, `update`, `remove`, `findLatest`, `exportCsv`). Emite `movement.recorded` (con `origin` y `affectsBalance`), `movement.updated`, `movement.deleted`. Usa `accountsQueryKey`.
+`index.ts` solo exporta `manifest`. Aporta el botón "+" central de la barra (slot `tabbar.fab`). Provee `movementsLedgerKey` (`list`, `getById`, `record`, `update`, `remove`, `findLatest`, `exportCsv`). Emite `movement.recorded` (con `origin` y `affectsBalance`), `movement.updated`, `movement.deleted`. Usa `accountsQueryKey`.
 
 ## UI
 

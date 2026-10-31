@@ -64,6 +64,8 @@ Formato: **RF-xx — título.** Descripción. _Criterios de aceptación (CA)._
 - **RF-09 — Avisos internos.** Corte y pago de tarjetas, presupuesto al 80 % y excedido, préstamos por vencer, suscripciones por cobrar y metas atrasadas; con interruptores por tipo y modo vacaciones.
 - **RF-10 — Inicio y estadísticas.** Patrimonio, ingresos y gastos del mes, variación contra el mes anterior, gastos por categoría, tendencias y resúmenes de cada módulo.
 - **RF-11 — Perfil y moneda.** Nombre, correo y moneda de visualización (MXN, USD, EUR).
+- **RF-13 — Temas de color** (2.1.0). Ajustes → Tema permite elegir Bosque nocturno (oscuro, por defecto), Claro o Cartera; la elección se guarda.
+  _CA: el cambio se ve de inmediato y se conserva al reabrir la app._
 - **RF-12 — Datos.** Exportar respaldo JSON (compatible con los respaldos de v1), exportar movimientos a CSV, exportar e importar la BD, importar JSON y borrar todos los datos.
   _CA: exportar → borrar todo → importar deja los mismos datos. Un JSON inválido no borra nada._
 
