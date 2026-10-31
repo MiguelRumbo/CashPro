@@ -1,494 +1,223 @@
-import { useState, useCallback } from 'react';
-import { ScrollView, View, StyleSheet, TouchableOpacity, RefreshControl, Alert } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
+import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import type { AccountRecord, MovementWithAccount } from '@/core/contracts/finance';
+import { useCurrency } from '@/core/preferences/use-currency';
+import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
+import { radii, spacing } from '@/core/ui-kit/theme';
+import { usePalette } from '@/core/ui-kit/theme-context';
 import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
-import { useThemeColor } from '@/core/ui-kit/use-theme-color';
-import { IconSymbol, type IconSymbolName } from '@/core/ui-kit/icon-symbol';
-import { useCurrency } from '@/core/preferences/use-currency';
-import type { AccountRecord } from '@/core/contracts/finance';
-import { getAccountsRuntime } from '../runtime';
-import { useErrorReporter } from '@/core/registry/react';
-import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 
-type Account = AccountRecord;
+import { accountsTexts } from '../texts';
+import { AccountStackView } from './account-stack-view';
+import { useAccountsList } from './use-accounts-list';
 
+/** Pantalla de cuentas: patrimonio, cartera de tarjetas apiladas y movimientos de la seleccionada. */
 export function AccountsListScreen() {
+  const palette = usePalette();
+  const insets = useSafeAreaInsets();
   const { formatCurrency } = useCurrency();
-  const { accounts: accountsService } = getAccountsRuntime();
-  const reportError = useErrorReporter();
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [totalBalance, setTotalBalance] = useState(0);
-  const [refreshing, setRefreshing] = useState(false);
-  const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
-  const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1c2e24' }, 'surface');
-  const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
-  const borderColor = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'border');
-  const textSub = '#64876f';
-  const primary = '#20df60';
+  const { accounts, ordered, selected, stats, recent, failed, select, remove } = useAccountsList();
+  const { list } = accountsTexts;
 
-  const fetchAccounts = useStableCallback(() => {
-    try {
-      const result = accountsService.getAccounts();
-
-      if (result.success) {
-        setAccounts(result.data);
-      }
-    } catch (error) {
-      reportError('Error al cargar cuentas:', error);
-      Alert.alert('Error', 'No se pudieron cargar las cuentas.');
-    }
-  });
-
-  const fetchTotalBalance = useStableCallback(() => {
-    try {
-      const result = accountsService.getAccountsStats();
-
-      if (result.success) {
-        setTotalBalance(result.data.total_balance);
-      }
-    } catch (error) {
-      reportError('Error al cargar balance:', error);
-    }
-  });
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchAccounts();
-    fetchTotalBalance();
-    setRefreshing(false);
-  };
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchAccounts();
-      fetchTotalBalance();
-    }, [fetchAccounts, fetchTotalBalance]),
-  );
-
-  const getAccountIcon = (type: string) => {
-    switch (type) {
-      case 'cash':
-        return { name: 'banknote', color: '#16a34a', bg: '#f0fdf4' };
-      case 'bank':
-        return { name: 'building.columns.fill', color: '#2563eb', bg: '#eff6ff' };
-      case 'debit':
-        return { name: 'creditcard', color: '#7c3aed', bg: '#faf5ff' };
-      case 'credit':
-        return { name: 'creditcard.fill', color: '#dc2626', bg: '#fef2f2' };
-      default:
-        return { name: 'banknote', color: '#64748b', bg: '#f1f5f9' };
-    }
-  };
-
-  const formatCurrencyLocal = (amount: number) => {
-    return formatCurrency(amount);
-  };
-
-  const handleDeleteAccount = (id: number, name: string) => {
-    Alert.alert('Eliminar Cuenta', `¿Estás seguro de eliminar "${name}"?`, [
-      { text: 'Cancelar', style: 'cancel' },
+  const confirmDelete = (account: AccountRecord) =>
+    Alert.alert(list.deleteTitle, list.deleteBody(account.name), [
+      { text: list.cancel, style: 'cancel' },
       {
-        text: 'Eliminar',
+        text: list.delete,
         style: 'destructive',
         onPress: () => {
-          try {
-            const result = accountsService.deleteAccount(id);
-
-            if (result.success) {
-              fetchAccounts();
-              fetchTotalBalance();
-            } else {
-              Alert.alert('Error', result.error || 'No se pudo eliminar la cuenta');
-            }
-          } catch {
-            Alert.alert('Error', 'No se pudo eliminar la cuenta');
-          }
+          const result = remove(account.id);
+          if (!result.success) Alert.alert(list.errorTitle, result.error);
         },
       },
     ]);
-  };
 
   return (
-    <ThemedView style={[styles.container, { backgroundColor }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor, borderBottomColor: borderColor }]}>
-        <View>
-          <ThemedText style={[styles.headerTitle, { color: textMain }]}>Mis Cuentas</ThemedText>
-          <ThemedText style={[styles.headerSubtitle, { color: textSub }]}>Gestión financiera</ThemedText>
+    <ThemedView style={styles.container}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.lg }]}>
+        <View style={styles.header}>
+          <ThemedText style={[styles.title, { color: palette.ink }]} accessibilityRole="header">
+            {list.title}
+          </ThemedText>
+          <TouchableOpacity
+            onPress={() => router.push('/accounts/add-account')}
+            accessibilityRole="button"
+            accessibilityLabel={list.add}
+            style={[styles.addIcon, { backgroundColor: palette.chip }]}
+          >
+            <IconSymbol name="plus" size={22} color={palette.accent} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={[styles.notificationButton, { backgroundColor: surfaceColor }]}>
-          <IconSymbol size={20} name="bell.fill" color={textMain} />
-        </TouchableOpacity>
-      </View>
 
-      {/* Main Content */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}
-      >
-        {/* Total Balance Card */}
-        <View style={styles.balanceCard}>
-          {/* Decorative glows */}
-          <View style={styles.balanceGlowTopRight} />
-          <View style={styles.balanceGlowBottomLeft} />
-          <View style={styles.balanceContent}>
-            <ThemedText style={styles.balanceLabel}>Balance Total</ThemedText>
-            <ThemedText style={styles.balanceAmount}>{formatCurrencyLocal(totalBalance)}</ThemedText>
-            <View style={styles.balanceBadge}>
-              <IconSymbol size={14} name="arrow.up.right" color={primary} />
-              <ThemedText style={styles.balanceBadgeText}>
-                {accounts.length} cuenta{accounts.length !== 1 ? 's' : ''}
+        <View>
+          <ThemedText style={[styles.label, { color: palette.muted }]}>
+            {list.totalLabel} · {list.accountsCount(accounts.length)}
+          </ThemedText>
+          <ThemedText style={[styles.total, { color: palette.ink }]}>
+            {formatCurrency(stats?.total_balance ?? 0)}
+          </ThemedText>
+        </View>
+
+        {failed && <ThemedText style={{ color: palette.negative }}>{list.loadError}</ThemedText>}
+
+        {accounts.length === 0 ? (
+          <View style={[styles.empty, { backgroundColor: palette.surface, borderColor: palette.line }]}>
+            <IconSymbol name="creditcard.fill" size={36} color={palette.accent} />
+            <ThemedText style={[styles.emptyTitle, { color: palette.ink }]}>{list.emptyTitle}</ThemedText>
+            <ThemedText style={[styles.emptyBody, { color: palette.muted }]}>{list.emptyBody}</ThemedText>
+            <TouchableOpacity
+              onPress={() => router.push('/accounts/add-account')}
+              accessibilityRole="button"
+              style={[styles.primaryButton, { backgroundColor: palette.accent }]}
+            >
+              <ThemedText style={[styles.primaryButtonText, { color: palette.onAccent }]}>
+                {list.add}
               </ThemedText>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <AccountStackView
+              ordered={ordered}
+              selectedId={selected?.id}
+              formatCurrency={formatCurrency}
+              onSelect={select}
+              onOpen={(id) => router.push(`/accounts/account-detail?id=${id}`)}
+              onLongPress={confirmDelete}
+            />
+            <ThemedText style={[styles.hint, { color: palette.muted }]}>{list.hint}</ThemedText>
+          </>
+        )}
+
+        {selected && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={[styles.sectionTitle, { color: palette.ink }]} numberOfLines={1}>
+                {list.recent(selected.name)}
+              </ThemedText>
+              <TouchableOpacity
+                onPress={() => router.push(`/accounts/account-detail?id=${selected.id}`)}
+                accessibilityRole="link"
+              >
+                <ThemedText style={[styles.link, { color: palette.accent }]}>{list.viewDetail}</ThemedText>
+              </TouchableOpacity>
+            </View>
+            <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.line }]}>
+              {recent.length === 0 ? (
+                <ThemedText style={[styles.emptyBody, { color: palette.muted }]}>
+                  {list.noMovements}
+                </ThemedText>
+              ) : (
+                recent.map((movement, index) => (
+                  <MovementRow
+                    key={movement.id}
+                    movement={movement}
+                    accountId={selected.id}
+                    isFirst={index === 0}
+                    formatCurrency={formatCurrency}
+                  />
+                ))
+              )}
             </View>
           </View>
-        </View>
-
-        {/* Action Bar */}
-        <View style={styles.actionBar}>
-          <ThemedText style={[styles.sectionTitle, { color: textMain }]}>Cuentas Activas</ThemedText>
-        </View>
-
-        {/* Account List */}
-        <View style={styles.accountList}>
-          {accounts.length === 0 ? (
-            <View style={styles.emptyState}>
-              <IconSymbol size={48} name="tray" color={textSub} />
-              <ThemedText style={[styles.emptyText, { color: textSub }]}>
-                No tienes cuentas registradas
-              </ThemedText>
-              <ThemedText style={[styles.emptySubtext, { color: textSub }]}>
-                Agrega tu primera cuenta para comenzar
-              </ThemedText>
-            </View>
-          ) : (
-            accounts.map((account) => {
-              const iconData = getAccountIcon(account.type);
-              const isCredit = account.type === 'credit';
-              const displayBalance = isCredit ? account.current_balance || 0 : account.balance;
-
-              return (
-                <TouchableOpacity
-                  key={account.id}
-                  style={[styles.accountItem, { backgroundColor: surfaceColor }]}
-                  onPress={() => router.push(`/accounts/account-detail?id=${account.id}`)}
-                  onLongPress={() => handleDeleteAccount(account.id, account.name)}
-                >
-                  <View style={[styles.accountIcon, { backgroundColor: iconData.bg }]}>
-                    <IconSymbol size={24} name={iconData.name as IconSymbolName} color={iconData.color} />
-                  </View>
-                  <View style={styles.accountInfo}>
-                    <ThemedText style={[styles.accountName, { color: textMain }]}>{account.name}</ThemedText>
-                    <ThemedText style={[styles.accountDetail, { color: textSub }]}>
-                      {account.card_last_four
-                        ? `•••• ${account.card_last_four}`
-                        : account.bank_name || 'Efectivo'}
-                    </ThemedText>
-                  </View>
-                  <View style={styles.accountRight}>
-                    <ThemedText
-                      style={[
-                        isCredit ? styles.accountAmountNegative : styles.accountAmount,
-                        { color: isCredit ? '#ef4444' : textMain },
-                      ]}
-                    >
-                      {isCredit ? '-' : ''}
-                      {formatCurrencyLocal(displayBalance)}
-                    </ThemedText>
-                    {isCredit && account.credit_limit && (
-                      <ThemedText style={[styles.accountSubDetail, { color: textSub }]}>
-                        Límite: {formatCurrencyLocal(account.credit_limit)}
-                      </ThemedText>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              );
-            })
-          )}
-        </View>
-
-        {/* Add Account Button */}
-        <TouchableOpacity style={styles.addButton} onPress={() => router.push('/accounts/add-account')}>
-          <IconSymbol size={24} name="plus.circle.fill" color="white" />
-          <ThemedText style={styles.addButtonText}>Agregar nueva cuenta</ThemedText>
-        </TouchableOpacity>
-
-        {/* Footer Text */}
-        <ThemedText style={[styles.footerText, { color: textSub }]}>
-          Puedes vincular tus cuentas bancarias de forma segura o agregar registros manuales.
-        </ThemedText>
-
-        {/* Bottom spacer */}
-        <View style={{ height: 40 }} />
+        )}
       </ScrollView>
     </ThemedView>
   );
 }
 
+function MovementRow({
+  movement,
+  accountId,
+  isFirst,
+  formatCurrency,
+}: {
+  movement: MovementWithAccount;
+  accountId: number;
+  isFirst: boolean;
+  formatCurrency: (amount: number) => string;
+}) {
+  const palette = usePalette();
+  // Una transferencia que llega a esta cuenta es entrada de dinero.
+  const incoming =
+    movement.type === 'income' || (movement.type === 'transfer' && movement.to_account_id === accountId);
+  const color = movement.category_color ?? palette.muted;
+  return (
+    <TouchableOpacity
+      onPress={() => router.push(`/movements/movement-detail?id=${movement.id}`)}
+      accessibilityRole="button"
+      style={[styles.row, !isFirst && { borderTopWidth: 1, borderTopColor: palette.line }]}
+    >
+      <View style={[styles.rowIcon, { backgroundColor: `${color}26` }]}>
+        <IconSymbol
+          name={(movement.category_icon ?? 'arrow.left.arrow.right') as IconSymbolName}
+          size={16}
+          color={color}
+        />
+      </View>
+      <View style={styles.rowText}>
+        <ThemedText style={[styles.rowTitle, { color: palette.ink }]} numberOfLines={1}>
+          {movement.title ?? movement.category_name ?? ''}
+        </ThemedText>
+        <ThemedText style={[styles.rowSub, { color: palette.muted }]}>
+          {new Date(movement.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
+        </ThemedText>
+      </View>
+      <ThemedText style={[styles.rowAmount, { color: incoming ? palette.positive : palette.negative }]}>
+        {incoming ? '+' : '−'}
+        {formatCurrency(movement.amount)}
+      </ThemedText>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  content: { paddingHorizontal: spacing.lg, paddingBottom: 120, gap: spacing.lg },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  title: { fontSize: 28, fontWeight: '700', letterSpacing: -0.5 },
+  addIcon: { width: 44, height: 44, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
+  label: { fontSize: 13, fontWeight: '600' },
+  total: { fontSize: 34, fontWeight: '700', letterSpacing: -1 },
+  hint: { fontSize: 12, textAlign: 'center' },
+  empty: {
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    padding: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.sm,
   },
-  // Header
-  header: {
+  emptyTitle: { fontSize: 17, fontWeight: '700' },
+  emptyBody: { fontSize: 13, textAlign: 'center' },
+  primaryButton: {
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radii.md,
+  },
+  primaryButtonText: { fontSize: 15, fontWeight: '700' },
+  section: { gap: spacing.sm },
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 48,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    zIndex: 30,
+    gap: spacing.sm,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    letterSpacing: -0.5,
+  sectionTitle: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
+  link: { fontSize: 13, fontWeight: '700' },
+  card: {
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
   },
-  headerSubtitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  notificationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
-    elevation: 2,
-  },
-  // Scroll
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
-  // Balance Card
-  balanceCard: {
-    marginTop: 16,
-    marginBottom: 24,
-    borderRadius: 16,
-    backgroundColor: '#111713',
-    padding: 24,
-    overflow: 'hidden',
-    position: 'relative',
-    shadowColor: '#20df60',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 8,
-  },
-  balanceGlowTopRight: {
-    position: 'absolute',
-    top: -16,
-    right: -16,
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    backgroundColor: 'rgba(32, 223, 96, 0.2)',
-  },
-  balanceGlowBottomLeft: {
-    position: 'absolute',
-    bottom: -16,
-    left: -16,
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: 'rgba(32, 223, 96, 0.3)',
-  },
-  balanceContent: {
-    zIndex: 10,
-    alignItems: 'center',
-  },
-  balanceLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#9ca3af',
-    marginBottom: 4,
-  },
-  balanceAmount: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: '#ffffff',
-    letterSpacing: -1,
-    marginBottom: 8,
-  },
-  balanceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-  balanceBadgeText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#20df60',
-  },
-  // Action Bar
-  actionBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 4,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  linkText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  // Account List
-  accountList: {
-    gap: 16,
-  },
-  accountItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    padding: 16,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 1,
-  },
-  accountItemDashed: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    backgroundColor: 'rgba(249, 250, 251, 0.5)',
-    opacity: 0.85,
-  },
-  accountIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  accountInfo: {
-    flex: 1,
-  },
-  accountName: {
-    fontSize: 16,
-    fontWeight: '700',
-    lineHeight: 20,
-  },
-  accountDetail: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  accountRight: {
-    alignItems: 'flex-end',
-  },
-  accountAmount: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  accountAmountNegative: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ef4444',
-  },
-  accountSubDetail: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  accountWarning: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: 'rgba(239, 68, 68, 0.7)',
-    marginTop: 2,
-  },
-  statusBadge: {
-    backgroundColor: 'rgba(32, 223, 96, 0.1)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginTop: 4,
-  },
-  statusBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#20df60',
-  },
-  progressBarSmall: {
-    width: 64,
-    height: 4,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginTop: 8,
-  },
-  progressFillSmall: {
-    width: '75%',
-    height: '100%',
-    backgroundColor: '#fb923c',
-  },
-  // Add Button
-  addButton: {
-    marginTop: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    backgroundColor: '#20df60',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 12,
-    shadowColor: '#20df60',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  // Footer
-  footerText: {
-    marginTop: 24,
-    textAlign: 'center',
-    fontSize: 12,
-    lineHeight: 18,
-    paddingHorizontal: 32,
-  },
-  // Empty State
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-    gap: 12,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  emptySubtext: {
-    fontSize: 14,
-    textAlign: 'center',
-  },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
+  rowIcon: { width: 36, height: 36, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center' },
+  rowText: { flex: 1 },
+  rowTitle: { fontSize: 14, fontWeight: '600' },
+  rowSub: { fontSize: 12 },
+  rowAmount: { fontSize: 14, fontWeight: '700' },
 });

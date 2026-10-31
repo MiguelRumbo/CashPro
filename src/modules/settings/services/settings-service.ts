@@ -31,8 +31,15 @@ export function createSettingsService(deps: {
     value !== undefined && value in config.currency.formats;
 
   const ensureProfile = () =>
-    repo.ensure({ name: settingsTexts.defaultProfileName, currency: config.currency.default });
-  const syncPreferencesFromProfile = () => preferences.set({ currency: ensureProfile().currency });
+    repo.ensure({
+      name: settingsTexts.defaultProfileName,
+      currency: config.currency.default,
+      theme: config.ui.defaultTheme,
+    });
+  const syncPreferencesFromProfile = () => {
+    const { currency, theme } = ensureProfile();
+    preferences.set({ currency, theme });
+  };
 
   return {
     ensureProfile,
@@ -40,11 +47,11 @@ export function createSettingsService(deps: {
     /** Carga la moneda guardada en las preferencias (sin volver a persistirla). */
     syncPreferencesFromProfile,
 
-    /** Persiste la moneda cuando cambia la preferencia (el selector de moneda vive en la UI). */
-    persistCurrency(): void {
-      const { currency } = preferences.get();
+    /** Persiste moneda y tema cuando cambia la preferencia (los selectores viven en la UI). */
+    persistPreferences(): void {
+      const { currency, theme } = preferences.get();
       const profile = ensureProfile();
-      if (profile.currency !== currency) repo.update({ name: profile.name, email: profile.email, currency });
+      if (profile.currency !== currency || profile.theme !== theme) repo.update({ currency, theme });
     },
 
     getProfile(): Result<ProfileRecord> {

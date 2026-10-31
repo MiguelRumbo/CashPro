@@ -1,15 +1,14 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
 import { StyleSheet } from 'react-native';
 import 'react-native-reanimated';
 
 import { useBoot } from '@/bootstrap';
+import { ThemedApp } from '@/core/preferences/themed-app';
 import { ModuleGates } from '@/core/registry/module-gates';
 import { CoreProvider } from '@/core/registry/react';
 import { coreTexts } from '@/core/texts';
-import { ThemedText, ThemedView, useColorScheme } from '@/core/ui-kit';
+import { ThemedText, ThemedView } from '@/core/ui-kit';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -18,7 +17,6 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const boot = useBoot();
 
   if (boot.status === 'loading') return null;
@@ -31,17 +29,15 @@ export default function RootLayout() {
     );
   }
 
-  const { runtime } = boot;
   return (
-    <CoreProvider value={runtime}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <CoreProvider value={boot.runtime}>
+      <ThemedApp>
         <ModuleGates>
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           </Stack>
         </ModuleGates>
-        <StatusBar style="auto" />
-      </ThemeProvider>
+      </ThemedApp>
     </CoreProvider>
   );
 }

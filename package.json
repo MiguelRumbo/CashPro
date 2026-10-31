@@ -1,7 +1,7 @@
 {
   "name": "cashpro",
   "main": "expo-router/entry",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "CashPro: app móvil de finanzas personales (Expo + TypeScript)",
   "scripts": {
@@ -18,12 +18,15 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@expo-google-fonts/manrope": "^0.4.3",
+    "@expo-google-fonts/sora": "^0.4.2",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-community/datetimepicker": "8.2.0",
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
     "drizzle-orm": "^0.45.4",
+    "expo": "~54.0.38",
     "expo-constants": "~18.0.13",
     "expo-crypto": "~15.0.9",
     "expo-dev-client": "~6.0.21",
@@ -35,7 +38,6 @@
     "expo-linking": "~8.0.11",
     "expo-local-authentication": "~17.0.9",
     "expo-router": "~6.0.23",
-    "expo-screen-capture": "~8.0.10",
     "expo-secure-store": "~15.0.8",
     "expo-sharing": "~14.0.8",
     "expo-splash-screen": "~31.0.13",
@@ -53,8 +55,7 @@
     "react-native-screens": "~4.16.0",
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.5.1",
-    "zod": "^4.6.7",
-    "expo": "~54.0.38"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",

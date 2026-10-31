@@ -1,79 +1,162 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Sistema visual del rediseño 2.1 (ADR-004): tres temas de color elegibles en Ajustes.
+ * Todo color de la UI sale del tema activo (usePalette / useThemeColor).
  */
 
-import { Platform } from 'react-native';
+export type ThemeId = 'forest' | 'daylight' | 'wallet';
+export type ThemeMode = 'light' | 'dark';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+export interface Palette {
+  bg: string;
+  surface: string;
+  surfaceRaised: string;
+  chip: string;
+  line: string;
+  ink: string;
+  muted: string;
+  accent: string;
+  onAccent: string;
+  positive: string;
+  negative: string;
+  warning: string;
+  info: string;
+  white: string;
+}
 
-export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
-    border: '#e5e7eb',
-    surface: '#ffffff',
-    inputBackground: '#f9fafb',
+export interface AppTheme {
+  id: ThemeId;
+  mode: ThemeMode;
+  palette: Palette;
+  /** Tarjeta de saldo del inicio: degradado (o null) + color de fondo y de texto. */
+  balanceCard: { gradient: string | null; background: string; ink: string };
+  /** Tarjetas de cuenta: degradado por tipo, o tarjeta plana con borde de color. */
+  accountCards: 'gradient' | 'outlined';
+  tabBar: { background: string; active: string; inactive: string; border: string };
+}
+
+/** Colores de marca por tipo de cuenta (de oscuro a claro) para las tarjetas. */
+export const accountCardColors = {
+  debit: ['#0a3d8f', '#1767d8'],
+  credit: ['#5b1a9a', '#8f3fd6'],
+  bank: ['#00699b', '#13a3d6'],
+  cash: ['#10563a', '#2bbf77'],
+} as const;
+
+/** A · Bosque nocturno (por defecto). */
+const forest: AppTheme = {
+  id: 'forest',
+  mode: 'dark',
+  palette: {
+    bg: '#0e1512',
+    surface: '#16201b',
+    surfaceRaised: '#1b2620',
+    chip: '#1d2a23',
+    line: '#24312a',
+    ink: '#edf3ef',
+    muted: '#8fa59a',
+    accent: '#3ee08f',
+    onAccent: '#06210f',
+    positive: '#3ee08f',
+    negative: '#ff8a7a',
+    warning: '#ffb36b',
+    info: '#7fc0ff',
+    white: '#ffffff',
   },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
-    border: '#374151',
-    surface: '#1f2937',
-    inputBackground: '#1f2937',
+  balanceCard: {
+    gradient: 'linear-gradient(135deg, #2bbf77 0%, #10563a 55%, #0f2a20 100%)',
+    background: '#10563a',
+    ink: '#f2fff8',
   },
+  accountCards: 'gradient',
+  tabBar: { background: '#121b17', active: '#3ee08f', inactive: '#8fa59a', border: '#1f2b25' },
 };
 
-// CashPro Theme Colors
-export const CashProColors = {
-  primary: '#20df60',
-  primaryDark: '#1ab84e',
-  light: {
-    background: '#f6f8f6',
+/** B · Claro con números grandes. */
+const daylight: AppTheme = {
+  id: 'daylight',
+  mode: 'light',
+  palette: {
+    bg: '#f6f5f1',
     surface: '#ffffff',
-    textMain: '#111713',
-    textMuted: '#64748b',
-    border: '#e5e7eb',
+    surfaceRaised: '#ffffff',
+    chip: '#ebeee7',
+    line: '#ecebe5',
+    ink: '#17201b',
+    muted: '#6c7369',
+    accent: '#0f7a4c',
+    onAccent: '#ffffff',
+    positive: '#0f7a4c',
+    negative: '#c2412d',
+    warning: '#b45e09',
+    info: '#1f5fbf',
+    white: '#ffffff',
   },
-  dark: {
-    background: '#112116',
-    surface: '#1a2c20',
-    textMain: '#ffffff',
-    textMuted: '#64748b',
-    border: '#374151',
-  },
+  balanceCard: { gradient: null, background: '#ffffff', ink: '#17201b' },
+  accountCards: 'outlined',
+  tabBar: { background: '#17201b', active: '#ffffff', inactive: '#8d968a', border: '#17201b' },
 };
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
+/** C · Cartera (índigo). */
+const wallet: AppTheme = {
+  id: 'wallet',
+  mode: 'light',
+  palette: {
+    bg: '#eef0f6',
+    surface: '#ffffff',
+    surfaceRaised: '#ffffff',
+    chip: '#e2e5f2',
+    line: '#e4e7f0',
+    ink: '#141826',
+    muted: '#6a7088',
+    accent: '#5b5bf0',
+    onAccent: '#ffffff',
+    positive: '#17a673',
+    negative: '#e5484d',
+    warning: '#c26a00',
+    info: '#2a5bd7',
+    white: '#ffffff',
   },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
+  balanceCard: { gradient: null, background: '#141826', ink: '#ffffff' },
+  accountCards: 'gradient',
+  tabBar: { background: '#ffffff', active: '#5b5bf0', inactive: '#6a7088', border: '#e4e7f0' },
+};
+
+export const themes: Readonly<Record<ThemeId, AppTheme>> = { forest, daylight, wallet };
+export const themeIds = ['forest', 'daylight', 'wallet'] as const satisfies readonly ThemeId[];
+export const defaultThemeId: ThemeId = 'forest';
+
+export const radii = { sm: 10, md: 16, lg: 22, pill: 999 } as const;
+
+export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 } as const;
+
+/** Familias cargadas en el arranque (core/ui-kit/fonts.ts). */
+export const fontFamilies = {
+  body: {
+    400: 'Manrope-Regular',
+    500: 'Manrope-Medium',
+    600: 'Manrope-SemiBold',
+    700: 'Manrope-Bold',
+    800: 'Manrope-ExtraBold',
   },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  },
-});
+  display: { 600: 'Sora-SemiBold', 700: 'Sora-Bold' },
+} as const;
+
+/** A partir de este tamaño (pt) los textos usan la fuente de títulos y cifras. */
+export const DISPLAY_MIN_FONT_SIZE = 22;
+
+/** Colores con nombre para useThemeColor, derivados del tema activo. */
+export function namedColors(palette: Palette) {
+  return {
+    text: palette.ink,
+    background: palette.bg,
+    tint: palette.accent,
+    icon: palette.muted,
+    tabIconDefault: palette.muted,
+    tabIconSelected: palette.accent,
+    border: palette.line,
+    surface: palette.surface,
+    inputBackground: palette.surfaceRaised,
+  };
+}
+
+export type ColorName = keyof ReturnType<typeof namedColors>;

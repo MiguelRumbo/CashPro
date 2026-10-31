@@ -7,7 +7,6 @@
 - **BD cifrada con SQLCipher** (`app.json` → `expo-sqlite.android.useSQLCipher`). La llave (256 bits aleatorios, `expo-crypto`) se genera en el primer arranque y se guarda en `expo-secure-store` (Android Keystore) bajo `db.keyStorageKey`. Se aplica con `PRAGMA key` antes de cualquier otra sentencia; si no abre, la app muestra la pantalla de error sin tocar el archivo.
 - **`android.allowBackup: false`**: Android no copia la BD a Google Drive (además, sin la llave del Keystore sería ilegible).
 - **Bloqueo** (módulo `security`): al abrir y al volver de segundo plano (`security.lockOnBackgroundMs`) se pide huella, rostro o el PIN/patrón del teléfono. Si el teléfono no tiene ningún método configurado, **no hay bloqueo** (no hay con qué verificar); se avisará en Ajustes en una fase posterior.
-- **`FLAG_SECURE`** (`security.preventScreenshots`): la app no aparece en capturas ni en la vista de recientes.
 - "Exportar base de datos" entrega el archivo **cifrado**; solo se puede abrir con la llave de ese teléfono.
 
 ## Salidas de red

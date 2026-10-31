@@ -16,6 +16,7 @@ import {
 import { fromOptional } from '@/core/contracts/result';
 import { useCapability, useErrorReporter } from '@/core/registry/react';
 import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
+import { usePalette } from '@/core/ui-kit/theme-context';
 
 const DATE_FILTERS = ['Este mes', 'Mes pasado', '3 meses', 'Personalizado'];
 
@@ -166,6 +167,7 @@ function DonutChart({
 }
 
 export function ReportsScreen() {
+  const palette = usePalette();
   const ledger = useCapability(movementsLedgerKey);
   const goalsQuery = useCapability(savingsGoalsQueryKey);
   const budgetsQuery = useCapability(budgetsQueryKey);
@@ -193,12 +195,12 @@ export function ReportsScreen() {
   const textMain = useThemeColor({ light: '#1e293b', dark: '#ffffff' }, 'text');
   const borderColor = useThemeColor({ light: 'rgba(255,255,255,0.5)', dark: '#334155' }, 'border');
   const textMuted = useThemeColor({ light: '#64748b', dark: '#94a3b8' }, 'text');
-  const barBg = useThemeColor({ light: '#f1f5f9', dark: '#1e293b' }, 'surface');
+  const barBg = useThemeColor({ light: 'rgba(100,116,139,0.14)', dark: '#1e293b' }, 'surface');
   const chipBg = useThemeColor({ light: '#ffffff', dark: '#1a2c22' }, 'surface');
-  const chipBorder = useThemeColor({ light: '#f1f5f9', dark: '#334155' }, 'border');
+  const chipBorder = useThemeColor({ light: 'rgba(100,116,139,0.14)', dark: '#334155' }, 'border');
   const chipText = useThemeColor({ light: '#475569', dark: '#cbd5e1' }, 'text');
   const weekendBarColor = useThemeColor({ light: '#cbd5e1', dark: '#475569' }, 'text');
-  const primary = '#20df60';
+  const primary = palette.accent;
 
   const getDateRangeForFilter = (filter: string): DateRange => {
     const now = new Date();
@@ -643,7 +645,10 @@ export function ReportsScreen() {
                 <IconSymbol size={22} name="arrow.down.right" color="#e11d48" />
               </View>
               <View
-                style={[styles.percentBadge, { backgroundColor: expenseChange < 0 ? '#dcfce7' : '#fff1f2' }]}
+                style={[
+                  styles.percentBadge,
+                  { backgroundColor: expenseChange < 0 ? 'rgba(34,197,94,0.16)' : 'rgba(225,29,72,0.14)' },
+                ]}
               >
                 <ThemedText
                   style={[styles.percentBadgeText, { color: expenseChange < 0 ? '#16a34a' : '#e11d48' }]}
@@ -671,11 +676,14 @@ export function ReportsScreen() {
           {/* Ingreso Total */}
           <View style={[styles.summaryCard, { backgroundColor: surfaceColor, borderColor }]}>
             <View style={styles.summaryCardTop}>
-              <View style={[styles.summaryIconBg, { backgroundColor: '#dcfce7' }]}>
+              <View style={[styles.summaryIconBg, { backgroundColor: 'rgba(34,197,94,0.16)' }]}>
                 <IconSymbol size={22} name="arrow.up.right" color="#16a34a" />
               </View>
               <View
-                style={[styles.percentBadge, { backgroundColor: incomeChange > 0 ? '#dcfce7' : '#fff1f2' }]}
+                style={[
+                  styles.percentBadge,
+                  { backgroundColor: incomeChange > 0 ? 'rgba(34,197,94,0.16)' : 'rgba(225,29,72,0.14)' },
+                ]}
               >
                 <ThemedText
                   style={[styles.percentBadgeText, { color: incomeChange > 0 ? '#16a34a' : '#e11d48' }]}

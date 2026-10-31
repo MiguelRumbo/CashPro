@@ -9,18 +9,20 @@ import { formatCardNumber, formatCurrencyInput, getNumericValue } from '@/core/u
 import { getAccountsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
 import type { AccountInput } from '../services/accounts-service';
+import { usePalette } from '@/core/ui-kit/theme-context';
 
 type AccountType = 'cash' | 'bank' | 'debit' | 'credit';
 
 export function AddAccountScreen() {
+  const palette = usePalette();
   const { accounts: accountsService } = getAccountsRuntime();
   const reportError = useErrorReporter();
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1c2e24' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
-  const textSub = '#64876f';
-  const primary = '#20df60';
-  const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#374151' }, 'border');
+  const textSub = palette.muted;
+  const primary = palette.accent;
+  const borderColor = useThemeColor({ light: 'rgba(127,127,127,0.2)', dark: '#374151' }, 'border');
 
   const [accountType, setAccountType] = useState<AccountType>('cash');
   const [name, setName] = useState('');

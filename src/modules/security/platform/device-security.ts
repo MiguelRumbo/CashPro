@@ -1,12 +1,10 @@
-/** Adaptadores de seguridad del sistema operativo (biometría y capturas de pantalla). */
+/** Adaptador de autenticación del sistema operativo (biometría o PIN del teléfono). */
 import * as LocalAuthentication from 'expo-local-authentication';
-import * as ScreenCapture from 'expo-screen-capture';
 
 export interface DeviceSecurity {
   /** true si el teléfono tiene biometría o credencial configurada. */
   canAuthenticate(): Promise<boolean>;
   authenticate(prompt: { message: string; cancel: string }): Promise<boolean>;
-  preventScreenCapture(): Promise<void>;
 }
 
 export const deviceSecurity: DeviceSecurity = {
@@ -26,6 +24,4 @@ export const deviceSecurity: DeviceSecurity = {
     });
     return result.success;
   },
-  // FLAG_SECURE en Android: oculta la app en capturas y en la vista de recientes.
-  preventScreenCapture: () => ScreenCapture.preventScreenCaptureAsync(),
 };

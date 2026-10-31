@@ -2,6 +2,9 @@ import { z } from 'zod';
 
 const currencyCodeSchema = z.enum(['MXN', 'USD', 'EUR']);
 
+/** Temas de color (deben coincidir con core/ui-kit/theme.ts). */
+const themeIdSchema = z.enum(['forest', 'daylight', 'wallet']);
+
 const moduleToggleSchema = z.object({ enabled: z.boolean() }).strict();
 
 const logLevelSchema = z.enum(['debug', 'info', 'warn', 'error']);
@@ -97,13 +100,12 @@ export const appConfigSchema = z
     security: z
       .object({
         lockOnBackgroundMs: z.number().int().min(0),
-        preventScreenshots: z.boolean(),
       })
       .strict(),
     ui: z
       .object({
         splashFadeMs: z.number().int().min(0),
-        primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+        defaultTheme: themeIdSchema,
       })
       .strict(),
   })
@@ -114,6 +116,8 @@ export const appConfigSchema = z
 
 export type AppConfig = z.infer<typeof appConfigSchema>;
 export type CurrencyCode = z.infer<typeof currencyCodeSchema>;
+export type ThemeIdConfig = z.infer<typeof themeIdSchema>;
+export const themeIdOptions = themeIdSchema.options;
 export type ModuleId = keyof AppConfig['modules'];
 
 type DeepReadonly<T> = T extends (infer U)[]

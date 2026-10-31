@@ -18,6 +18,7 @@ import type { MovementWithAccount } from '@/core/contracts/finance';
 import { getMovementsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
 import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
+import { usePalette } from '@/core/ui-kit/theme-context';
 
 const FILTERS = ['Mes', 'Hoy', 'Semana', 'Año', 'Personalizado'];
 
@@ -29,6 +30,7 @@ type Section = {
 };
 
 export function MovementsListScreen() {
+  const palette = usePalette();
   const { movements: movementsService } = getMovementsRuntime();
   const reportError = useErrorReporter();
   const [activeFilter, setActiveFilter] = useState('Mes');
@@ -41,10 +43,10 @@ export function MovementsListScreen() {
   const backgroundColor = useThemeColor({ light: '#ffffff', dark: '#112116' }, 'background');
   const filterTextColor = useThemeColor({ light: '#4b5563', dark: '#d1d5db' }, 'text');
   const textMain = useThemeColor({ light: '#1F2937', dark: '#ffffff' }, 'text');
-  const borderColor = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'border');
-  const searchBg = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'surface');
+  const borderColor = useThemeColor({ light: 'rgba(127,127,127,0.12)', dark: '#374151' }, 'border');
+  const searchBg = useThemeColor({ light: 'rgba(127,127,127,0.12)', dark: '#374151' }, 'surface');
   const textMuted = '#9CA3AF';
-  const primary = '#20df60';
+  const primary = palette.accent;
 
   const fetchMovements = useStableCallback(() => {
     try {
@@ -168,7 +170,7 @@ export function MovementsListScreen() {
 
   const getMovementIcon = (movement: Transaction) => {
     if (movement.type === 'transfer') {
-      return { name: 'arrow.left.arrow.right', color: '#3b82f6', bg: '#dbeafe' };
+      return { name: 'arrow.left.arrow.right', color: '#3b82f6', bg: 'rgba(59,130,246,0.16)' };
     }
 
     if (movement.category_icon && movement.category_color) {
@@ -178,7 +180,7 @@ export function MovementsListScreen() {
 
     return movement.type === 'income'
       ? { name: 'arrow.down', color: primary, bg: 'rgba(32, 223, 96, 0.2)' }
-      : { name: 'arrow.up', color: '#ef4444', bg: '#fee2e2' };
+      : { name: 'arrow.up', color: '#ef4444', bg: 'rgba(239,68,68,0.14)' };
   };
 
   const formatTime = (dateString: string) => {
@@ -332,11 +334,6 @@ export function MovementsListScreen() {
         )}
         <View style={{ height: 100 }} />
       </ScrollView>
-
-      {/* FAB */}
-      <TouchableOpacity style={styles.fab} onPress={() => router.push('/movements/add-movement')}>
-        <IconSymbol size={28} name="plus" color="white" />
-      </TouchableOpacity>
     </ThemedView>
   );
 }
@@ -462,7 +459,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#fee2e2',
+    backgroundColor: 'rgba(239,68,68,0.14)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -494,21 +491,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   // FAB
-  fab: {
-    position: 'absolute',
-    bottom: 120,
-    right: 16,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#20df60',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#20df60',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-    zIndex: 40,
-  },
 });

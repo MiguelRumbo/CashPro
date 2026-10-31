@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { appConfig } from '@/config/app.config';
 import { openAppDatabase } from '@/core/db/client';
 import { createLogger } from '@/core/logger/logger';
+import { loadAppFonts } from '@/core/ui-kit/fonts';
 
 import { manifestLoaders } from './manifest-loaders';
 import { startModules, type AppRuntime } from './start';
@@ -22,7 +23,10 @@ export function useBoot(): BootState {
     let runtime: AppRuntime | undefined;
     (async () => {
       try {
+        // Si las fuentes no cargan, la app sigue con la fuente del sistema.
+        const fonts = loadAppFonts().catch(() => logger.warn('fonts not loaded'));
         const db = await openAppDatabase(appConfig.db);
+        await fonts;
         runtime = await startModules({ config: appConfig, db, logger, loaders: manifestLoaders });
         if (!cancelled) setState({ status: 'ready', runtime });
       } catch (error) {

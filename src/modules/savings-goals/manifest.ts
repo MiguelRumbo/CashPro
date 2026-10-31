@@ -23,7 +23,7 @@ export const manifest: ModuleManifest = {
       subtitle: savingsGoalsTexts.menuSubtitle,
       icon: 'target',
       color: '#10b981',
-      iconBg: '#ecfdf5',
+      iconBg: 'rgba(16,185,129,0.16)',
       route: '/savings-goals',
       order: 2,
     },

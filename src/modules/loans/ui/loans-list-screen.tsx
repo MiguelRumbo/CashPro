@@ -10,10 +10,12 @@ import type { LoanRecord } from '@/core/contracts/finance';
 import { getLoansRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
 import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
+import { usePalette } from '@/core/ui-kit/theme-context';
 
 type Loan = LoanRecord;
 
 export function LoansListScreen() {
+  const palette = usePalette();
   const { loans: loansService } = getLoansRuntime();
   const reportError = useErrorReporter();
   const [loans, setLoans] = useState<Loan[]>([]);
@@ -23,9 +25,9 @@ export function LoansListScreen() {
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
-  const textMuted = '#64748b';
-  const borderColor = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'border');
-  const primary = '#20df60';
+  const textMuted = palette.muted;
+  const borderColor = useThemeColor({ light: 'rgba(127,127,127,0.12)', dark: '#374151' }, 'border');
+  const primary = palette.accent;
   const warning = '#f59e0b';
   const success = '#10b981';
 

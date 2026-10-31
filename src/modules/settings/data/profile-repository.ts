@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 
-import type { CurrencyCode } from '@/config/schema';
+import type { CurrencyCode, ThemeIdConfig } from '@/config/schema';
 import type { ProfileRecord } from '@/core/contracts/finance';
 import { nowIso, type DbHandle } from '@/core/db/handle';
 
@@ -15,16 +15,27 @@ export function createProfileRepository(db: DbHandle) {
     get(): ProfileRecord | undefined {
       return orm.select().from(userProfile).where(eq(userProfile.id, PROFILE_ID)).get();
     },
-    ensure(defaults: { name: string; currency: CurrencyCode }): ProfileRecord {
+    ensure(defaults: { name: string; currency: CurrencyCode; theme: ThemeIdConfig }): ProfileRecord {
       const existing = this.get();
       if (existing) return existing;
       return orm
         .insert(userProfile)
-        .values({ id: PROFILE_ID, name: defaults.name, email: '', currency: defaults.currency })
+        .values({
+          id: PROFILE_ID,
+          name: defaults.name,
+          email: '',
+          currency: defaults.currency,
+          theme: defaults.theme,
+        })
         .returning()
         .get();
     },
-    update(fields: { name: string; email: string; currency: CurrencyCode }): ProfileRecord | undefined {
+    update(fields: {
+      name?: string;
+      email?: string;
+      currency?: CurrencyCode;
+      theme?: ThemeIdConfig;
+    }): ProfileRecord | undefined {
       orm
         .update(userProfile)
         .set({ ...fields, updated_at: nowIso() })

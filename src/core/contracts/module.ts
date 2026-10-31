@@ -22,7 +22,7 @@ export interface TabContribution {
 }
 
 /** Slots con nombre donde un módulo puede aportar accesos. */
-export type ActionSlot = 'more.menu';
+export type ActionSlot = 'more.menu' | 'tabbar.fab';
 
 export interface ActionContribution {
   id: string;
@@ -32,6 +32,8 @@ export interface ActionContribution {
   icon: IconSymbolName;
   color: string;
   iconBg: string;
+  /** Sección del menú "Más" (por defecto, finanzas). */
+  section?: 'finance' | 'general';
   /** Ruta pública de Expo Router (no se importa el módulo destino). */
   route: string;
   order: number;

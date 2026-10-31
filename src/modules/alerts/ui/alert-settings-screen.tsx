@@ -8,6 +8,7 @@ import { IconSymbol } from '@/core/ui-kit/icon-symbol';
 import { getAlertsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
 import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
+import { usePalette } from '@/core/ui-kit/theme-context';
 
 type NotificationSettings = {
   id: number;
@@ -25,6 +26,7 @@ type NotificationSettings = {
 };
 
 export function AlertSettingsScreen() {
+  const palette = usePalette();
   const { alerts: alertsService } = getAlertsRuntime();
   const reportError = useErrorReporter();
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
@@ -33,9 +35,9 @@ export function AlertSettingsScreen() {
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
-  const textMuted = '#64748b';
-  const borderColor = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'border');
-  const primary = '#20df60';
+  const textMuted = palette.muted;
+  const borderColor = useThemeColor({ light: 'rgba(127,127,127,0.12)', dark: '#374151' }, 'border');
+  const primary = palette.accent;
 
   const fetchSettings = useStableCallback(() => {
     try {
@@ -278,7 +280,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: 'rgba(127,127,127,0.12)',
   },
   settingRowLast: { borderBottomWidth: 0 },
   settingLeft: { flex: 1, marginRight: 12 },
@@ -290,7 +292,7 @@ const styles = StyleSheet.create({
     gap: 8,
     margin: 16,
     padding: 12,
-    backgroundColor: '#f9fafb',
+    backgroundColor: 'rgba(127,127,127,0.06)',
     borderRadius: 12,
   },
   infoText: { flex: 1, fontSize: 12, lineHeight: 18 },

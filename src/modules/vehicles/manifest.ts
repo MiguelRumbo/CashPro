@@ -25,7 +25,7 @@ export const manifest: ModuleManifest = {
       subtitle: vehiclesTexts.menuSubtitle,
       icon: 'car',
       color: '#3b82f6',
-      iconBg: '#eff6ff',
+      iconBg: 'rgba(59,130,246,0.16)',
       route: '/vehicles',
       order: 5,
     },

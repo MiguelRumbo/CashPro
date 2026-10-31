@@ -33,7 +33,7 @@ v2 conserva todo lo que hace v1 (captura manual, presupuestos, metas, préstamos
 - Importación de estados de cuenta CSV, XML y PDF con texto (RF-40 a RF-45).
 - Conciliación y deduplicación (RF-50 a RF-53).
 - Categorización por reglas y aprendizaje por corrección (RF-60 a RF-62).
-- Seguridad: BD cifrada, bloqueo biométrico, `FLAG_SECURE`, respaldo cifrado (RNF-10 a RNF-16).
+- Seguridad: BD cifrada, bloqueo biométrico, respaldo cifrado (RNF-10, RNF-11, RNF-13 a RNF-16).
 
 ### 3.2 Fuera de alcance (por ahora)
 
@@ -64,6 +64,8 @@ Formato: **RF-xx — título.** Descripción. _Criterios de aceptación (CA)._
 - **RF-09 — Avisos internos.** Corte y pago de tarjetas, presupuesto al 80 % y excedido, préstamos por vencer, suscripciones por cobrar y metas atrasadas; con interruptores por tipo y modo vacaciones.
 - **RF-10 — Inicio y estadísticas.** Patrimonio, ingresos y gastos del mes, variación contra el mes anterior, gastos por categoría, tendencias y resúmenes de cada módulo.
 - **RF-11 — Perfil y moneda.** Nombre, correo y moneda de visualización (MXN, USD, EUR).
+- **RF-13 — Temas de color** (2.1.0). Ajustes → Tema permite elegir Bosque nocturno (oscuro, por defecto), Claro o Cartera; la elección se guarda.
+  _CA: el cambio se ve de inmediato y se conserva al reabrir la app._
 - **RF-12 — Datos.** Exportar respaldo JSON (compatible con los respaldos de v1), exportar movimientos a CSV, exportar e importar la BD, importar JSON y borrar todos los datos.
   _CA: exportar → borrar todo → importar deja los mismos datos. Un JSON inválido no borra nada._
 
@@ -121,7 +123,7 @@ Formato: **RF-xx — título.** Descripción. _Criterios de aceptación (CA)._
 - **RNF-06 — Pruebas.** Dominio al 100 %; repositorios con sql.js; parsers con fixtures anonimizados; smoke test con módulos apagados.
 - **RNF-10 — BD cifrada** (SQLCipher) con la llave en Android Keystore.
 - **RNF-11 — Bloqueo biométrico** al abrir y al volver de segundo plano.
-- **RNF-12 — `FLAG_SECURE`.** La app no aparece en capturas ni en recientes.
+- ~~**RNF-12 — `FLAG_SECURE`.**~~ Retirado el 2026-10-31 a pedido del usuario: impedía tomar capturas de pantalla (OQ-022).
 - **RNF-13 — Sin telemetría** ni crash reporting con contenido de eventos.
 - **RNF-14 — Red mínima.** Solo para el correo (si se aprueba) y el respaldo; cada salida se documenta en `docs/security.md`.
 - **RNF-15 — Respaldo cifrado** con contraseña del usuario; nunca en claro (incluye el JSON de RF-12 cuando haya datos de v2).

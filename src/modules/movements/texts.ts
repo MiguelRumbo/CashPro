@@ -1,5 +1,6 @@
 export const movementsTexts = {
   tabTitle: 'Movimientos',
+  fabTitle: 'Nuevo movimiento',
   errors: {
     typeAndAmountRequired: 'El tipo y monto son requeridos',
     invalidType: 'Tipo de movimiento inválido',

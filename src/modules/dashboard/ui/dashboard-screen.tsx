@@ -31,6 +31,8 @@ import { useCapability, useErrorReporter } from '@/core/registry/react';
 import { getInitials } from '@/core/units/initials';
 import { summarizeMonth } from '../domain/month-summary';
 import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
+import { radii } from '@/core/ui-kit/theme';
+import { useAppTheme, usePalette } from '@/core/ui-kit/theme-context';
 
 type RecentMovement = MovementWithAccount;
 
@@ -53,6 +55,8 @@ type Budget = BudgetRecord;
 type SubscriptionsSummary = RecurringPaymentsStats;
 
 export function DashboardScreen() {
+  const palette = usePalette();
+  const theme = useAppTheme();
   const profileQuery = useCapability(profileQueryKey);
   const accountsQuery = useCapability(accountsQueryKey);
   const ledger = useCapability(movementsLedgerKey);
@@ -93,10 +97,10 @@ export function DashboardScreen() {
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
-  const borderColor = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'border');
-  const textMuted = '#64748b';
-  const primary = '#20df60';
-  const progressBarBg = useThemeColor({ light: '#f3f4f6', dark: '#1f2937' }, 'surface');
+  const borderColor = useThemeColor({ light: 'rgba(127,127,127,0.12)', dark: '#374151' }, 'border');
+  const textMuted = palette.muted;
+  const primary = palette.accent;
+  const progressBarBg = useThemeColor({ light: 'rgba(127,127,127,0.12)', dark: '#1f2937' }, 'surface');
   const addAccountBorderColor = useThemeColor({ light: '#d1d5db', dark: '#374151' }, 'border');
 
   const fetchData = useStableCallback(async () => {
@@ -277,73 +281,65 @@ export function DashboardScreen() {
       >
         {/* Grid: Balance + Income/Expense */}
         <View style={styles.cardsGrid}>
-          {/* Balance Card (Full Width) */}
-          <View style={[styles.balanceCard, { backgroundColor: surfaceColor }]}>
-            {/* Decorative glow */}
-            <View style={styles.balanceGlow} />
+          {/* Tarjeta de patrimonio con ingresos y gastos del mes (estilo del tema) */}
+          <View
+            style={[
+              styles.balanceCard,
+              {
+                backgroundColor: theme.balanceCard.background,
+                experimental_backgroundImage: theme.balanceCard.gradient ?? undefined,
+                borderColor,
+                borderWidth: theme.balanceCard.gradient ? 0 : 1,
+              },
+            ]}
+          >
             <View style={styles.balanceContent}>
-              <ThemedText style={[styles.cardLabel, { color: textMuted }]}>Balance Total</ThemedText>
+              <ThemedText style={[styles.cardLabel, { color: theme.balanceCard.ink, opacity: 0.8 }]}>
+                Patrimonio total
+              </ThemedText>
               <ThemedText
-                style={[styles.balanceAmount, { color: textMain }]}
+                style={[styles.balanceAmount, { color: theme.balanceCard.ink }]}
                 numberOfLines={1}
                 adjustsFontSizeToFit
               >
                 {formatCurrency(totalBalance)}
               </ThemedText>
-              <View
-                style={[
-                  styles.badge,
-                  {
-                    backgroundColor: expenseChange <= 0 ? 'rgba(32, 223, 96, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                  },
-                ]}
-              >
+              <View style={[styles.badge, { backgroundColor: 'rgba(255,255,255,0.14)' }]}>
                 <IconSymbol
                   size={14}
                   name={expenseChange <= 0 ? 'arrow.down.right' : 'arrow.up.right'}
-                  color={expenseChange <= 0 ? primary : '#ef4444'}
+                  color={theme.balanceCard.ink}
                 />
-                <ThemedText style={[styles.badgeText, { color: expenseChange <= 0 ? primary : '#ef4444' }]}>
-                  {expenseChange > 0 ? '+' : ''}
-                  {changePercentage}% este mes
+                <ThemedText style={[styles.badgeText, { color: theme.balanceCard.ink }]}>
+                  Gastos {expenseChange > 0 ? '+' : ''}
+                  {changePercentage}% vs. mes anterior
                 </ThemedText>
               </View>
-            </View>
-          </View>
-
-          {/* Income & Expense Row */}
-          <View style={styles.smallCardsRow}>
-            {/* Income Card */}
-            <View style={[styles.smallCard, { backgroundColor: surfaceColor, borderColor }]}>
-              <View style={[styles.iconCircle, { backgroundColor: '#dcfce7' }]}>
-                <IconSymbol size={18} name="arrow.down" color={primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <ThemedText style={[styles.smallCardLabel, { color: textMuted }]}>Ingresos</ThemedText>
-                <ThemedText
-                  style={[styles.smallCardAmount, { color: textMain }]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  +{formatCurrency(totalIncome)}
-                </ThemedText>
-              </View>
-            </View>
-
-            {/* Expense Card */}
-            <View style={[styles.smallCard, { backgroundColor: surfaceColor, borderColor }]}>
-              <View style={[styles.iconCircle, { backgroundColor: '#fef2f2' }]}>
-                <IconSymbol size={18} name="arrow.up" color="#ef4444" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <ThemedText style={[styles.smallCardLabel, { color: textMuted }]}>Gastos</ThemedText>
-                <ThemedText
-                  style={[styles.smallCardAmount, { color: textMain }]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  -{formatCurrency(totalExpense)}
-                </ThemedText>
+              <View style={styles.smallCardsRow}>
+                <View style={[styles.smallCard, { backgroundColor: 'rgba(127,127,127,0.14)' }]}>
+                  <ThemedText style={[styles.smallCardLabel, { color: theme.balanceCard.ink, opacity: 0.8 }]}>
+                    Ingresos del mes
+                  </ThemedText>
+                  <ThemedText
+                    style={[styles.smallCardAmount, { color: theme.balanceCard.ink }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
+                    +{formatCurrency(totalIncome)}
+                  </ThemedText>
+                </View>
+                <View style={[styles.smallCard, { backgroundColor: 'rgba(127,127,127,0.14)' }]}>
+                  <ThemedText style={[styles.smallCardLabel, { color: theme.balanceCard.ink, opacity: 0.8 }]}>
+                    Gastos del mes
+                  </ThemedText>
+                  <ThemedText
+                    style={[styles.smallCardAmount, { color: theme.balanceCard.ink }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
+                    −{formatCurrency(totalExpense)}
+                  </ThemedText>
+                </View>
               </View>
             </View>
           </View>
@@ -966,11 +962,6 @@ export function DashboardScreen() {
         {/* Bottom spacer for FABs */}
         <View style={{ height: 120 }} />
       </ScrollView>
-
-      {/* Floating Action Button */}
-      <TouchableOpacity style={styles.fab} onPress={() => router.push('/movements/add-movement')}>
-        <IconSymbol size={28} name="plus" color="white" />
-      </TouchableOpacity>
     </ThemedView>
   );
 }
@@ -1072,24 +1063,9 @@ const styles = StyleSheet.create({
   },
   // Balance Card
   balanceCard: {
-    padding: 24,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
-    elevation: 3,
+    padding: 22,
+    borderRadius: radii.lg,
     overflow: 'hidden',
-    position: 'relative',
-  },
-  balanceGlow: {
-    position: 'absolute',
-    top: -40,
-    right: -40,
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    backgroundColor: 'rgba(32, 223, 96, 0.1)',
   },
   balanceContent: {
     zIndex: 1,
@@ -1121,15 +1097,15 @@ const styles = StyleSheet.create({
   // Small Cards
   smallCardsRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
+    marginTop: 16,
   },
   smallCard: {
     flex: 1,
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-    height: 128,
-    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: radii.md,
+    gap: 2,
   },
   iconCircle: {
     width: 32,
@@ -1392,23 +1368,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   // FAB
-  fab: {
-    position: 'absolute',
-    bottom: 100,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#20df60',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#20df60',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-    zIndex: 40,
-  },
   // Savings Goals Card
   savingsGoalsCard: {
     padding: 20,

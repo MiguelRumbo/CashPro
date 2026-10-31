@@ -67,11 +67,10 @@ export const rawAppConfig = {
   },
   security: {
     lockOnBackgroundMs: 0, // ms en segundo plano antes de volver a pedir autenticación (0 = siempre)
-    preventScreenshots: true, // FLAG_SECURE: oculta la app en capturas y en recientes
   },
   ui: {
     splashFadeMs: 250, // ms
-    primaryColor: '#20df60',
+    defaultTheme: 'forest', // tema de color inicial: forest (A), daylight (B) o wallet (C)
   },
 } as const;
 

@@ -36,7 +36,7 @@ export function initSettingsRuntime(ctx: ModuleContext): void {
 export function startSettingsRuntime(): void {
   const runtime = holder.get();
   runtime.settings.syncPreferencesFromProfile();
-  runtime.unsubscribe = runtime.preferences.subscribe(runtime.settings.persistCurrency);
+  runtime.unsubscribe = runtime.preferences.subscribe(runtime.settings.persistPreferences);
 }
 
 export const getSettingsRuntime = holder.get;

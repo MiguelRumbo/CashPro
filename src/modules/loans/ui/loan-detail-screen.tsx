@@ -23,6 +23,7 @@ import { useCapability, useErrorReporter } from '@/core/registry/react';
 import { getLoansRuntime } from '../runtime';
 import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { usePalette } from '@/core/ui-kit/theme-context';
 
 type Loan = LoanRecord;
 
@@ -38,6 +39,7 @@ type Payment = {
 type Account = AccountRecord;
 
 export function LoanDetailScreen() {
+  const palette = usePalette();
   const { loans: loansService } = getLoansRuntime();
   const accountsQuery = useCapability(accountsQueryKey);
   const reportError = useErrorReporter();
@@ -59,12 +61,12 @@ export function LoanDetailScreen() {
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
-  const textMuted = '#64748b';
-  const borderColor = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'border');
-  const primary = '#20df60';
+  const textMuted = palette.muted;
+  const borderColor = useThemeColor({ light: 'rgba(127,127,127,0.12)', dark: '#374151' }, 'border');
+  const primary = palette.accent;
   const success = '#10b981';
   const warning = '#f59e0b';
-  const inputBg = useThemeColor({ light: '#f9fafb', dark: '#1f2937' }, 'inputBackground');
+  const inputBg = useThemeColor({ light: 'rgba(127,127,127,0.06)', dark: '#1f2937' }, 'inputBackground');
 
   const fetchLoanData = useStableCallback(async () => {
     try {

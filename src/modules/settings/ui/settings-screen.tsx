@@ -17,9 +17,13 @@ import {
   writeAndShare,
 } from '../platform/files';
 import { getInitials } from '@/core/units/initials';
+import { useThemePreference } from '@/core/preferences/use-theme-preference';
 import { getSettingsRuntime } from '../runtime';
+import { settingsTexts } from '../texts';
+import { ThemePickerView } from './theme-picker-view';
 import { useErrorReporter } from '@/core/registry/react';
 import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
+import { usePalette } from '@/core/ui-kit/theme-context';
 
 type SettingsRowProps = {
   icon: IconSymbolName;
@@ -52,6 +56,7 @@ function SettingsRow({
   textMuted,
   borderColor,
 }: SettingsRowProps) {
+  const palette = usePalette();
   return (
     <TouchableOpacity
       style={[styles.settingsRow, !isLast && { borderBottomWidth: 1, borderBottomColor: borderColor }]}
@@ -73,7 +78,7 @@ function SettingsRow({
         <Switch
           value={switchValue}
           onValueChange={onSwitchChange}
-          trackColor={{ false: '#e5e7eb', true: '#20df60' }}
+          trackColor={{ false: palette.line, true: palette.accent }}
           thumbColor="#ffffff"
         />
       )}
@@ -82,22 +87,27 @@ function SettingsRow({
 }
 
 export function SettingsScreen() {
+  const palette = usePalette();
   const { settings: settingsService, dbFileName } = getSettingsRuntime();
   const reportError = useErrorReporter();
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [profileName, setProfileName] = useState('Usuario');
   const [profileEmail, setProfileEmail] = useState('');
   const { currency, setCurrency: setGlobalCurrency } = useCurrency();
+  const { theme, setTheme } = useThemePreference();
 
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1c2b21' }, 'surface');
   const textMain = useThemeColor({ light: '#111827', dark: '#ffffff' }, 'text');
-  const borderColor = useThemeColor({ light: '#f3f4f6', dark: 'rgba(55, 65, 81, 0.5)' }, 'border');
+  const borderColor = useThemeColor(
+    { light: 'rgba(127,127,127,0.12)', dark: 'rgba(55, 65, 81, 0.5)' },
+    'border',
+  );
   const textMuted = useThemeColor({ light: '#6b7280', dark: '#9ca3af' }, 'text');
-  const editButtonBg = useThemeColor({ light: '#f9fafb', dark: '#374151' }, 'surface');
+  const editButtonBg = useThemeColor({ light: 'rgba(127,127,127,0.06)', dark: '#374151' }, 'surface');
   const dataIconColor = useThemeColor({ light: '#4b5563', dark: '#d1d5db' }, 'text');
-  const dataIconBg = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'surface');
-  const primary = '#20df60';
+  const dataIconBg = useThemeColor({ light: 'rgba(127,127,127,0.12)', dark: '#374151' }, 'surface');
+  const primary = palette.accent;
 
   const currencies = [
     { code: 'MXN', label: 'MXN - Peso Mexicano' },
@@ -332,7 +342,13 @@ export function SettingsScreen() {
           style={[styles.profileCard, { backgroundColor: surfaceColor }]}
           onPress={() => router.push('/settings/edit-profile')}
         >
-          <View style={styles.profileAvatar}>
+          <View
+            style={[
+              styles.profileAvatar,
+              { backgroundColor: palette.accent },
+              { backgroundColor: palette.accent },
+            ]}
+          >
             <ThemedText style={styles.profileInitials}>{getInitials(profileName)}</ThemedText>
           </View>
           <View style={styles.profileInfo}>
@@ -351,7 +367,7 @@ export function SettingsScreen() {
         <View style={[styles.sectionCard, { backgroundColor: surfaceColor }]}>
           <TouchableOpacity style={[styles.settingsRow]} onPress={() => setShowCurrencyModal(true)}>
             <View style={styles.settingsRowLeft}>
-              <View style={[styles.settingsIcon, { backgroundColor: '#eff6ff' }]}>
+              <View style={[styles.settingsIcon, { backgroundColor: 'rgba(59,130,246,0.16)' }]}>
                 <IconSymbol size={22} name="banknote" color="#2563eb" />
               </View>
               <View>
@@ -363,6 +379,12 @@ export function SettingsScreen() {
             </View>
             <IconSymbol size={14} name="chevron.forward" color="#9ca3af" />
           </TouchableOpacity>
+        </View>
+
+        {/* TEMA */}
+        <ThemedText style={styles.sectionLabel}>{settingsTexts.themeSection}</ThemedText>
+        <View style={styles.themeSection}>
+          <ThemePickerView selected={theme} onSelect={setTheme} />
         </View>
 
         {/* APARIENCIA */}
@@ -412,7 +434,7 @@ export function SettingsScreen() {
             onPress={handleExportJSON}
           >
             <View style={styles.settingsRowLeft}>
-              <View style={[styles.settingsIcon, { backgroundColor: '#eff6ff' }]}>
+              <View style={[styles.settingsIcon, { backgroundColor: 'rgba(59,130,246,0.16)' }]}>
                 <IconSymbol size={22} name="arrow.down.circle.fill" color="#2563eb" />
               </View>
               <View>
@@ -450,7 +472,7 @@ export function SettingsScreen() {
             onPress={handleExportDB}
           >
             <View style={styles.settingsRowLeft}>
-              <View style={[styles.settingsIcon, { backgroundColor: '#f0fdf4' }]}>
+              <View style={[styles.settingsIcon, { backgroundColor: 'rgba(34,197,94,0.16)' }]}>
                 <IconSymbol size={22} name="arrow.up.circle.fill" color="#16a34a" />
               </View>
               <View>
@@ -471,7 +493,7 @@ export function SettingsScreen() {
             onPress={handleImportData}
           >
             <View style={styles.settingsRowLeft}>
-              <View style={[styles.settingsIcon, { backgroundColor: '#faf5ff' }]}>
+              <View style={[styles.settingsIcon, { backgroundColor: 'rgba(147,51,234,0.16)' }]}>
                 <IconSymbol size={22} name="arrow.down.circle.fill" color="#9333ea" />
               </View>
               <View>
@@ -487,7 +509,7 @@ export function SettingsScreen() {
           {/* Eliminar Todos los Datos */}
           <TouchableOpacity style={[styles.settingsRow]} onPress={handleDeleteAllData}>
             <View style={styles.settingsRowLeft}>
-              <View style={[styles.settingsIcon, { backgroundColor: '#fee2e2' }]}>
+              <View style={[styles.settingsIcon, { backgroundColor: 'rgba(239,68,68,0.14)' }]}>
                 <IconSymbol size={22} name="trash.fill" color="#ef4444" />
               </View>
               <View>
@@ -554,6 +576,9 @@ export function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  themeSection: {
+    marginBottom: 24,
+  },
   container: {
     flex: 1,
   },

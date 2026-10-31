@@ -2,7 +2,7 @@
  * Contratos de datos compartidos entre módulos y las claves de sus capacidades.
  * Los nombres de campo conservan el snake_case de la BD v1 (y del formato de respaldo JSON).
  */
-import type { CurrencyCode } from '@/config/schema';
+import type { CurrencyCode, ThemeIdConfig } from '@/config/schema';
 
 import { createCapabilityKey } from './capabilities';
 import type { Result } from './result';
@@ -314,6 +314,7 @@ export interface ProfileRecord {
   name: string;
   email: string;
   currency: CurrencyCode;
+  theme: ThemeIdConfig;
   created_at: string;
   updated_at: string;
 }

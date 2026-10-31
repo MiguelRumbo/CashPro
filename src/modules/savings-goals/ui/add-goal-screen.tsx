@@ -19,6 +19,7 @@ import { formatCurrencyInput, getNumericValue } from '@/core/units/format';
 import { getSavingsGoalsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
 import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { usePalette } from '@/core/ui-kit/theme-context';
 
 interface GoalIcon {
   id: string;
@@ -38,6 +39,7 @@ const GOAL_ICONS: readonly [GoalIcon, ...GoalIcon[]] = [
 ];
 
 export function AddGoalScreen() {
+  const palette = usePalette();
   const { goals: goalsService } = getSavingsGoalsRuntime();
   const reportError = useErrorReporter();
   const [name, setName] = useState('');
@@ -52,9 +54,9 @@ export function AddGoalScreen() {
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#0a0f0d' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
-  const textSub = '#64876f';
-  const primary = '#20df60';
-  const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#374151' }, 'border');
+  const textSub = palette.muted;
+  const primary = palette.accent;
+  const borderColor = useThemeColor({ light: 'rgba(127,127,127,0.2)', dark: '#374151' }, 'border');
 
   const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowDatePicker(false);
@@ -233,7 +235,7 @@ export function AddGoalScreen() {
             <Switch
               value={autoDeduct}
               onValueChange={setAutoDeduct}
-              trackColor={{ false: '#e5e7eb', true: primary }}
+              trackColor={{ false: 'rgba(127,127,127,0.2)', true: primary }}
               thumbColor="#ffffff"
             />
           </View>

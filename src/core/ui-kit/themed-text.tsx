@@ -1,4 +1,6 @@
-import { StyleSheet, Text, type TextProps } from 'react-native';
+import { StyleSheet, Text, type TextProps, type TextStyle } from 'react-native';
+
+import { fontFamilyFor } from './typography';
 
 import { useThemeColor } from './use-theme-color';
 
@@ -11,6 +13,20 @@ export type ThemedTextProps = TextProps & {
 export function ThemedText({ style, lightColor, darkColor, type = 'default', ...rest }: ThemedTextProps) {
   const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
 
+  const typeStyle =
+    type === 'title'
+      ? styles.title
+      : type === 'defaultSemiBold'
+        ? styles.defaultSemiBold
+        : type === 'subtitle'
+          ? styles.subtitle
+          : type === 'link'
+            ? styles.link
+            : styles.default;
+  const flat: TextStyle = StyleSheet.flatten([typeStyle, style]) ?? {};
+  // Cada peso es una familia en Android: se elige la familia y se quita fontWeight.
+  const fontFamily = flat.fontFamily ?? fontFamilyFor(flat.fontWeight, flat.fontSize);
+
   return (
     <Text
       style={[
@@ -21,6 +37,7 @@ export function ThemedText({ style, lightColor, darkColor, type = 'default', ...
         type === 'subtitle' ? styles.subtitle : undefined,
         type === 'link' ? styles.link : undefined,
         style,
+        { fontFamily, fontWeight: 'normal' },
       ]}
       {...rest}
     />

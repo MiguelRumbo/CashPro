@@ -23,7 +23,7 @@ export const manifest: ModuleManifest = {
       subtitle: loansTexts.menuSubtitle,
       icon: 'doc.text',
       color: '#f59e0b',
-      iconBg: '#fffbeb',
+      iconBg: 'rgba(245,158,11,0.16)',
       route: '/loans',
       order: 3,
     },

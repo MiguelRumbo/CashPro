@@ -9,17 +9,18 @@ import type { AppAlert } from '../domain/compute-alerts';
 import { getAlertsRuntime } from '../runtime';
 import { useCurrency } from '@/core/preferences/use-currency';
 import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
+import { usePalette } from '@/core/ui-kit/theme-context';
 
 type Notification = AppAlert;
 
 const NOTIF_CONFIG: Record<string, { icon: string; color: string; bg: string }> = {
-  credit_cutoff: { icon: 'calendar', color: '#f59e0b', bg: '#fef3c7' },
-  credit_payment: { icon: 'creditcard', color: '#ef4444', bg: '#fee2e2' },
-  budget_exceeded: { icon: 'exclamationmark.triangle', color: '#ef4444', bg: '#fee2e2' },
-  budget_warning: { icon: 'chart.bar.fill', color: '#f59e0b', bg: '#fef3c7' },
-  loan_due: { icon: 'banknote', color: '#7c3aed', bg: '#ede9fe' },
-  subscription_due: { icon: 'repeat', color: '#3b82f6', bg: '#dbeafe' },
-  savings_goal_behind: { icon: 'target', color: '#059669', bg: '#d1fae5' },
+  credit_cutoff: { icon: 'calendar', color: '#f59e0b', bg: 'rgba(245,158,11,0.16)' },
+  credit_payment: { icon: 'creditcard', color: '#ef4444', bg: 'rgba(239,68,68,0.14)' },
+  budget_exceeded: { icon: 'exclamationmark.triangle', color: '#ef4444', bg: 'rgba(239,68,68,0.14)' },
+  budget_warning: { icon: 'chart.bar.fill', color: '#f59e0b', bg: 'rgba(245,158,11,0.16)' },
+  loan_due: { icon: 'banknote', color: '#7c3aed', bg: 'rgba(124,58,237,0.16)' },
+  subscription_due: { icon: 'repeat', color: '#3b82f6', bg: 'rgba(59,130,246,0.16)' },
+  savings_goal_behind: { icon: 'target', color: '#059669', bg: 'rgba(16,185,129,0.16)' },
 };
 
 const GROUP_LABELS: Record<string, string> = {
@@ -40,6 +41,7 @@ function getGroup(type: string): string {
 }
 
 export function AlertsInboxScreen() {
+  const palette = usePalette();
   const { alerts: alertsService } = getAlertsRuntime();
   const { formatCurrency } = useCurrency();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -47,9 +49,9 @@ export function AlertsInboxScreen() {
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
-  const textMuted = '#64748b';
-  const borderColor = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'border');
-  const primary = '#20df60';
+  const textMuted = palette.muted;
+  const borderColor = useThemeColor({ light: 'rgba(127,127,127,0.12)', dark: '#374151' }, 'border');
+  const primary = palette.accent;
 
   const fetchNotifications = useStableCallback(() => {
     const result = alertsService.getPendingNotifications((amount) => formatCurrency(amount));
@@ -128,7 +130,7 @@ export function AlertsInboxScreen() {
                   const config = NOTIF_CONFIG[notif.type] || {
                     icon: 'bell',
                     color: '#64748b',
-                    bg: '#f1f5f9',
+                    bg: 'rgba(100,116,139,0.14)',
                   };
                   return (
                     <TouchableOpacity

@@ -23,7 +23,7 @@ export const manifest: ModuleManifest = {
       subtitle: subscriptionsTexts.menuSubtitle,
       icon: 'repeat',
       color: '#3b82f6',
-      iconBg: '#eff6ff',
+      iconBg: 'rgba(59,130,246,0.16)',
       route: '/subscriptions',
       order: 4,
     },

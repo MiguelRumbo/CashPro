@@ -7,7 +7,19 @@ export const manifest: ModuleManifest = {
   id: 'reports',
   version: '1.0.0',
   routes: ['/(tabs)/explore'],
-  tabs: [{ routeName: 'explore', title: 'Estadísticas', icon: 'chart.bar.fill', order: 3 }],
+  actions: [
+    {
+      id: 'reports.menu',
+      slot: 'more.menu',
+      title: 'Estadísticas',
+      subtitle: 'Gastos por categoría y tendencias',
+      icon: 'chart.bar.fill',
+      color: '#7fc0ff',
+      iconBg: 'rgba(127,192,255,0.16)',
+      route: '/(tabs)/explore',
+      order: 0,
+    },
+  ],
   screens: { 'reports.home': ReportsScreen },
   register: () => undefined,
 };
