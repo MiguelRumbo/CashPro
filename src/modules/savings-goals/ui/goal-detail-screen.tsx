@@ -21,6 +21,7 @@ import { ok } from '@/core/contracts/result';
 import { useCapability, useErrorReporter } from '@/core/registry/react';
 import { getSavingsGoalsRuntime } from '../runtime';
 import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
+import { usePalette } from '@/core/ui-kit/theme-context';
 
 type SavingsGoal = SavingsGoalRecord;
 
@@ -35,6 +36,7 @@ type Contribution = {
 type Account = AccountRecord;
 
 export function GoalDetailScreen() {
+  const palette = usePalette();
   const { goals: goalsService } = getSavingsGoalsRuntime();
   const accountsQuery = useCapability(accountsQueryKey);
   const reportError = useErrorReporter();
@@ -53,9 +55,9 @@ export function GoalDetailScreen() {
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
-  const textMuted = '#64748b';
-  const borderColor = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'border');
-  const primary = '#20df60';
+  const textMuted = palette.muted;
+  const borderColor = useThemeColor({ light: 'rgba(127,127,127,0.12)', dark: '#374151' }, 'border');
+  const primary = palette.accent;
 
   const fetchGoalData = useStableCallback(async () => {
     try {

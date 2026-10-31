@@ -11,10 +11,12 @@ import { ok } from '@/core/contracts/result';
 import { useCapability, useErrorReporter } from '@/core/registry/react';
 import { getSubscriptionsRuntime } from '../runtime';
 import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
+import { usePalette } from '@/core/ui-kit/theme-context';
 
 type RecurringPayment = RecurringPaymentRecord;
 
 export function SubscriptionDetailScreen() {
+  const palette = usePalette();
   const { recurring: recurringService } = getSubscriptionsRuntime();
   const accountsQuery = useCapability(accountsQueryKey);
   const reportError = useErrorReporter();
@@ -26,9 +28,9 @@ export function SubscriptionDetailScreen() {
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
-  const textMuted = '#64748b';
-  const borderColor = useThemeColor({ light: '#f3f4f6', dark: '#374151' }, 'border');
-  const primary = '#20df60';
+  const textMuted = palette.muted;
+  const borderColor = useThemeColor({ light: 'rgba(127,127,127,0.12)', dark: '#374151' }, 'border');
+  const primary = palette.accent;
 
   const fetchPayment = useStableCallback(async () => {
     try {
@@ -327,7 +329,7 @@ export function SubscriptionDetailScreen() {
           <Switch
             value={!!payment.is_active}
             onValueChange={handleToggleActive}
-            trackColor={{ false: '#e5e7eb', true: primary }}
+            trackColor={{ false: 'rgba(127,127,127,0.2)', true: primary }}
             thumbColor="#ffffff"
           />
         </View>
@@ -508,7 +510,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 14,
     marginTop: 8,
-    backgroundColor: '#fef2f2',
+    backgroundColor: 'rgba(239,68,68,0.14)',
   },
   deleteButtonText: {
     color: '#ef4444',

@@ -1,5 +1,12 @@
 export const settingsTexts = {
   tabTitle: 'Ajustes',
+  menuSubtitle: 'Perfil, tema, moneda y datos',
+  themeSection: 'TEMA',
+  themes: {
+    forest: { name: 'Bosque nocturno', description: 'Oscuro con verde profundo' },
+    daylight: { name: 'Claro', description: 'Fondo claro y cifras grandes' },
+    wallet: { name: 'Cartera', description: 'Claro con acento índigo' },
+  },
   defaultProfileName: 'Usuario',
   errors: {
     nameRequired: 'El nombre es requerido',

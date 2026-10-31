@@ -8,6 +8,10 @@ export const userProfile = sqliteTable('user_profile', {
   currency: text('currency', { enum: ['MXN', 'USD', 'EUR'] })
     .notNull()
     .default('MXN'),
+  // Tema de color elegido en Ajustes (2.1.0).
+  theme: text('theme', { enum: ['forest', 'daylight', 'wallet'] })
+    .notNull()
+    .default('forest'),
   created_at: text('created_at')
     .notNull()
     .default(sql`(datetime('now'))`),

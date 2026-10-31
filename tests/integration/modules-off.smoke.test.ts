@@ -4,14 +4,10 @@ describe('arranque con módulos apagados', () => {
   it('con todos los módulos activos aporta todas las pestañas', async () => {
     const app = await startApp();
     expect(app.registry.failedModules().size).toBe(0);
-    expect(app.registry.tabs().map((t) => t.routeName)).toEqual([
-      'index',
-      'movements',
-      'explore',
-      'accounts',
-      'settings',
-    ]);
-    expect(app.registry.actions('more.menu')).toHaveLength(5);
+    expect(app.registry.tabs().map((t) => t.routeName)).toEqual(['index', 'movements', 'accounts']);
+    expect(app.registry.actions('more.menu')).toHaveLength(7);
+    expect(app.registry.actions('tabbar.fab').map((a) => a.route)).toEqual(['/movements/add-movement']);
+    expect(app.registry.gates()).toHaveLength(1);
     app.dispose();
   });
 

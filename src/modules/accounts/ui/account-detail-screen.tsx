@@ -21,10 +21,12 @@ import { getAccountsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
 import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 import type { MsiPurchase } from '../data/msi-repository';
+import { usePalette } from '@/core/ui-kit/theme-context';
 
 type Account = AccountRecord;
 
 export function AccountDetailScreen() {
+  const palette = usePalette();
   const { accounts: accountsService, msi: msiService } = getAccountsRuntime();
   const reportError = useErrorReporter();
   const params = useLocalSearchParams();
@@ -45,9 +47,9 @@ export function AccountDetailScreen() {
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1c2e24' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
-  const textSub = '#64876f';
-  const primary = '#20df60';
-  const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#374151' }, 'border');
+  const textSub = palette.muted;
+  const primary = palette.accent;
+  const borderColor = useThemeColor({ light: 'rgba(127,127,127,0.2)', dark: '#374151' }, 'border');
 
   const fetchAccount = useStableCallback(() => {
     try {
@@ -188,15 +190,15 @@ export function AccountDetailScreen() {
   const getAccountIcon = (type: string) => {
     switch (type) {
       case 'cash':
-        return { name: 'banknote', color: '#16a34a', bg: '#f0fdf4' };
+        return { name: 'banknote', color: '#16a34a', bg: 'rgba(34,197,94,0.16)' };
       case 'bank':
-        return { name: 'building.columns.fill', color: '#2563eb', bg: '#eff6ff' };
+        return { name: 'building.columns.fill', color: '#2563eb', bg: 'rgba(59,130,246,0.16)' };
       case 'debit':
-        return { name: 'creditcard', color: '#7c3aed', bg: '#faf5ff' };
+        return { name: 'creditcard', color: '#7c3aed', bg: 'rgba(147,51,234,0.16)' };
       case 'credit':
-        return { name: 'creditcard.fill', color: '#dc2626', bg: '#fef2f2' };
+        return { name: 'creditcard.fill', color: '#dc2626', bg: 'rgba(239,68,68,0.14)' };
       default:
-        return { name: 'banknote', color: '#64748b', bg: '#f1f5f9' };
+        return { name: 'banknote', color: '#64748b', bg: 'rgba(100,116,139,0.14)' };
     }
   };
 

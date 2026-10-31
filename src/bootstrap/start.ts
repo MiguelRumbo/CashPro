@@ -36,7 +36,10 @@ const errorMessage = (error: unknown) => (error instanceof Error ? error.message
 export async function startModules({ config, db, logger, loaders }: StartOptions): Promise<AppRuntime> {
   const registry = new ModuleRegistry();
   const events = new EventBus(logger);
-  const preferences = createPreferencesStore({ currency: config.currency.default });
+  const preferences = createPreferencesStore({
+    currency: config.currency.default,
+    theme: config.ui.defaultTheme,
+  });
   const unsubscribers: (() => void)[] = [];
 
   const enabledIds = (Object.keys(config.modules) as ModuleId[]).filter((id) => config.modules[id].enabled);

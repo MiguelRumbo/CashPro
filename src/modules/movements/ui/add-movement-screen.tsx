@@ -24,9 +24,11 @@ import { getMovementsRuntime } from '../runtime';
 import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 import type { MovementDraft } from '../domain/movement-rules';
 import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { usePalette } from '@/core/ui-kit/theme-context';
 type Account = AccountRecord;
 
 export function AddMovementScreen() {
+  const palette = usePalette();
   const { movements: movementsService } = getMovementsRuntime();
   const accountsQuery = useCapability(accountsQueryKey);
   const reportError = useErrorReporter();
@@ -48,9 +50,9 @@ export function AddMovementScreen() {
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#0a0f0d' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
-  const textSub = '#64876f';
-  const primary = '#20df60';
-  const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#374151' }, 'border');
+  const textSub = palette.muted;
+  const primary = palette.accent;
+  const borderColor = useThemeColor({ light: 'rgba(127,127,127,0.2)', dark: '#374151' }, 'border');
 
   const fetchAccounts = useStableCallback(() => {
     try {

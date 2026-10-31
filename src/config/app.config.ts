@@ -70,7 +70,7 @@ export const rawAppConfig = {
   },
   ui: {
     splashFadeMs: 250, // ms
-    primaryColor: '#20df60',
+    defaultTheme: 'forest', // tema de color inicial: forest (A), daylight (B) o wallet (C)
   },
 } as const;
 

@@ -20,10 +20,12 @@ import { getBudgetsRuntime } from '../runtime';
 import { useErrorReporter } from '@/core/registry/react';
 import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { usePalette } from '@/core/ui-kit/theme-context';
 
 type BudgetPeriod = 'daily' | 'weekly' | 'monthly';
 
 export function EditBudgetScreen() {
+  const palette = usePalette();
   const { budgets: budgetsService } = getBudgetsRuntime();
   const reportError = useErrorReporter();
   const { id } = useLocalSearchParams();
@@ -41,10 +43,10 @@ export function EditBudgetScreen() {
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
-  const textMuted = '#64748b';
-  const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#374151' }, 'border');
-  const primary = '#20df60';
-  const inputBg = useThemeColor({ light: '#f9fafb', dark: '#1f2937' }, 'inputBackground');
+  const textMuted = palette.muted;
+  const borderColor = useThemeColor({ light: 'rgba(127,127,127,0.2)', dark: '#374151' }, 'border');
+  const primary = palette.accent;
+  const inputBg = useThemeColor({ light: 'rgba(127,127,127,0.06)', dark: '#1f2937' }, 'inputBackground');
 
   const fetchBudget = useStableCallback(() => {
     try {

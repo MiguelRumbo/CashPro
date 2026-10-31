@@ -59,6 +59,13 @@ function MenuItem({
 /** Menú armado con las acciones que los módulos activos aportan a un slot (pestaña "Más"). */
 export function ActionMenuScreen({ slot }: { slot: ActionSlot }) {
   const actions = useRegistry().actions(slot);
+  const sections = [
+    {
+      label: coreTexts.moreSectionFinance,
+      items: actions.filter((a) => (a.section ?? 'finance') === 'finance'),
+    },
+    { label: coreTexts.moreSectionGeneral, items: actions.filter((a) => a.section === 'general') },
+  ];
   const backgroundColor = useThemeColor({ light: '#f6f8f6', dark: '#112116' }, 'background');
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1c2b21' }, 'surface');
   const textMain = useThemeColor({ light: '#111827', dark: '#ffffff' }, 'text');
@@ -77,30 +84,37 @@ export function ActionMenuScreen({ slot }: { slot: ActionSlot }) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <ThemedText style={styles.sectionLabel}>{coreTexts.moreSectionFinance}</ThemedText>
-        <View style={[styles.sectionCard, { backgroundColor: surfaceColor }]}>
-          {actions.length === 0 ? (
+        {actions.length === 0 && (
+          <View style={[styles.sectionCard, { backgroundColor: surfaceColor }]}>
             <ThemedText style={[styles.menuSubtitle, styles.empty, { color: textMuted }]}>
               {coreTexts.moreEmpty}
             </ThemedText>
-          ) : (
-            actions.map((action, index) => (
-              <MenuItem
-                key={action.id}
-                icon={action.icon}
-                iconColor={action.color}
-                iconBg={action.iconBg}
-                title={action.title}
-                subtitle={action.subtitle}
-                onPress={() => router.push(action.route as Href)}
-                textMain={textMain}
-                textMuted={textMuted}
-                borderColor={borderColor}
-                isLast={index === actions.length - 1}
-              />
-            ))
-          )}
-        </View>
+          </View>
+        )}
+        {sections.map(({ label, items }) =>
+          items.length === 0 ? null : (
+            <View key={label}>
+              <ThemedText style={[styles.sectionLabel, { color: textMuted }]}>{label}</ThemedText>
+              <View style={[styles.sectionCard, { backgroundColor: surfaceColor }]}>
+                {items.map((action, index) => (
+                  <MenuItem
+                    key={action.id}
+                    icon={action.icon}
+                    iconColor={action.color}
+                    iconBg={action.iconBg}
+                    title={action.title}
+                    subtitle={action.subtitle}
+                    onPress={() => router.push(action.route as Href)}
+                    textMain={textMain}
+                    textMuted={textMuted}
+                    borderColor={borderColor}
+                    isLast={index === items.length - 1}
+                  />
+                ))}
+              </View>
+            </View>
+          ),
+        )}
         <View style={styles.bottomSpacer} />
       </ScrollView>
     </ThemedView>
@@ -132,7 +146,6 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#9ca3af',
     marginBottom: 8,
     paddingHorizontal: 8,
     letterSpacing: 1,

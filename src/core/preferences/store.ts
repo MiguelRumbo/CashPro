@@ -1,7 +1,8 @@
-import type { CurrencyCode } from '@/config/schema';
+import type { CurrencyCode, ThemeIdConfig } from '@/config/schema';
 
 export interface Preferences {
   readonly currency: CurrencyCode;
+  readonly theme: ThemeIdConfig;
 }
 
 export interface PreferencesStore {
@@ -18,7 +19,7 @@ export function createPreferencesStore(initial: Preferences): PreferencesStore {
     get: () => snapshot,
     set(patch) {
       const next = Object.freeze({ ...snapshot, ...patch });
-      if (next.currency === snapshot.currency) return;
+      if (next.currency === snapshot.currency && next.theme === snapshot.theme) return;
       snapshot = next;
       listeners.forEach((listener) => listener());
     },

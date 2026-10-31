@@ -30,10 +30,12 @@ import { useCapability, useErrorReporter } from '@/core/registry/react';
 import { getMovementsRuntime } from '../runtime';
 import { useStableCallback } from '@/core/ui-kit/use-stable-callback';
 import type { MovementDraft } from '../domain/movement-rules';
+import { usePalette } from '@/core/ui-kit/theme-context';
 type Account = AccountRecord;
 type Movement = MovementWithAccount;
 
 export function MovementDetailScreen() {
+  const palette = usePalette();
   const { movements: movementsService } = getMovementsRuntime();
   const accountsQuery = useCapability(accountsQueryKey);
   const vehiclesQuery = useCapability(vehiclesQueryKey);
@@ -66,8 +68,8 @@ export function MovementDetailScreen() {
   const surfaceColor = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
   const textMain = useThemeColor({ light: '#111713', dark: '#ffffff' }, 'text');
   const textMuted = useThemeColor({ light: '#64748b', dark: '#94a3b8' }, 'text');
-  const primary = '#20df60';
-  const borderColor = useThemeColor({ light: '#e5e7eb', dark: '#374151' }, 'border');
+  const primary = palette.accent;
+  const borderColor = useThemeColor({ light: 'rgba(127,127,127,0.2)', dark: '#374151' }, 'border');
   const cardBg = useThemeColor({ light: '#ffffff', dark: '#1a2c20' }, 'surface');
 
   const fetchMovement = useStableCallback(() => {

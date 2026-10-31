@@ -118,3 +118,25 @@ describe('flujo de movimientos entre módulos (BD real en memoria)', () => {
     app.dispose();
   });
 });
+
+describe('preferencias persistidas en el perfil', () => {
+  it('guarda el tema y la moneda elegidos y los recupera al reiniciar la sincronización', async () => {
+    const app = await startApp();
+    const { settings } = getSettingsRuntime();
+    expect(app.preferences.get().theme).toBe('forest');
+
+    app.preferences.set({ theme: 'wallet', currency: 'USD' });
+    expect(settings.getProfile()).toMatchObject({
+      success: true,
+      data: { theme: 'wallet', currency: 'USD' },
+    });
+
+    app.preferences.set({ theme: 'forest', currency: 'MXN' });
+    settings.updateProfile({ name: 'Ana', currency: 'MXN' });
+    // Editar el perfil no debe pisar el tema elegido.
+    app.preferences.set({ theme: 'daylight' });
+    settings.syncPreferencesFromProfile();
+    expect(app.preferences.get().theme).toBe('daylight');
+    app.dispose();
+  });
+});

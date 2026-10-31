@@ -1,7 +1,7 @@
 import { StyleSheet, TouchableOpacity } from 'react-native';
 
 import { IconSymbol } from '@/core/ui-kit/icon-symbol';
-import { CashProColors } from '@/core/ui-kit/theme';
+import { usePalette } from '@/core/ui-kit/theme-context';
 import { ThemedText } from '@/core/ui-kit/themed-text';
 import { ThemedView } from '@/core/ui-kit/themed-view';
 
@@ -16,22 +16,27 @@ export interface LockViewProps {
 
 /** Pantalla de bloqueo (componente tonto). */
 export function LockView({ canUnlock, failed, onUnlock }: LockViewProps) {
+  const palette = usePalette();
   return (
     <ThemedView style={styles.container} accessibilityRole="alert">
-      <IconSymbol name="lock.fill" size={48} color={CashProColors.primary} />
+      <IconSymbol name="lock.fill" size={48} color={palette.accent} />
       <ThemedText type="subtitle" style={styles.title}>
         {securityTexts.lockTitle}
       </ThemedText>
       <ThemedText style={styles.body}>{securityTexts.lockBody}</ThemedText>
-      {failed && <ThemedText style={styles.error}>{securityTexts.failed}</ThemedText>}
+      {failed && (
+        <ThemedText style={[styles.error, { color: palette.negative }]}>{securityTexts.failed}</ThemedText>
+      )}
       {canUnlock && (
         <TouchableOpacity
-          style={styles.button}
+          style={[styles.button, { backgroundColor: palette.accent }]}
           onPress={onUnlock}
           accessibilityRole="button"
           accessibilityLabel={securityTexts.unlockButton}
         >
-          <ThemedText style={styles.buttonText}>{securityTexts.unlockButton}</ThemedText>
+          <ThemedText style={[styles.buttonText, { color: palette.onAccent }]}>
+            {securityTexts.unlockButton}
+          </ThemedText>
         </TouchableOpacity>
       )}
     </ThemedView>
@@ -42,13 +47,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 },
   title: { textAlign: 'center' },
   body: { textAlign: 'center', opacity: 0.7 },
-  error: { textAlign: 'center', color: '#ef4444' },
+  error: { textAlign: 'center' },
   button: {
     marginTop: 12,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: CashProColors.primary,
   },
-  buttonText: { color: '#ffffff', fontWeight: '600' },
+  buttonText: { fontWeight: '600' },
 });

@@ -23,7 +23,7 @@ export const manifest: ModuleManifest = {
       subtitle: budgetsTexts.menuSubtitle,
       icon: 'chart.pie.fill',
       color: '#9333ea',
-      iconBg: '#faf5ff',
+      iconBg: 'rgba(147,51,234,0.16)',
       route: '/budgets',
       order: 1,
     },
